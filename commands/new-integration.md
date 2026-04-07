@@ -1,11 +1,13 @@
 ---
 name: new-integration
-description: Add a new EM integration to product-core-backend. Orchestrates sub-agents for research, implementation, testing, linting, typechecking, and code review. Handles both Synqly-proxied and direct-SDK integrations.
+description: Add a new EM integration to product-core-backend and product-core-frontend. Orchestrates sub-agents for research, implementation, testing, linting, typechecking, and code review. Handles both Synqly-proxied and direct-SDK integrations, plus FE form fields and table config.
 ---
 
 # New Integration
 
-Add a new Exposure Management integration to `product-core-backend` using **sub-agents to preserve main context**. The orchestrator holds the plan and talks to the user; heavy work stays in sub-agents.
+Add a new Exposure Management integration to `product-core-backend` **and** `product-core-frontend` using **sub-agents to preserve main context**. The orchestrator holds the plan and talks to the user; heavy work stays in sub-agents.
+
+Every new integration needs **both** BE wiring (Synqly plugin, factory, types) **and** FE wiring (form fields, table config). Do not consider the integration complete until both are done.
 
 ## Workspace detection
 
@@ -140,6 +142,13 @@ Files to **modify**:
 
 Files to **create** (tests):
 - [ ] `plugins/factory.test.ts` — Factory wiring tests (or add to existing)
+
+**Frontend** (`product-core-frontend` — separate branch):
+Files to **modify**:
+- [ ] `app/components/_Organisms/ApiIntegrationForm/fields/{Name}Fields.tsx` — Add credential form fields (apiUrl, apiKey/apiSecret per auth type)
+- [ ] `app/components/_Organisms/ApiIntegrationTable/ApiIntegrationTable.config.tsx` — Update empty state text to list specific credential fields
+
+**Note:** FE integrations are typically scaffolded (stub form with just connection name). The work here is adding the actual credential fields to the existing stub and updating the table config to mention the specific credentials users need.
 
 **User confirms** or adjusts before proceeding.
 
@@ -282,7 +291,7 @@ Fix each finding. Return:
 
 ---
 
-## Step 5: Commit (orchestrator)
+## Step 5: Commit BE (orchestrator)
 
 **GATE: Do NOT commit unless ALL of these are true:**
 1. Code review agent (4c) ran and approved (or findings were fixed)
@@ -296,13 +305,67 @@ If resuming a session where code was already committed but review was not run, r
 
 ---
 
-## Step 6: Handoff (orchestrator)
+## Step 6: Frontend Implementation (sub-agent)
 
-- **Summary**: What was implemented, which files changed, and what was tested.
-- **Branch name** and **commit hash(es)**.
+**Separate branch in `product-core-frontend`**: `{TICKET-KEY}-{integration-name}-form-fields`
+
+Every new integration needs FE form fields for credential input. The integration stub (connection name only) already exists — the work is adding the actual credential fields.
+
+### 6a. FE Implementation Agent
+
+```
+You are implementing frontend form fields for the {INTEGRATION_NAME} integration in {WORKSPACE}/product-core-frontend on branch {BRANCH}.
+
+The integration form component already exists at:
+app/components/_Organisms/ApiIntegrationForm/fields/{Name}Fields.tsx
+
+It currently only has a "Connection name" field. Add the credential fields based on the auth type:
+
+Auth type: {TOKEN | BASIC | OAUTH}
+Settings fields: {list from BE plan, e.g. apiUrl}
+Secret fields: {list from BE plan, e.g. apiSecret, apiKey}
+
+Reference: Look at the CrowdStrike or Defender form fields for the pattern:
+- CloudServerIcon + "Connect to {Name}" section header
+- Form.Item with FormLabel, data-testid, required validation
+- Input.Password for secret fields
+- Helpful placeholder text and extra descriptions
+
+Also update:
+app/components/_Organisms/ApiIntegrationTable/ApiIntegrationTable.config.tsx
+- Find the {INTEGRATION_NAME} case in getEmptyState
+- Update the first step description to mention the specific credentials (e.g. "API URL and API Key")
+
+Standards:
+- Read CLAUDE.md for product-core-frontend rules
+- Follow existing patterns in the codebase
+- Include data-testid attributes on all inputs
+- All credential fields should be required
+
+Return: files changed + descriptions
+```
+
+**→ Run verification**: `npx eslint {changed files}` and `npm run typecheck`
+
+### 6b. FE Code Review — MANDATORY
+
+Use `pt-doots:code-reviewer` or `everything-claude-code:typescript-reviewer`.
+
+### 6c. Commit FE
+
+- Stage and commit: `{TICKET-KEY}: add {Integration Name} credential form fields`
+- **Never push.** Remind user.
+
+---
+
+## Step 7: Handoff (orchestrator)
+
+- **Summary**: What was implemented in BOTH repos, which files changed.
+- **BE branch** and **FE branch** names and commit hashes.
 - **Manual test steps** for verifying the integration end-to-end.
-- Suggested **PR title and body** (following BE PR template with Observability section).
-- Reminder that the user should push the branch when ready.
+- Suggested **PR title and body** for BOTH PRs (BE uses Observability template, FE uses simpler template).
+- Cross-link both PRs in their descriptions.
+- Reminder that the user should push both branches when ready.
 
 ---
 
