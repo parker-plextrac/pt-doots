@@ -4,16 +4,13 @@ Templates for spawning each agent. The orchestrator fills in the `{variables}`.
 
 ---
 
-## Researcher Prompt
+## Researcher Prompt (pt-doots:researcher)
 
 ```
 You are researching Jira ticket {TICKET-KEY} for the PlexTrac workspace.
 
 Ticket content:
 {paste ticket title, description, acceptance criteria}
-
-Learned patterns:
-{paste from .local/team-manager/learned-patterns.md if it exists}
 
 Domain context — repo routing:
 - Parser/import tickets: Check `product-core-backend/apps/integration-worker/src/modules/file-uploads/file-upload-processor.ts` FIRST to identify which parser is active. Many parsers have been ported from Python (product-services-parsing) to TypeScript (product-core-backend/apps/integration-worker/batch-generators/). Always verify which is the active code path before deep-diving into any parser code.
@@ -32,16 +29,13 @@ Your job:
 
 ---
 
-## Developer Prompt (Implementation)
+## Developer Prompt — Implementation (pt-doots:developer)
 
 ```
 You are implementing ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
 
 Plan:
 {paste relevant plan steps from plan.md}
-
-Learned patterns:
-{paste from .local/team-manager/learned-patterns.md if it exists}
 
 Standards:
 - Read and follow CLAUDE.md rules for {repo}
@@ -58,7 +52,7 @@ Implement the changes described in the plan. When done, return:
 
 ---
 
-## Developer Prompt (QA Fixes)
+## Developer Prompt — QA Fixes (pt-doots:developer)
 
 ```
 You are fixing QA findings for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
@@ -76,7 +70,7 @@ Fix each finding. Return:
 
 ---
 
-## Test Writer Prompt (Standard Mode — after implementation)
+## Test Writer Prompt — Standard (pt-doots:test-writer)
 
 ```
 You are writing tests for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
@@ -86,9 +80,6 @@ Files changed:
 
 Plan:
 {paste test-relevant plan steps}
-
-Learned patterns:
-{paste from .local/team-manager/learned-patterns.md if it exists}
 
 Standards:
 - Read and follow CLAUDE.md testing rules for {repo}
@@ -106,7 +97,7 @@ Write the tests. When done, return:
 
 ---
 
-## Test Writer Prompt (TDD Mode — before implementation)
+## Test Writer Prompt — TDD (pt-doots:test-writer)
 
 ```
 You are writing tests FIRST for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
@@ -121,9 +112,6 @@ Acceptance criteria:
 
 Test fixtures:
 {list any sample files, mock data, etc.}
-
-Learned patterns:
-{paste from .local/team-manager/learned-patterns.md if it exists}
 
 Standards:
 - Read and follow CLAUDE.md testing rules for {repo}
@@ -141,22 +129,17 @@ Write the tests. When done, return:
 
 ---
 
-## Code Reviewer Prompt
+## Code Reviewer Prompt (pt-doots:code-reviewer)
 
 ```
 Review the changes for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
 
 Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md
 
-Learned patterns:
-{paste from .local/team-manager/learned-patterns.md if it exists}
-
 Review against:
 - The plan's acceptance criteria
 - CLAUDE.md standards for {repo}
 - Code quality, security, naming, architecture
-
-You can message other active teammates (acceptance-qa, edge-case-qa) via SendMessage for cross-validation.
 
 Return only actionable findings. For each finding:
 - File and line number
@@ -170,7 +153,7 @@ Return "REVIEW: clean" explicitly if no issues found.
 
 ---
 
-## Acceptance QA Prompt
+## Acceptance QA Prompt (pt-doots:acceptance-qa)
 
 ```
 You are verifying ticket {TICKET-KEY} meets its acceptance criteria.
@@ -188,14 +171,12 @@ Review the implementation against EACH acceptance criterion. For each:
 - Pass / Fail / Partial
 - Evidence (file:line or explanation)
 
-You can message other active teammates (code-reviewer, edge-case-qa) via SendMessage.
-
 Mark any missed requirements as [GOVERNANCE] if they suggest the plan needs revision.
 ```
 
 ---
 
-## Edge Case QA Prompt
+## Edge Case QA Prompt (pt-doots:edge-case-qa)
 
 ```
 You are looking for failure modes in ticket {TICKET-KEY} changes.
@@ -203,16 +184,11 @@ You are looking for failure modes in ticket {TICKET-KEY} changes.
 Changed files:
 {list from implementation}
 
-Learned patterns:
-{paste from .local/team-manager/learned-patterns.md if it exists}
-
 For each changed function/module:
 - Boundary conditions (empty arrays, null, max values)
 - Error paths and exception handling
 - Concurrency / race conditions (if applicable)
 - Data permutations the test suite doesn't cover
-
-You can message other active teammates (code-reviewer, acceptance-qa) via SendMessage.
 
 Return structured findings:
 - [file:line] [scenario] [risk level] [recommendation]
@@ -223,7 +199,7 @@ Return "EDGE CASES: clean" explicitly if no issues found.
 
 ---
 
-## Documentarian Prompt
+## Documentarian Prompt (pt-doots:documentarian)
 
 ```
 You are updating documentation for ticket {TICKET-KEY} in {WORKSPACE}/{repo}.

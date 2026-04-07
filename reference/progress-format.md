@@ -19,8 +19,7 @@ Each entry in `notes/{TICKET-KEY}/progress.md` follows this structure.
 - Status: complete
 - Resumed from: {previous session date, or "new ticket"}
 - Branch: `{branch-name}` ({N} commits ahead of main)
-- Roster check: healthy (or: pitch approved — {summary})
-- Workflow: {standard | lightweight | docs-only | custom} — {rationale}
+- Workflow: {standard | lightweight | thorough} — {rationale}
 - Execution mode: {standard | tdd}
 
 ### Step 1: Research
@@ -78,5 +77,4 @@ Each entry in `notes/{TICKET-KEY}/progress.md` follows this structure.
 ### Step 6: Handoff
 - Status: complete
 - Branch ready for push and PR
-- Metrics written to .local/team-manager/metrics-summary.md
 ```
