@@ -1,0 +1,11 @@
+{
+  "name": "plextrac-workflow",
+  "version": "1.0.0",
+  "description": "Orchestrated PlexTrac workflow — Jira ticket state machine, 9-agent team, ceremony gates, integration scaffolding.",
+  "author": {
+    "name": "Parker",
+    "email": "parker@plextrac.com"
+  },
+  "repository": "https://github.com/parker-plextrac/plextrac-workflow",
+  "keywords": ["plextrac", "workflow", "agent-team", "orchestration"]
+}

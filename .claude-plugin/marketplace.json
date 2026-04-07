@@ -1,0 +1,13 @@
+{
+  "name": "plextrac-workflow",
+  "owner": { "name": "Parker", "email": "parker@plextrac.com" },
+  "metadata": { "description": "Personal PlexTrac orchestrated workflow with agent teams", "version": "1.0.0" },
+  "plugins": [
+    {
+      "name": "plextrac-workflow",
+      "source": ".",
+      "description": "Orchestrated Jira ticket workflow with 9-agent team architecture",
+      "version": "1.0.0"
+    }
+  ]
+}
