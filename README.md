@@ -1,6 +1,6 @@
-# PlexTrac Workflow
+# pt-doots
 
-Personal Claude Code plugin for orchestrated PlexTrac ticket workflows.
+Parker's PlexTrac Claude Code plugin — orchestrated ticket workflows, agent teams, PR dashboard, and integration scaffolding.
 
 ## Prerequisites
 
@@ -12,7 +12,8 @@ Personal Claude Code plugin for orchestrated PlexTrac ticket workflows.
 
 | Command | Description |
 |---------|-------------|
-| `/plextrac-work` | Full Jira ticket workflow — research, plan, implement, test, QA, commit |
+| `/pt-doots` | Full Jira ticket workflow — research, plan, implement, test, QA, commit |
+| `/prs` | PR dashboard and review workflow |
 | `/bootstrap-team` | One-time agent roster setup |
 | `/team-audit` | Agent roster health review |
 | `/new-integration` | Scaffold a new EM integration with sub-agents |
@@ -20,5 +21,5 @@ Personal Claude Code plugin for orchestrated PlexTrac ticket workflows.
 ## Install
 
 ```bash
-claude plugin add /path/to/plextrac-workflow
+claude --plugin-dir /path/to/pt-doots
 ```

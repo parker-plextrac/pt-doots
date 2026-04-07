@@ -1,10 +1,10 @@
 {
-  "name": "plextrac-workflow",
+  "name": "pt-doots",
   "owner": { "name": "Parker", "email": "parker@plextrac.com" },
-  "metadata": { "description": "Personal PlexTrac orchestrated workflow with agent teams", "version": "1.0.0" },
+  "metadata": { "description": "Parker's PlexTrac toolkit — orchestrated workflow, agent teams, PR dashboard", "version": "1.0.0" },
   "plugins": [
     {
-      "name": "plextrac-workflow",
+      "name": "pt-doots",
       "source": ".",
       "description": "Orchestrated Jira ticket workflow with 9-agent team architecture",
       "version": "1.0.0"

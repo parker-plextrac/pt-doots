@@ -1,6 +1,6 @@
 ---
-name: plextrac-work
-description: PlexTrac ticket workflow: fetch a Jira ticket, research codebase, plan with the user how to tackle it, create a branch, run sub-agents to implement and review, then commit (never push). Use when working in a PlexTrac workspace on a Jira ticket—e.g. "tackle IO-2097", "tackle PROJ-123", "implement this ticket", "do IO-2097", "complete this ticket", "run the plextrac workflow for PT-456". Also handles "save our work" / "save progress" by updating notes/progress file.
+name: pt-doots
+description: PlexTrac ticket workflow: fetch a Jira ticket, research codebase, plan with the user how to tackle it, create a branch, run sub-agents to implement and review, then commit (never push). Use when working in a PlexTrac workspace on a Jira ticket—e.g. "tackle IO-2097", "tackle PROJ-123", "implement this ticket", "do IO-2097", "complete this ticket", "doots IO-2097", "run the plextrac workflow for PT-456". Also handles "save our work" / "save progress" by updating notes/progress file.
 ---
 
 # PlexTrac Work

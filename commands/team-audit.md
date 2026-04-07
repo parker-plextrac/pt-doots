@@ -9,7 +9,7 @@ description: >
 
 # Team Audit — Agent Roster Health Check
 
-Full roster audit. Run end-of-day, end-of-sprint, or whenever you want a thorough review of agent health, performance trends, and workflow effectiveness. This is the deep review — distinct from the lightweight roster check that runs at the start of every `/plextrac-work` session.
+Full roster audit. Run end-of-day, end-of-sprint, or whenever you want a thorough review of agent health, performance trends, and workflow effectiveness. This is the deep review — distinct from the lightweight roster check that runs at the start of every `/pt-doots` session.
 
 **Plugin root**: `{WORKSPACE}/agent-skills/plugins/plextrac` — store as `{PLUGIN}`.
 
@@ -27,7 +27,7 @@ Full roster audit. Run end-of-day, end-of-sprint, or whenever you want a thoroug
    ```bash
    test -f "{PLUGIN}/.local/team-manager/metrics-summary.md" && echo "HAS_METRICS" || echo "NO_METRICS"
    ```
-   If no metrics: "No workflow metrics found. Run at least one ticket through `/plextrac-work` first so the Team Manager has data to analyze."
+   If no metrics: "No workflow metrics found. Run at least one ticket through `/pt-doots` first so the Team Manager has data to analyze."
 
 3. **Initialize directories** (in case they exist but are incomplete):
    ```bash
@@ -257,4 +257,4 @@ If agent definitions were modified, suggest committing:
 - **Workflow history**: `{PLUGIN}/.local/scrum-master/workflow-history.md`
 - **Learned patterns**: `{PLUGIN}/.local/team-manager/learned-patterns.md`
 - **Bootstrap**: `/bootstrap-team` — one-time agent roster setup
-- **Workflow**: `/plextrac-work` — the orchestrator that generates the metrics this audit reviews
+- **Workflow**: `/pt-doots` — the orchestrator that generates the metrics this audit reviews
