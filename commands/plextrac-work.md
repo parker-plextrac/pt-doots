@@ -145,14 +145,14 @@ If no notes exist, this is a new ticket — proceed to Step 1.
 ## Step 1: Research (sub-agent)
 
 - **FIRST — check notes folder**: If `notes/{TICKET-KEY}/research.md` exists, read it — skip to Step 2.
-- **Otherwise**: Fetch ticket from Jira (MCP) **in main context**, then launch a **Research sub-agent**.
+- **Otherwise**: Use the `/ticket` command to fetch and display the ticket details, then launch a **Research sub-agent** with the ticket content.
 
 ### Research sub-agent prompt template
 ```
 You are researching Jira ticket {TICKET-KEY} for the PlexTrac workspace.
 
 Ticket content:
-{paste ticket title, description, acceptance criteria}
+{paste ticket details from /ticket output — title, description, acceptance criteria}
 
 Your job:
 1. Explore the codebase under {WORKSPACE}/{repo} to understand the affected areas
@@ -389,15 +389,14 @@ Present a summary:
 **Tests**: {count} added/modified
 **Review**: Clean (or: {N} findings fixed, {N} deferred)
 **Verification**: All passing
-
-### Suggested PR
-**Title**: {TICKET-KEY}: {short description}
-**Description**: {2-3 sentence summary}
-
-⚠️ Push when ready: `git push -u origin {branch-name}`
 ```
 
-**→ Save to progress.md**: `Handoff complete. Branch ready for push and PR.`
+Then ask the user: **"Ready to create a PR? I can use `/create-pr` to push the branch and open a PR with the repo's template filled out."**
+
+- If yes → invoke `/create-pr` which handles push, template, draft approval, and PR creation
+- If no → remind them: `git push -u origin {branch-name}` when ready
+
+**→ Save to progress.md**: `Handoff complete. Branch ready for push and PR.` (or `PR created: {url}`)
 
 ---
 
@@ -442,3 +441,14 @@ When the user says **"save our work"**, **"save progress"**, **"let's save"**, *
 - **Full workflow details**: [reference/workflow.md](../reference/workflow.md)
 - **Implementation standards**: Follow CLAUDE.md rules for each repo
 - **Code review**: Everything Claude Code `typescript-reviewer` / `python-reviewer` / `code-reviewer` agents
+
+## Team Tools (from plextrac agent-skills plugin)
+
+These commands are provided by the team plugin and used by this workflow:
+
+| Command | Used in | Purpose |
+|---------|---------|---------|
+| `/ticket` | Step 1 | Fetch Jira ticket details |
+| `/verify` | Step 4 (all verification loops) | Lint, typecheck, tests |
+| `/create-pr` | Step 6 | Push branch + create PR with template |
+| `/logs` | Debugging during implementation | View service logs |
