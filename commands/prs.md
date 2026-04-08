@@ -200,7 +200,7 @@ Launch these **in parallel**:
 
 **Call 4:** Extract the Jira ticket key from the PR title or branch name using regex `[A-Z]+-\d+` (e.g. `IO-2168`). If found:
 ```
-mcp__atlassian-jira__jira_get(path: "/rest/api/3/issue/{ticket_key}")
+mcp__atlassian__getJiraIssue(cloudId: "plextrac.atlassian.net", issueIdOrKey: "{ticket_key}", responseContentFormat: "markdown")
 ```
 Extract: summary, description, acceptance criteria, and status.
 

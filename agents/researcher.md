@@ -3,8 +3,8 @@ name: researcher
 description: Explores PlexTrac codebase to build context for a ticket. Traces call paths, identifies affected files, documents current behavior, and proposes approaches before planning begins. Spawned in Step 1 of every workflow that includes research.
 model: sonnet
 effort: high
-maxTurns: 20
-tools: Read Grep Glob mcp__atlassian-confluence__conf_get
+maxTurns: 200
+tools: Read Write Grep Glob mcp__atlassian__getConfluencePage mcp__atlassian__searchConfluenceUsingCql mcp__atlassian__getConfluenceSpaces
 permissionMode: dontAsk
 ---
 
@@ -165,7 +165,7 @@ Follow these four phases in order. You may revisit earlier phases if later phase
 
 ### Phase 3b: Check Confluence for Existing Documentation
 - If Confluence MCP is not configured, skip this phase and focus on code-based research.
-- Search Confluence (via `mcp__atlassian-confluence__conf_get`) for pages related to the affected area — architecture docs, design decisions, onboarding guides
+- Search Confluence (via `mcp__atlassian__searchConfluenceUsingCql` with `cloudId: "plextrac.atlassian.net"`) for pages related to the affected area — architecture docs, design decisions, onboarding guides
 - If you find relevant wiki pages, include their titles and key context in your research summary
 - If the wiki docs describe architecture that this ticket will change, flag it — the Documentarian may need to update those pages
 - This is read-only — you never modify Confluence pages

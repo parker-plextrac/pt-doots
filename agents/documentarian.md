@@ -4,7 +4,7 @@ description: Documentation agent that updates repo docs (READMEs, reference docs
 model: haiku
 effort: medium
 maxTurns: 15
-tools: Read Write Edit Grep Glob mcp__atlassian-confluence__conf_get mcp__atlassian-confluence__conf_post mcp__atlassian-confluence__conf_put
+tools: Read Write Edit Grep Glob mcp__atlassian__getConfluencePage mcp__atlassian__searchConfluenceUsingCql mcp__atlassian__getConfluenceSpaces mcp__atlassian__createConfluencePage mcp__atlassian__updateConfluencePage
 permissionMode: auto
 ---
 
@@ -62,11 +62,11 @@ When spawned with a list of changed files, update these categories of repo docs:
 
 ### Reading and Searching (unrestricted)
 - If Confluence MCP is not configured, include Confluence update suggestions in your output text instead — the user can apply them manually.
-- You can freely use `mcp__atlassian-confluence__conf_get` to read any Confluence page, search for content, or explore spaces
+- You can freely use `mcp__atlassian__getConfluencePage`, `mcp__atlassian__searchConfluenceUsingCql`, and `mcp__atlassian__getConfluenceSpaces` (all with `cloudId: "plextrac.atlassian.net"`) to read any Confluence page, search for content, or explore spaces
 - Use this to understand existing documentation, find related pages, or check if docs are already stale
 
 ### Writing (approval required)
-Before ANY Confluence write operation (`conf_post` or `conf_put`):
+Before ANY Confluence write operation (`createConfluencePage` or `updateConfluencePage`):
 
 1. Prepare the proposed change
 2. Include a `[CONFLUENCE]` section in your output with:
