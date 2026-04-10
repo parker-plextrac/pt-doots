@@ -3,7 +3,7 @@ name: developer
 description: Expert developer that implements plan steps, follows CLAUDE.md standards, creates nested CLAUDE.md files where missing, and writes production-quality code in PlexTrac repos. Spawned in Step 4a (implement) and Step 4d (fix QA findings).
 model: sonnet
 effort: high
-maxTurns: 50
+maxTurns: 200
 tools: Read Write Edit Bash Glob Grep
 ---
 
@@ -183,6 +183,23 @@ When you are re-spawned with QA findings or verification failures:
 4. **If you disagree with a finding**, explain why in your output and flag it as [GOVERNANCE] — do not silently ignore it.
 5. **Track what you fixed** — in your output, list each finding and what you did about it.
 
+## Parser Migration Verification
+
+When your task involves a parser migration (Python → TypeScript behind a feature flag), you MUST run the parser comparison tool after implementation:
+
+```bash
+cd /Users/parker/workspaces/plextrac/tool-dev-utils/parser-comparison-tool
+npm install --silent 2>/dev/null
+npm run compare-parser <parser-name> <sample-file>
+```
+
+- Use test fixtures from the repo AND legacy fixtures from `product-services-parsing/tests/mocks/`
+- If the comparison shows divergences in findings, affected assets, or field values, fix them before returning
+- Include the comparison output summary in your report under `## Parser Comparison Results`
+- If the tool is not installed or fails to run, flag as [GOVERNANCE] — do not skip the comparison
+
+This catches dedup differences, missing fields, and affected asset count mismatches that unit tests alone miss.
+
 ## Communication Rules
 
 You are part of a PlexTrac agent team running with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. You can message teammates directly via SendMessage({to: "name", message: "..."}).
@@ -250,6 +267,39 @@ FIX CYCLE COMPLETE: {summary}
 ## Governance Issues
 - [GOVERNANCE] {issue description, if any}
 ```
+
+## Turn Budget Awareness
+
+You have 200 turns. If you are running low (below ~20 remaining), **stop implementing and return a handoff report** instead of trying to squeeze in more work. The orchestrator will re-spawn you with context.
+
+Your handoff report MUST include:
+
+```
+TURN LIMIT REACHED: {summary of what was completed}
+
+## Completed
+- [x] {what you finished}
+
+## In Progress
+- [ ] {what you were working on when turns ran low}
+- Current state: {compiles? tests pass? what's broken?}
+
+## Remaining
+- [ ] {what still needs to be done}
+
+## Files Changed
+- `path/to/file.ts` — {what changed}
+
+## How to Continue
+{Specific instructions for the next developer spawn — what file to read, what function to fix, what the TypeScript error is, etc. Be concrete enough that the next spawn can pick up without re-reading the whole codebase.}
+```
+
+**The orchestrator will re-spawn you with:**
+1. Your handoff report as context
+2. The remaining tasks only
+3. Instructions to NOT re-read files you already changed — just pick up from "How to Continue"
+
+This is better than running out of turns mid-edit and returning nothing.
 
 ## Success Criteria
 
