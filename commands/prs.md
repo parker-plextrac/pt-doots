@@ -221,6 +221,34 @@ mcp__atlassian__getJiraIssue(cloudId: "plextrac.atlassian.net", issueIdOrKey: "{
 ```
 Extract: summary, description, acceptance criteria, and status.
 
+#### 2a-backport: Detect Backport & Check Prior Reviews
+
+After Call 1 returns, check if the PR's `base.ref` targets a release branch (e.g. `release/v3.0`, `release/v2.28`) rather than `main`. If so, this is a **backport**.
+
+For backport PRs:
+
+1. Extract the Jira ticket key from the PR title or branch name using regex `[A-Z]+-\d+`
+2. Search `{WORKSPACE}/notes/pr-reviews/` for a prior review of the same work. Try these strategies in order (stop at first match):
+   - **Ticket match**: scan review files whose `ticket` field matches the extracted ticket key
+   - **Title match**: if ticket is "none" in review files, search for review files whose `title` contains the ticket key (e.g. a review file titled "add severity to synqly plugin" won't match, but one titled "IO-2191: fix severity" would)
+   - **Author + recency match**: look for review files from the same `author` in the same `repo`, posted within the last 7 days — these are likely the original PR that's now being backported. Present as a candidate and ask user to confirm.
+3. If a prior review is found, read it and present a summary:
+
+   > **Backport detected** — this PR targets `{base_ref}` (not `main`).
+   > Found a prior review for the same work: PR #{original_pr} ("{original_title}") reviewed on {date}, status: {status}.
+   >
+   > Prior findings:
+   > {findings table from the original review file}
+   >
+   > Since this is a backport of already-reviewed code, you can:
+   > - **Skip** — the code was already reviewed on the original PR
+   > - **Quick diff** — compare the backport diff against the original to check for cherry-pick drift
+   > - **Full review** — run the full 4-agent review anyway
+
+4. If no prior review file is found, proceed with the full review but note "Backport detected (targets `{base_ref}`) — no prior review found for {ticket_key}" in the review header.
+
+5. If the user chooses **Skip**, jump to Step 9 (restore branch). If **Quick diff**, do a lightweight comparison (no agents — just fetch both PR diffs and highlight differences). If **Full review**, continue to Step 2b as normal.
+
 #### 2b: Checkout PR branch
 
 The orchestrator may be in any directory. After Call 1 completes and `{head_ref}` is known:
@@ -475,17 +503,25 @@ Write a 2-3 sentence review comment that:
 For each selected finding, rewrite it as a review comment in Parker's voice:
 
 **Voice rules:**
-- Use: "Hey!", "Would it be worth...", "Just wanted to flag", "Just thinking out loud", "Totally not blocking"
-- Frame feedback as observations: "feels a bit heavy-handed" NOT "you should change this"
+- These comments are for humans — write like a teammate, not a report generator
+- Get to the point — no filler openers ("Hey!", "Just wanted to flag", "Just thinking out loud")
+- "Would it be worth..." is fine for suggestions, but don't overuse hedging language
+- Frame feedback as observations, not commands: "feels a bit heavy-handed" NOT "you should change this"
 - No CLAUDE.md citations — frame as personal observations
-- For nits, use playful language
 - Skip findings that would just add noise — fold them into the blurb if worth mentioning
+
+**Formatting rules (readability matters):**
+- Break comments into short paragraphs — never post a wall of text
+- Structure: (1) what's wrong, (2) why it matters, (3) suggested fix
+- Each paragraph should be 1-2 sentences max
+- Inline code backticks are fine but don't over-backtick — it fragments the reading flow on GitHub
 
 **NEVER include:**
 - "Generated with Claude Code" or any AI attribution
 - Praise-only inline comments (weave praise into the blurb)
 - Lecture-style explanations
 - "you should" or "this needs to" language
+- "Not blocking!", "Totally not blocking" or similar disclaimers unless the user adds them
 
 Present the full batch:
 
@@ -522,27 +558,19 @@ After approval:
 
 ### Step 8: Post Review
 
-Build the review payload using Python to avoid all shell escaping issues.
+Post in two phases: (1) the top-level review with just the blurb, then (2) individual inline comments on the code.
 
-Since review agents no longer produce diff positions, all findings are posted in the review body (not as inline comments). Format each finding as a body section with file:line reference:
+**CRITICAL: Comments MUST be posted as inline comments on specific code lines, NOT in the review body.** The review body should only contain the blurb. Dumping findings into the body looks lazy and AI-generated.
+
+#### Phase 1: Post the review (blurb only)
 
 ```bash
 python3 -c "
 import json
 
-# Build the body: blurb first, then each finding as a section
-body_parts = [
-    '''BLURB_TEXT_HERE''',
-]
-
-# Append each selected finding as a body section
-# findings = [('path/to/file.ts', 45, 'comment text'), ...]
-# for path, line, text in findings:
-#     body_parts.append(f'**{path}:{line}** — {text}')
-
 payload = {
     'event': 'COMMENT',  # or 'APPROVE' if user chose to approve
-    'body': '\n\n'.join(body_parts),
+    'body': '''BLURB_TEXT_HERE''',
 }
 
 with open('/tmp/pr-review.json', 'w') as f:
@@ -550,18 +578,48 @@ with open('/tmp/pr-review.json', 'w') as f:
 "
 ```
 
-Substitute the actual blurb text and finding details into the Python script at dispatch time. The triple-quoted string handles newlines and special characters safely.
-
-Post the review:
 ```bash
 /opt/homebrew/bin/gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews \
   --method POST \
   --input /tmp/pr-review.json
 ```
 
-Clean up:
+#### Phase 2: Post inline comments
+
+For each selected finding, post an inline comment using the PR comments API:
+
 ```bash
-rm /tmp/pr-review.json
+python3 -c "
+import json
+
+comment = {
+    'body': '''COMMENT_TEXT_HERE''',
+    'commit_id': '{head_sha}',
+    'path': '{file_path}',
+    'line': {line_number},
+    'side': 'RIGHT',
+}
+
+with open('/tmp/pr-comment-N.json', 'w') as f:
+    json.dump(comment, f)
+"
+```
+
+```bash
+/opt/homebrew/bin/gh api repos/{owner}/{repo}/pulls/{pr_number}/comments \
+  --method POST \
+  --input /tmp/pr-comment-N.json
+```
+
+**Line placement rules:**
+- GitHub only allows inline comments on lines within the diff context
+- If the finding's line IS in the diff: post directly on that line
+- If the finding's line is OUTSIDE the diff: post on the nearest changed line in the same file and reference the actual line number in the comment text
+- Use `line` + `side: "RIGHT"` (for new-side lines) — do NOT use `position` (deprecated diff-relative counting)
+
+Clean up temp files after all comments are posted:
+```bash
+rm /tmp/pr-review.json /tmp/pr-comment-*.json
 ```
 
 **If the post succeeds:**

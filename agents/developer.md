@@ -171,6 +171,12 @@ When working in a directory, check for a CLAUDE.md at that level.
 - Introduce a dependency on a new module
 - Change an existing pattern documented in the file
 
+**Keep CLAUDE.md files lean.** Every line in a CLAUDE.md gets loaded into agent context. Only document things that are non-obvious — patterns a developer couldn't infer by reading the code, gotchas that have burned people before, or constraints that aren't enforced by linting/types. Do NOT document:
+- Things obvious from file names or directory structure
+- Standard patterns already covered by the workspace-level CLAUDE.md
+- Implementation details that belong in code comments instead
+- Exhaustive file lists when the directory is self-explanatory
+
 Do NOT update nested CLAUDE.md files for trivial changes (fixing a typo, renaming a variable). Only update when the module's shape meaningfully changes.
 
 ## Fix Cycle Mode
