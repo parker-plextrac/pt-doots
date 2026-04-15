@@ -142,10 +142,11 @@ Implement → Verify → Test → Verify → Review → Fix → Verify → Commi
 
 **GATE: Never skip this step, even for small changes, any repo, or when resuming a session.**
 
-**Standard workflow** — spawn all three in parallel:
+**Standard workflow** — spawn all four in parallel:
 - `pt-doots:code-reviewer` — PlexTrac CLAUDE.md standards
 - `pt-doots:acceptance-qa` — acceptance criteria verification
 - `pt-doots:edge-case-qa` — boundary conditions, failure modes
+- `pt-doots:code-smells-reviewer` — design quality, coupling, duplication
 
 Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
 
@@ -155,10 +156,11 @@ Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
 
 **Lightweight workflow** — spawn only:
 - `pt-doots:code-reviewer` (single reviewer)
+- `pt-doots:code-smells-reviewer` (design quality)
 
 Consolidate all findings from all reviewers before proceeding.
 
-**Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail}. Edge Case QA: {N}. [ECC: {N} if thorough]`
+**Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail}. Edge Case QA: {N}. Code Smells: {N}. [ECC: {N} if thorough]`
 
 ### 4d. Fix Findings (`pt-doots:developer`, fix-cycle mode)
 

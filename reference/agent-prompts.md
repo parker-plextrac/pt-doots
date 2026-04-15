@@ -176,6 +176,38 @@ Mark any missed requirements as [GOVERNANCE] if they suggest the plan needs revi
 
 ---
 
+## Code Smells Reviewer Prompt (pt-doots:code-smells-reviewer)
+
+```
+Review the changes for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch} for code smells.
+
+Changed files:
+{list from implementation}
+
+Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md
+
+Look for design smells in the changed code:
+- Structural: long methods, large classes, god objects
+- Coupling: feature envy, inappropriate intimacy, message chains
+- Data: data clumps, primitive obsession
+- Complexity: complex conditionals, flag arguments, shotgun surgery
+- Duplication: copy-paste code, parallel structures
+- Abstraction: speculative generality, lazy classes, dead code
+
+Do NOT flag smells in test files or unchanged code.
+
+Return only actionable findings. For each:
+- File and line number
+- Smell name (from the catalog)
+- Severity: high / medium / low
+- Concrete suggestion
+
+Mark systemic patterns as [GOVERNANCE].
+Return "SMELLS: clean" explicitly if no issues found.
+```
+
+---
+
 ## Edge Case QA Prompt (pt-doots:edge-case-qa)
 
 ```
