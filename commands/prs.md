@@ -243,7 +243,7 @@ For backport PRs:
    > Since this is a backport of already-reviewed code, you can:
    > - **Skip** — the code was already reviewed on the original PR
    > - **Quick diff** — compare the backport diff against the original to check for cherry-pick drift
-   > - **Full review** — run the full 4-agent review anyway
+   > - **Full review** — run the full 5-agent review anyway
 
 4. If no prior review file is found, proceed with the full review but note "Backport detected (targets `{base_ref}`) — no prior review found for {ticket_key}" in the review header.
 
@@ -295,9 +295,9 @@ This gives the orchestrator (and user) context on what's already been discussed.
 
 **Context strategy:** For each agent, prepare the full diff content from Call 2 and **inline it directly in the prompt**. Agents should NOT need to read files or run git commands to find the changed code — give them everything they need upfront. They CAN read additional files for surrounding context (e.g., CLAUDE.md, imports, types), but the diff itself must be in the prompt.
 
-For PRs with very large diffs (>200KB of patch content), split files across agents by domain instead of duplicating the entire diff to all 4. Note which agent got which files.
+For PRs with very large diffs (>200KB of patch content), split files across agents by domain instead of duplicating the entire diff to all 5. Note which agent got which files.
 
-Launch **4 parallel sub-agents** via the Agent tool. Each agent returns **structured findings ONLY** — no posting, no GitHub interaction.
+Launch **5 parallel sub-agents** via the Agent tool. Each agent returns **structured findings ONLY** — no posting, no GitHub interaction.
 
 ---
 
@@ -416,6 +416,28 @@ FINDING | severity: MED/LOW | file: path/to/file.ts | line: 45 | description —
 
 If no violations found, return: NO_FINDINGS
 ```
+
+---
+
+**Agent 5 — Code Smells Detector**
+
+Spawn using `subagent_type: "pt-doots:code-smells-reviewer"` — the agent definition has the full smell catalog and review strategy. Just provide the PR context:
+
+```
+Review PR #{pr_number} in {owner}/{repo} for code smells.
+
+PR title: {title}
+PR description: {description}
+
+The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
+
+Changed files and their diffs:
+{paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
+
+Review these changed files using your full smell catalog. Skip test files. Return your CODE SMELLS REPORT.
+```
+
+**Output mapping:** The agent returns findings in `[file:line] [Smell Name] [severity] description` format. When consolidating with other agents' findings, normalize to the same structure: extract file, line, severity, and description from each finding line.
 
 ---
 
@@ -665,6 +687,6 @@ If the restore fails (e.g. the branch was deleted), stay on the PR branch and in
 The command is split between lightweight orchestrator (main context) and heavyweight analysis (sub-agents):
 
 - **Main context:** Dashboard display, findings presentation, comment drafting (voice-sensitive), approval gate, posting
-- **Sub-agents:** All code review analysis (4 parallel agents), context gathering where needed
+- **Sub-agents:** All code review analysis (5 parallel agents), context gathering where needed
 
 This keeps the orchestrator lean and avoids context exhaustion from dumping full diffs into the main conversation.

@@ -86,7 +86,7 @@ Step 2:   Plan                (main — user interaction)
 Step 3:   Create Branch       (main)
 Step 4a:  Implement           (pt-doots:developer) → /verify
 Step 4b:  Write Tests         (pt-doots:test-writer) → /verify
-Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa, parallel)
+Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer, parallel)
           If thorough:        (+ ECC language-matched reviewer as second pass)
 Step 4d:  Fix Findings        (pt-doots:developer, fix-cycle mode) → /verify
 Step 4e:  Documentation       (pt-doots:documentarian — if workflow includes it)
@@ -105,6 +105,7 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 | 4c | `pt-doots:code-reviewer` | Read-only. PlexTrac standards. |
 | 4c | `pt-doots:acceptance-qa` | Read-only. Acceptance criteria. |
 | 4c | `pt-doots:edge-case-qa` | Read-only. Boundary conditions. |
+| 4c | `pt-doots:code-smells-reviewer` | Read-only. Design quality. |
 | 4c | `everything-claude-code:typescript-reviewer` or `python-reviewer` | Only for "thorough" workflow. |
 | 4e | `pt-doots:documentarian` | Only when scrum-master recommends it. |
 
