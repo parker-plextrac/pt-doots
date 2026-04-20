@@ -66,13 +66,47 @@ Show the recommendation to the user. They can override.
 
 ---
 
+## Step 0.7: Fetch Ticket Context (main context)
+
+Run before research. This gathers the full Jira context into the notes folder.
+
+### 1. Fetch ticket details + Bug Description
+
+Use `mcp__atlassian__getJiraIssue` with **two calls**:
+- Standard fields (summary, description, status, assignee, etc.)
+- Custom fields: `["customfield_10227"]` — this is the **Bug Description** field (Defect issue type). It often contains the real bug details, repro steps, and expected/actual behavior when the standard `description` field is empty.
+
+If `customfield_10227` has content, display it to the user alongside the standard description.
+
+### 2. Download attachments
+
+Check if the ticket has attachments (fetch with `fields: ["attachment"]`). If it does:
+
+```bash
+~/bin/jira-attachment {TICKET-KEY} {WORKSPACE}/notes/{TICKET-KEY}
+```
+
+This downloads all attachments to the notes folder. Common attachment types:
+- `.ptrac` — PlexTrac report export (JSON), useful as test data
+- `.docx` — Jinja templates or example exports, useful for OOXML inspection
+- `.png`/`.jpg` — Screenshots showing the bug
+- `.csv`/`.xml` — Import/export test files
+
+Tell the user what was downloaded. These files are available to sub-agents via the notes folder path.
+
+**If `~/bin/jira-attachment` is not installed**: Tell the user to run `/setup` or create an Atlassian API token at https://id.atlassian.com/manage-profile/security/api-tokens and save credentials to `~/.jira-attlasian-cred`.
+
+**Save to progress.md**: `Ticket context fetched. Bug Description: {present/absent}. Attachments: {count} downloaded to notes/`
+
+---
+
 ## Step 1: Research (sub-agent)
 
 **Check notes first**: If `notes/{TICKET-KEY}/research.md` exists, read it and skip to Step 2.
 
 **Otherwise**:
-1. Fetch ticket via `/ticket {TICKET-KEY}` in main context
-2. Spawn `pt-doots:researcher` with the ticket content — use the **Researcher Prompt** from [agent-prompts.md](agent-prompts.md)
+1. Fetch ticket via `/ticket {TICKET-KEY}` in main context (if not already done in Step 0.7)
+2. Spawn `pt-doots:researcher` with the ticket content — use the **Researcher Prompt** from [agent-prompts.md](agent-prompts.md). Include Bug Description and list of downloaded attachments in the prompt.
 3. Researcher explores codebase, writes `research.md`, returns 2-3 paragraph summary
 4. Main context receives only the summary
 
