@@ -243,7 +243,7 @@ For backport PRs:
    > Since this is a backport of already-reviewed code, you can:
    > - **Skip** — the code was already reviewed on the original PR
    > - **Quick diff** — compare the backport diff against the original to check for cherry-pick drift
-   > - **Full review** — run the full 5-agent review anyway
+   > - **Full review** — run the full multi-agent review anyway
 
 4. If no prior review file is found, proceed with the full review but note "Backport detected (targets `{base_ref}`) — no prior review found for {ticket_key}" in the review header.
 
@@ -295,93 +295,62 @@ This gives the orchestrator (and user) context on what's already been discussed.
 
 **Context strategy:** For each agent, prepare the full diff content from Call 2 and **inline it directly in the prompt**. Agents should NOT need to read files or run git commands to find the changed code — give them everything they need upfront. They CAN read additional files for surrounding context (e.g., CLAUDE.md, imports, types), but the diff itself must be in the prompt.
 
-For PRs with very large diffs (>200KB of patch content), split files across agents by domain instead of duplicating the entire diff to all 5. Note which agent got which files.
+For PRs with very large diffs (>200KB of patch content), split files across agents by domain instead of duplicating the entire diff to all agents. Note which agent got which files.
 
-Launch **5 parallel sub-agents** via the Agent tool. Each agent returns **structured findings ONLY** — no posting, no GitHub interaction.
+Launch **5-7 parallel sub-agents** via the Agent tool (6th is conditional on test files, 7th+ are conditional on artifact types — see below). Each agent returns **structured findings ONLY** — no posting, no GitHub interaction.
+
+**Use pt-doots agents wherever possible** — they have domain expertise, CLAUDE.md awareness, and structured output formats that general-purpose agents don't match.
 
 ---
 
-**Agent 1 — Bug Scanner**
+**Agent 1 — Edge Case QA** (`subagent_type: "pt-doots:edge-case-qa"`)
 
 ```
-You are reviewing PR #{pr_number} in {owner}/{repo} for bugs.
+Review PR #{pr_number} in {owner}/{repo} for boundary conditions and edge cases.
 
 PR title: {title}
 PR description: {description}
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}. You can read files for additional context.
+The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
 
-Instructions:
-1. Analyze each changed file's diff carefully
-2. If you need surrounding context (imports, types, called functions), read those files — but do NOT re-read files whose diffs are already provided above
-3. Look for bugs: logic errors, off-by-one, null/undefined access, race conditions, resource leaks
-4. Focus on significant bugs — ignore things a linter or typechecker would catch
-5. Ignore style issues, naming, formatting
-6. For each bug found, return a line in this format:
-
-FINDING | severity: HIGH/MED/LOW | file: path/to/file.ts | line: 45 | description
-
-If no bugs found, return: NO_FINDINGS
+Examine every changed function for boundary conditions, null/undefined/empty handling, error paths, race conditions, async edge cases, and data permutations. Return your EDGE CASE QA report.
 ```
 
 ---
 
-**Agent 2 — Data Flow Analyzer (HIGHEST PRIORITY)**
+**Agent 2 — Acceptance QA (HIGHEST PRIORITY)** (`subagent_type: "pt-doots:acceptance-qa"`)
 
 ```
-You are reviewing PR #{pr_number} in {owner}/{repo} for data flow issues. This is the highest-priority review.
+Review PR #{pr_number} in {owner}/{repo} to verify implementation meets its claims.
 
 PR title: {title}
 PR description: {description}
 Jira context: {jira_summary_and_acceptance_criteria OR "No Jira ticket"}
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}. You can read files for additional context.
+The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
 
-Instructions:
-1. Identify the PR's core claim — what behavior does it say it changes?
-2. Trace the data flow through ALL changed files, prioritizing:
-   - Repository/data layer files (highest priority)
-   - Service layer files
-   - Mapping/cosmetic files (lowest priority)
-3. Verify the PR's claims against the actual code — does the code do what the description says?
-4. Look for these specific red flags:
-   - .map() over items sharing a key/ID (stale state bug — should be .reduce() or sequential accumulation)
-   - Promise.all() over items with shared mutable state
-   - Upsert logic that drops fields or overwrites when it should merge
-   - Tests that only use 1 item per key when production sends many
-5. Check that tests match real data shapes, not just happy path
-6. For each issue found, return a line in this format:
-
-FINDING | severity: HIGH/MED/LOW | file: path/to/file.ts | line: 45 | description
-
-If no issues found, return: NO_FINDINGS
+Verify the PR's claims against the actual code. Trace data flow through all changed files. Check for .map() stale state bugs, Promise.all() over shared state, upsert logic that drops fields, and tests that only use 1 item per key. Return your per-criterion PASS/FAIL report.
 ```
 
 ---
 
-**Agent 3 — History & Context**
+**Agent 3 — History & Context** (`subagent_type: "pt-doots:researcher"`)
 
 ```
-You are reviewing PR #{pr_number} in {owner}/{repo} using git history context.
+Research PR #{pr_number} in {owner}/{repo} using git history context.
 
 The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
 
 Changed files:
 {list of changed file paths}
 
-Instructions:
-1. For each changed file, run git blame on the modified sections to understand history
-2. Check for previous PRs that touched these files — look for recurring issues or patterns
-3. Read code comments in the modified files — check if the changes comply with guidance in comments
-4. Look for TODO/FIXME/HACK comments the PR should have addressed
-5. For positive observations (good patterns, thorough tests), use severity "NICE"
-6. For each issue or observation, return a line in this format:
+For each changed file: run git blame on modified sections, check for previous PRs that touched these files, read code comments for guidance compliance, look for TODO/FIXME/HACK that should have been addressed. For positive observations use severity "NICE". Return findings as:
 
 FINDING | severity: HIGH/MED/LOW/NICE | file: path/to/file.ts | line: 45 | description
 
@@ -390,31 +359,17 @@ If no issues found, return: NO_FINDINGS
 
 ---
 
-**Agent 4 — CLAUDE.md Compliance**
+**Agent 4 — Code Reviewer** (`subagent_type: "pt-doots:code-reviewer"`)
 
 ```
-You are reviewing PR #{pr_number} in {owner}/{repo} for CLAUDE.md compliance.
+Review PR #{pr_number} in {owner}/{repo} against CLAUDE.md standards.
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}. You can read files for additional context (especially CLAUDE.md files).
+The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
 
-Instructions:
-1. Read the workspace CLAUDE.md at {WORKSPACE}/CLAUDE.md — this is the authoritative cross-repo standards file. Also check for a repo-specific CLAUDE.md at {WORKSPACE}/{repo}/CLAUDE.md if it exists.
-2. Read any CLAUDE.md files in directories containing changed files
-3. Check changes against ONLY rules explicitly stated in those CLAUDE.md files
-4. Do NOT invent rules — only flag violations of things the CLAUDE.md explicitly requires
-5. Common things to check:
-   - TypeScript: no `as any`, no `as unknown as T`, proper use of Pick for narrowing
-   - Python: type hints, f-strings, SOLID principles
-   - Testing patterns: co-location, naming, coverage
-   - Layer rules: services don't import repositories from other domains, etc.
-6. For each violation, return a line in this format:
-
-FINDING | severity: MED/LOW | file: path/to/file.ts | line: 45 | description — CLAUDE.md says: "exact quote"
-
-If no violations found, return: NO_FINDINGS
+Review every changed file against the workspace CLAUDE.md at {WORKSPACE}/CLAUDE.md and any repo-specific or directory-level CLAUDE.md files. Only flag violations of explicitly stated rules. Return your structured findings report.
 ```
 
 ---
@@ -438,6 +393,47 @@ Review these changed files using your full smell catalog. Skip test files. Retur
 ```
 
 **Output mapping:** The agent returns findings in `[file:line] [Smell Name] [severity] description` format. When consolidating with other agents' findings, normalize to the same structure: extract file, line, severity, and description from each finding line.
+
+---
+
+**Agent 6 — Test Quality Reviewer (conditional)**
+
+**Only spawn this agent if the PR includes test files** (`.test.ts`, `.test.tsx`, `test_*.py`). Check the changed files list from Call 2 — if none match test file patterns, skip this agent entirely.
+
+Spawn using `subagent_type: "pt-doots:test-reviewer"` — the agent definition has the full test smells catalog and review strategy. Just provide the PR context:
+
+```
+Review the test files in PR #{pr_number} in {owner}/{repo} for test quality issues.
+
+PR title: {title}
+PR description: {description}
+
+The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
+
+Changed files and their diffs:
+{paste file list and FULL diff/patch content from Call 2 — include ALL files, not just test files, so the reviewer can read production code alongside tests}
+
+Review only the test files in this changeset using your full test smells catalog. Return your TEST REVIEW report.
+```
+
+**Output mapping:** The agent returns findings in `[file:line] [Smell Name] [severity] description` format. When consolidating with other agents' findings, normalize to the same structure: extract file, line, severity, and description from each finding line.
+
+---
+
+**Agent 7+ — Dynamic Specialized Reviewers (conditional)**
+
+Check the changed files for artifact types that deserve dedicated expertise. Add a specialized general-purpose agent for each:
+
+| Artifact type | Trigger | Agent focus |
+|---|---|---|
+| Claude skill (`.claude/skills/**/SKILL.md`) | Any SKILL.md added/modified | Trigger accuracy, technical correctness vs codebase, completeness, maintainability, security (credential leaks in examples) |
+| Database migration (`migrations/`) | Any migration file | Schema safety, rollback plan, data loss risk |
+| CI/CD config (`.github/workflows/`) | Any workflow change | Correctness, security, performance |
+| Docker/infra (`Dockerfile`, `docker-compose*`) | Any container config | Security, layer efficiency, env leaks |
+
+For skill files specifically, the agent should compare the skill's code examples, file paths, and patterns against the actual codebase to catch drift. Check existing similar skills in the repo for consistency.
+
+These use general-purpose agents since no pt-doots equivalent exists.
 
 ---
 
@@ -507,6 +503,25 @@ Otherwise:
 
 If "none": ask if they want a top-level comment only, approve, or skip entirely.
 
+### Step 5b: Walk Through Findings One-at-a-Time
+
+**Do NOT batch all findings at once.** Present each finding individually and wait for the user's decision before moving to the next:
+
+1. Show the finding (number, severity, file, description)
+2. Ask: "Comment, skip, or tweak?"
+3. If comment: draft the comment text in Parker's voice and show it
+4. Wait for user approval or edits on the draft
+5. Move to the next finding
+
+This gives the user control over:
+- Which findings to include/skip
+- Whether to combine related findings into one comment
+- Whether to cross-reference other findings
+- The exact tone and content of each comment
+- Whether to escalate a nit to a real comment or vice versa
+
+After walking through all findings, show the complete batch (blurb + all approved comments) for final review.
+
 ### Step 6: Draft Review as a Batch
 
 **This step MUST happen in the main context (not a sub-agent) to preserve voice consistency.**
@@ -519,31 +534,41 @@ Write a 2-3 sentence review comment that:
 - Calls out what the PR does well (specific, not generic praise)
 - Sets the tone for inline comments ("Left a couple small thoughts inline but nothing blocking")
 - Sounds like Parker — warm, collaborative
+- If any findings can't be posted inline (outside the diff), include them in the blurb with **GitHub permalink links** (`[description](https://github.com/{owner}/{repo}/blob/{head_sha}/{path}#L{line})`)
 
 #### Inline comments
 
 For each selected finding, rewrite it as a review comment in Parker's voice:
 
 **Voice rules:**
-- These comments are for humans — write like a teammate, not a report generator
-- Get to the point — no filler openers ("Hey!", "Just wanted to flag", "Just thinking out loud")
+- These comments are for humans. Write like a teammate, not a report generator
+- Get to the point. No filler openers ("Hey!", "Just wanted to flag", "Just thinking out loud", "Just a heads up")
 - "Would it be worth..." is fine for suggestions, but don't overuse hedging language
 - Frame feedback as observations, not commands: "feels a bit heavy-handed" NOT "you should change this"
-- No CLAUDE.md citations — frame as personal observations
-- Skip findings that would just add noise — fold them into the blurb if worth mentioning
+- No CLAUDE.md citations. Frame as personal observations
+- "nit:" prefix already signals low pressure. No need to further soften with disclaimers
+- Skip findings already covered by another comment in the review. Cross-reference related comments instead ("Similar theme to the credential table comment")
+- Offer concrete suggestions when possible (code examples, specific alternatives, renamed values)
+- For pre-existing issues, check git blame to see if the PR author owns the code. If yes, "while you're in here" is fair. If not, acknowledge it's not from this PR
+- No cheesy encouragement ("Could be a nice boy scout opportunity if you're up for it")
+
+**AI tells to avoid (these are dead ringers for AI-generated text):**
+- NO em dashes (—) in running text. Use periods, commas, or restructure the sentence
+- NO "Hey!" or similar greetings
+- NO trailing disclaimers ("Not blocking!", "Totally not blocking")
+- Contractions are fine and sound more human
 
 **Formatting rules (readability matters):**
-- Break comments into short paragraphs — never post a wall of text
+- Break comments into short paragraphs. Never post a wall of text
 - Structure: (1) what's wrong, (2) why it matters, (3) suggested fix
 - Each paragraph should be 1-2 sentences max
-- Inline code backticks are fine but don't over-backtick — it fragments the reading flow on GitHub
+- Inline code backticks are fine but don't over-backtick
 
 **NEVER include:**
 - "Generated with Claude Code" or any AI attribution
 - Praise-only inline comments (weave praise into the blurb)
 - Lecture-style explanations
 - "you should" or "this needs to" language
-- "Not blocking!", "Totally not blocking" or similar disclaimers unless the user adds them
 
 Present the full batch:
 
@@ -576,13 +601,13 @@ After approval:
 > "Want to also approve this PR, or just leave as a comment?"
 
 - "comment" or "just comment" → event: `COMMENT`
-- "approve" → event: `APPROVE`
+- "approve" → event: `APPROVE`, body is ONLY: `🎺 💀 🤖` (Parker's signature approval emojis — no other text)
 
 ### Step 8: Post Review
 
 Post in two phases: (1) the top-level review with just the blurb, then (2) individual inline comments on the code.
 
-**CRITICAL: Comments MUST be posted as inline comments on specific code lines, NOT in the review body.** The review body should only contain the blurb. Dumping findings into the body looks lazy and AI-generated.
+**Prefer inline comments on specific code lines.** The review body should primarily contain the blurb. However, findings that reference lines OUTSIDE the diff (e.g., a hardcoded value on line 93 when the diff only touches lines 200-250) belong in the body — **always with a clickable GitHub permalink** so the author can jump straight to the line.
 
 #### Phase 1: Post the review (blurb only)
 
@@ -635,9 +660,10 @@ with open('/tmp/pr-comment-N.json', 'w') as f:
 
 **Line placement rules:**
 - GitHub only allows inline comments on lines within the diff context
-- If the finding's line IS in the diff: post directly on that line
-- If the finding's line is OUTSIDE the diff: post on the nearest changed line in the same file and reference the actual line number in the comment text
+- If the finding's line IS in the diff: post directly on that line using the inline comment API
+- If the finding's line is OUTSIDE the diff: put it in the review body with a **GitHub permalink** (format: `https://github.com/{owner}/{repo}/blob/{head_sha}/{file_path}#L{line}`)
 - Use `line` + `side: "RIGHT"` (for new-side lines) — do NOT use `position` (deprecated diff-relative counting)
+- **Permalink rule**: Every finding mentioned in the review body MUST include a clickable link to the exact line. Never reference "line ~93" without a link — the author should be able to click and navigate instantly.
 
 Clean up temp files after all comments are posted:
 ```bash
@@ -687,6 +713,6 @@ If the restore fails (e.g. the branch was deleted), stay on the PR branch and in
 The command is split between lightweight orchestrator (main context) and heavyweight analysis (sub-agents):
 
 - **Main context:** Dashboard display, findings presentation, comment drafting (voice-sensitive), approval gate, posting
-- **Sub-agents:** All code review analysis (5 parallel agents), context gathering where needed
+- **Sub-agents:** All code review analysis (5-6 parallel agents), context gathering where needed
 
 This keeps the orchestrator lean and avoids context exhaustion from dumping full diffs into the main conversation.

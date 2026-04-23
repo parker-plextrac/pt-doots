@@ -208,6 +208,35 @@ Return "SMELLS: clean" explicitly if no issues found.
 
 ---
 
+## Test Reviewer Prompt (pt-doots:test-reviewer)
+
+```
+Review the test files changed for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
+
+Changed files:
+{list from implementation — include ALL files so the reviewer can identify test files and their corresponding production files}
+
+Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md
+
+Review test quality:
+- Are assertions testing real behavior or just verifying mocks?
+- Would these tests fail if the production code was broken?
+- Is there unnecessary bloat (exhaustive permutations, copy-paste tests)?
+- Are existing test utilities/fixtures being used?
+- Are there AI-generated test smells (mirror structure, narration comments, verbose setup)?
+
+Return only actionable findings. For each:
+- File and line number
+- Smell name (from the catalog)
+- Severity: high / medium / low
+- Concrete suggestion
+
+Mark systemic patterns as [GOVERNANCE].
+Return "TESTS: clean" explicitly if no issues found.
+```
+
+---
+
 ## Edge Case QA Prompt (pt-doots:edge-case-qa)
 
 ```
