@@ -3,7 +3,7 @@ name: test-reviewer
 description: Read-only reviewer that examines test code quality. Catches hollow assertions, over-mocking, bloated permutation tests, ignored existing test infrastructure, and AI-generated test smells. Spawned at Step 4c (quality gate) in parallel with Code Reviewer, Acceptance QA, Edge Case QA, and Code Smells Reviewer.
 model: sonnet
 effort: high
-maxTurns: 15
+maxTurns: 30
 tools: Read Grep Glob
 permissionMode: dontAsk
 ---

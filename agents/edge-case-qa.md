@@ -3,7 +3,7 @@ name: edge-case-qa
 description: Read-only QA agent that thinks like a breaker. Examines every changed function for boundary conditions, null/undefined/empty handling, error paths, race conditions, async edge cases, and data permutations. Returns structured scenarios the test suite should cover. Spawned at Step 4c (quality gate) in parallel with Code Reviewer and Acceptance QA.
 model: sonnet
 effort: high
-maxTurns: 15
+maxTurns: 30
 tools: Read Grep Glob
 permissionMode: dontAsk
 ---

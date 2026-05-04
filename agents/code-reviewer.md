@@ -3,7 +3,7 @@ name: code-reviewer
 description: Reviews every changed file against CLAUDE.md standards for the target repo. Returns structured findings with file, line, severity, and suggested fix. Spawned in Step 4c of standard workflows as part of the quality gate (parallel with Acceptance QA and Edge Case QA).
 model: sonnet
 effort: high
-maxTurns: 15
+maxTurns: 30
 tools: Read Grep Glob
 permissionMode: dontAsk
 ---
