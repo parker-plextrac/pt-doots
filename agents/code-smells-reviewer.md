@@ -3,7 +3,7 @@ name: code-smells-reviewer
 description: Read-only reviewer that identifies code smells — design issues that aren't bugs but make code harder to maintain. Looks for long methods, feature envy, data clumps, primitive obsession, excessive coupling, and other Fowler-catalog smells. Spawned at Step 4c (quality gate) in parallel with Code Reviewer, Acceptance QA, and Edge Case QA.
 model: sonnet
 effort: high
-maxTurns: 15
+maxTurns: 30
 tools: Read Grep Glob
 permissionMode: dontAsk
 ---
