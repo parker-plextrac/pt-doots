@@ -14,6 +14,8 @@ Two modes based on arguments:
 
 **GitHub user:** `parker-plextrac`
 
+**QA engineer:** `bwilson-pt` (Brandon Wilson — his PRs are prefixed with `QA-`)
+
 **Target repos:**
 
 | Repo | Slug |
@@ -68,17 +70,29 @@ Make **parallel** GitHub MCP calls across all 4 target repos. For each repo:
 mcp__github__list_pull_requests(owner: "PlexTrac", repo: "{repo_name}", state: "open")
 ```
 
-From the results, split into two lists:
-- **Your PRs**: PRs where `user.login` is `parker-plextrac`
-- **Requesting Your Review**: PRs where `requested_reviewers` includes `parker-plextrac`
+From the results, split into four lists (apply in order, **deduplicate** — a PR appears in only the first list it qualifies for):
+- **Your PRs**: PRs where `user.login` is `parker-plextrac` (no age filter — show regardless of age)
+- **Requesting Your Review**: PRs where `requested_reviewers` includes `parker-plextrac` (no age filter)
+- **QA — Brandon Wilson**: PRs where `user.login` is `bwilson-pt`, **created within the last 40 days**
+- **IO Tickets (All Open)**: PRs where the title or `head.ref` starts with `IO-`, **created within the last 40 days**
 
-For each PR in **Your PRs** only, also fetch CI status:
+The 40-day freshness filter on QA and IO sections keeps the dashboard focused on actively in-flight work. Older PRs are usually abandoned and just add noise.
+
+For each PR in **Your PRs**, **QA — Brandon Wilson**, and **IO Tickets (All Open)**, also fetch CI status:
 
 ```
 mcp__github__get_pull_request_status(owner: "PlexTrac", repo: "{repo_name}", sha: "{head.sha}")
 ```
 
-Launch these status calls in parallel.
+For each PR in **QA — Brandon Wilson** and **IO Tickets (All Open)**, also fetch review state to detect if Parker has reviewed:
+
+```bash
+/opt/homebrew/bin/gh api "repos/PlexTrac/{repo_name}/pulls/{pr_number}/reviews" --jq '[.[] | select(.user.login == "parker-plextrac") | .state] | last // "NONE"'
+```
+
+This returns Parker's most recent review state (`APPROVED`, `COMMENTED`, `CHANGES_REQUESTED`) or `NONE` if he has not reviewed.
+
+Launch all these calls in parallel.
 
 **If a repo call fails**: note it and continue with the others.
 > "Could not fetch PRs from {repo} (API error). Showing results from other repos."
@@ -122,6 +136,39 @@ Column definitions:
 - **IO?**: `YES` if IO-prefixed, `no` otherwise
 
 If no review-requested PRs: "No PRs requesting your review."
+
+#### QA — Brandon Wilson
+
+| # | Repo | PR | CI | Reviewed | Days | Draft? |
+|---|------|----|----|----------|------|--------|
+
+Column definitions:
+- **#**: Row number (continues numbering)
+- **Repo**: Short repo name
+- **PR**: `#{number} {title}` (typically `QA-` prefixed)
+- **CI**: `PASS` / `FAIL` / `PENDING` / `—`
+- **Reviewed**: Parker's last review state — `APPROVED` / `COMMENTED` / `CHANGES_REQ` / `—` (not reviewed)
+- **Days**: Days since `created_at`
+- **Draft?**: `DRAFT` if `draft: true`, empty otherwise
+
+If none: "No open PRs from Brandon."
+
+#### IO Tickets (All Open)
+
+| # | Repo | PR | Author | CI | Reviewed | Days | Draft? |
+|---|------|----|--------|----|----------|------|--------|
+
+Column definitions:
+- **#**: Row number (continues numbering)
+- **Repo**: Short repo name
+- **PR**: `#{number} {title}`
+- **Author**: `@{user.login}`
+- **CI**: `PASS` / `FAIL` / `PENDING` / `—`
+- **Reviewed**: Parker's last review state — `APPROVED` / `COMMENTED` / `CHANGES_REQ` / `—` (not reviewed)
+- **Days**: Days since `created_at`
+- **Draft?**: `DRAFT` if `draft: true`, empty otherwise
+
+If none: "No open IO PRs."
 
 ### Step 3: Stale Review Cleanup
 
@@ -186,7 +233,7 @@ If found, read the file and parse the YAML frontmatter:
      ```
   4. Present the resume prompt:
      > "Found an in-progress review for #{pr_number} from {date} ({N} new commits since then). Status: {status}. Resume where you left off, or start fresh?"
-  5. If "resume": always run Step 2 (Context Gathering) first — this includes both branch checkout (2b) and PR metadata (2a). The branch checkout ensures agents run on the correct code even if the user switched branches between sessions. Then jump based on status: `findings_ready` → Step 5, `drafting` → Step 6. Skip Step 3 (the expensive agent work) since findings are already saved.
+  5. If "resume": always run Step 2 (Context Gathering) first — this includes both worktree setup (2b) and PR metadata (2a). The worktree ensures agents run on the correct code without interfering with whatever branch the main checkout is on (the user may have a parallel session editing it). Then jump based on status: `findings_ready` → Step 5, `drafting` → Step 6. Skip Step 3 (the expensive agent work) since findings are already saved.
   6. If "fresh": proceed to Step 2
 
 If no file found, proceed to Step 2.
@@ -195,11 +242,11 @@ If no file found, proceed to Step 2.
 
 #### 2a: Fetch PR metadata (lightweight — runs first)
 
-**Call 1 must run before anything else** — it provides `{head_ref}` (the PR branch name) needed by Step 2b.
+**Call 1 must run before anything else** — it provides `{head_ref}` (the PR branch name) needed by the worktree setup in Step 2b.
 
 **Call 1:** `mcp__github__get_pull_request` — get PR title, description, author, base branch, head ref/branch name, head SHA, draft status
 
-Store `{head_ref}` from the response's `head.ref` field. This is the branch name to checkout in Step 2b.
+Store `{head_ref}` from the response's `head.ref` field. This is the branch the worktree will track in Step 2b.
 
 Then launch these **in parallel** (they don't depend on Call 1's result):
 
@@ -247,25 +294,35 @@ For backport PRs:
 
 4. If no prior review file is found, proceed with the full review but note "Backport detected (targets `{base_ref}`) — no prior review found for {ticket_key}" in the review header.
 
-5. If the user chooses **Skip**, jump to Step 9 (restore branch). If **Quick diff**, do a lightweight comparison (no agents — just fetch both PR diffs and highlight differences). If **Full review**, continue to Step 2b as normal.
+5. If the user chooses **Skip**, jump to Step 9 (clean up worktree). If **Quick diff**, do a lightweight comparison (no agents — just fetch both PR diffs and highlight differences). If **Full review**, continue to Step 2b as normal.
 
-#### 2b: Checkout PR branch
+#### 2b: Set up isolated worktree (DEFAULT)
 
-The orchestrator may be in any directory. After Call 1 completes and `{head_ref}` is known:
+The user often has a parallel Claude session editing the main checkout. **Always review in an isolated worktree** so the main checkout stays on whatever branch they're working on. After Call 1 completes and `{head_ref}` is known:
 
 ```bash
-# 1. Save current branch BEFORE changing anything
-PREVIOUS_BRANCH=$(git -C {WORKSPACE}/{repo} rev-parse --abbrev-ref HEAD)
+# Resolve worktree path — keeps all review worktrees in one place
+WORKTREE_DIR={WORKSPACE}/.worktrees/{repo}-{head_ref}
 
-# 2. cd to the repo and checkout the PR branch
-cd {WORKSPACE}/{repo}
-git fetch origin {head_ref}
-git checkout {head_ref}
+# Fetch the latest PR branch tip
+git -C {WORKSPACE}/{repo} fetch origin {head_ref}
+
+# Create the worktree (or reuse if it already exists from a prior review)
+if [ -d "$WORKTREE_DIR" ]; then
+    git -C "$WORKTREE_DIR" fetch origin {head_ref}
+    git -C "$WORKTREE_DIR" reset --hard origin/{head_ref}
+else
+    git -C {WORKSPACE}/{repo} worktree add "$WORKTREE_DIR" origin/{head_ref}
+fi
 ```
 
-**Order matters:** capture `PREVIOUS_BRANCH` before `cd` and `checkout` — otherwise you'll record the PR branch, and Step 9's restore will be a no-op.
+Store `WORKTREE_DIR` for the rest of the review. **All agent prompts and pre-flight checks must reference `WORKTREE_DIR`, not `{WORKSPACE}/{repo}`.** This is the path agents read code from.
 
-If the checkout fails (e.g. local changes), report the error and ask the user — do NOT proceed with agents on the wrong branch.
+**Why worktrees by default:** the user almost always has another session editing the main checkout. A normal `git checkout` would either fail (uncommitted changes) or yank their working tree out from under them. Worktrees give a clean isolated copy that the main checkout never notices.
+
+If the worktree creation fails (e.g. the branch was already checked out somewhere else), report the error and ask the user — do NOT fall back to checking out in the main checkout without explicit permission.
+
+**Escape hatch:** if the user explicitly says "review in place" or "no worktree," fall back to the legacy `git checkout` flow — capture `PREVIOUS_BRANCH` first, checkout `{head_ref}` in `{WORKSPACE}/{repo}`, and restore the previous branch in Step 9.
 
 #### 2c: Show existing comments
 
@@ -289,9 +346,11 @@ This gives the orchestrator (and user) context on what's already been discussed.
 **Do NOT invoke the `code-review:code-review` skill.** The review pipeline is built directly here for full control over output format and posting.
 
 **IMPORTANT — Pre-flight checks before spawning agents:**
-1. Confirm `pwd` is `{WORKSPACE}/{repo}` — if not, `cd` there
-2. Confirm the PR branch is checked out: `git rev-parse --abbrev-ref HEAD` should match `{head_ref}`
-3. If either check fails, fix it before spawning agents. Do NOT proceed with agents on the wrong branch or in the wrong directory.
+1. Confirm `WORKTREE_DIR` exists and is a valid git worktree: `git -C "$WORKTREE_DIR" rev-parse --is-inside-work-tree` returns `true`
+2. Confirm the worktree HEAD points at the PR branch tip: `git -C "$WORKTREE_DIR" rev-parse HEAD` matches the PR's `head.sha` from Call 1
+3. If either check fails, fix it before spawning agents. Do NOT proceed with agents pointed at a stale or missing path.
+
+(Legacy fallback: if the user opted into in-place review, the checks instead confirm `pwd` is `{WORKSPACE}/{repo}` and the PR branch is checked out there.)
 
 **Context strategy:** For each agent, prepare the full diff content from Call 2 and **inline it directly in the prompt**. Agents should NOT need to read files or run git commands to find the changed code — give them everything they need upfront. They CAN read additional files for surrounding context (e.g., CLAUDE.md, imports, types), but the diff itself must be in the prompt.
 
@@ -311,7 +370,7 @@ Review PR #{pr_number} in {owner}/{repo} for boundary conditions and edge cases.
 PR title: {title}
 PR description: {description}
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
+The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPACE}/{repo} on branch {head_ref}). Read all code from {WORKTREE_DIR}, not the main checkout.
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
@@ -330,7 +389,7 @@ PR title: {title}
 PR description: {description}
 Jira context: {jira_summary_and_acceptance_criteria OR "No Jira ticket"}
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
+The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPACE}/{repo} on branch {head_ref}). Read all code from {WORKTREE_DIR}, not the main checkout.
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
@@ -345,7 +404,7 @@ Verify the PR's claims against the actual code. Trace data flow through all chan
 ```
 Research PR #{pr_number} in {owner}/{repo} using git history context.
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
+The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPACE}/{repo} on branch {head_ref}). Read all code from {WORKTREE_DIR}, not the main checkout.
 
 Changed files:
 {list of changed file paths}
@@ -364,7 +423,7 @@ If no issues found, return: NO_FINDINGS
 ```
 Review PR #{pr_number} in {owner}/{repo} against CLAUDE.md standards.
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
+The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPACE}/{repo} on branch {head_ref}). Read all code from {WORKTREE_DIR}, not the main checkout.
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
@@ -384,7 +443,7 @@ Review PR #{pr_number} in {owner}/{repo} for code smells.
 PR title: {title}
 PR description: {description}
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
+The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPACE}/{repo} on branch {head_ref}). Read all code from {WORKTREE_DIR}, not the main checkout.
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
@@ -408,7 +467,7 @@ Review the test files in PR #{pr_number} in {owner}/{repo} for test quality issu
 PR title: {title}
 PR description: {description}
 
-The repo is at {WORKSPACE}/{repo} on branch {head_ref}.
+The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPACE}/{repo} on branch {head_ref}). Read all code from {WORKTREE_DIR}, not the main checkout.
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — include ALL files, not just test files, so the reviewer can read production code alongside tests}
@@ -505,15 +564,36 @@ If "none": ask if they want a top-level comment only, approve, or skip entirely.
 
 ### Step 5b: Walk Through Findings One-at-a-Time
 
-**Do NOT batch all findings at once.** Present each finding individually and wait for the user's decision before moving to the next:
+**Do NOT batch all findings at once.** Present each finding individually and wait for the user's decision before moving to the next.
 
-1. Show the finding (number, severity, file, description)
-2. Ask: "Comment, skip, or tweak?"
-3. If comment: draft the comment text in Parker's voice and show it
-4. Wait for user approval or edits on the draft
-5. Move to the next finding
+**Use this exact format for every finding** (do not improvise — Parker has explicitly asked for consistency here):
 
-This gives the user control over:
+```
+### Finding N — SEV — {file:line or "(top-level)"}
+
+**what the agent said:**
+{the raw agent finding, paraphrased tightly — no verbatim quoting}
+
+**why this matters:**
+{concrete impact if this isn't addressed — what breaks, what surprises a future reader, what slips through review. Be specific to the consequence, not abstract — "operators won't have a log breadcrumb to debug from", not "violates CLAUDE.md".}
+
+**your suggestions:**
+{1-2 concrete code-shaped fixes — extract X helper, add Y log line, change ?? to ||. No hedging. No "consider improving."}
+
+**Comment, skip, or tweak?**
+```
+
+Then wait for the user's response. If they say comment, draft the inline comment in Parker's voice and show it for approval. If skip, move to the next. If tweak, apply their change and re-show.
+
+**Format rules (strict):**
+- One section header per `what / why / suggestions` block. Don't merge them.
+- "what the agent said" is paraphrased, not quoted verbatim. Tight.
+- "why this matters" should go into **decent detail** — Parker hasn't seen the code. Walk through the actual code path that produces the bug, name the surrounding functions, show a concrete real-world input that triggers it, and explain why the existing tests miss it. The user is reading review findings to *learn*, not just to approve. Be specific to the consequence (e.g. "operators won't have a log breadcrumb to debug from"), not abstract style/violation framing.
+- "your suggestions" should be concrete and actionable, ideally code-shaped.
+- No jokes, no "(may be downgrade-worthy)" asides, no "Counter:" sections, no "So: flag or skip?" editorializing.
+- Pre-filter: if a finding matches existing convention in untouched code and the PR author is following it, skip before presenting.
+
+This format gives the user control over:
 - Which findings to include/skip
 - Whether to combine related findings into one comment
 - Whether to cross-reference other findings
@@ -542,6 +622,11 @@ For each selected finding, rewrite it as a review comment in Parker's voice:
 
 **Voice rules:**
 - These comments are for humans. Write like a teammate, not a report generator
+- **Prefix every comment with its type**: `nit:`, `question:`, `observation:`, or `bug:`. Pick exactly one. Do NOT stack prefixes (no `nit: nit:` or `observation: nit:`). The prefix sets expectation:
+  - `nit:` purely cosmetic / take it or leave it
+  - `question:` asking for clarification or intent
+  - `observation:` substantive concern worth discussing — author may push back
+  - `bug:` an actual defect that will produce wrong behavior in production. Not "could be improved" — "will break". When in doubt between `observation:` and `bug:`, ask: does this produce incorrect output for real user input? If yes, it's `bug:`.
 - Get to the point. No filler openers ("Hey!", "Just wanted to flag", "Just thinking out loud", "Just a heads up")
 - "Would it be worth..." is fine for suggestions, but don't overuse hedging language
 - Frame feedback as observations, not commands: "feels a bit heavy-handed" NOT "you should change this"
@@ -679,9 +764,19 @@ rm /tmp/pr-review.json /tmp/pr-comment-*.json
 - Keep review file at `status: drafting` for retry
 - "Want to try posting again, or save the draft for later?"
 
-### Step 9: Restore Original Branch
+### Step 9: Clean up worktree
 
-**This step runs ALWAYS** — after posting, after a failed post, or if the user skips posting at Step 7. The user should not be left on the PR branch after a review.
+**This step runs ALWAYS** — after posting, after a failed post, or if the user skips posting at Step 7.
+
+**Worktree path (default):**
+
+```bash
+git -C {WORKSPACE}/{repo} worktree remove "$WORKTREE_DIR" --force
+```
+
+If `worktree remove` fails (e.g. uncommitted notes inside the worktree the user wants to keep), tell the user and leave it in place — they can run `git worktree remove` themselves later. Don't `rm -rf` the directory; that orphans git metadata.
+
+**Escape-hatch path (if review ran in-place):**
 
 ```bash
 cd {WORKSPACE}/{repo}
