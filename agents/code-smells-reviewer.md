@@ -3,7 +3,7 @@ name: code-smells-reviewer
 description: Read-only reviewer that identifies code smells — design issues that aren't bugs but make code harder to maintain. Looks for long methods, feature envy, data clumps, primitive obsession, excessive coupling, and other Fowler-catalog smells. Spawned at Step 4c (quality gate) in parallel with Code Reviewer, Acceptance QA, and Edge Case QA.
 model: sonnet
 effort: high
-maxTurns: 30
+maxTurns: 50
 tools: Read Grep Glob
 permissionMode: dontAsk
 ---
@@ -104,6 +104,24 @@ For every changed function/class, systematically check each category. Skip categ
 - **high** — the smell actively makes the code harder to understand or change, and will compound over time. Examples: God object that everything depends on, feature envy hiding business logic in the wrong layer, copy-paste duplication across 3+ locations.
 - **medium** — the smell is noticeable and worth addressing, but the code works and is still reasonably understandable. Examples: data clumps in 2 function signatures, moderately long method with clear sections, primitive obsession for IDs.
 - **low** — minor design friction. Note for awareness. Examples: one flag argument, slightly lazy class, mild message chain.
+
+## Verify Before Flag
+
+Smells exist on a spectrum. The same pattern can be a real smell in one codebase and idiomatic in another. Before promoting a finding to `medium` or `high`, run the matching check below. If it fails, downgrade or drop.
+
+**"Duplication" at N=2** — apply rule of three. Two call sites is not yet a smell. Three is. If you flag duplication at N=2, use `low` severity and frame as "watch this pair if a third caller appears." The author likely already considered extracting and decided not to. Do not flag at `medium` or higher unless the duplicated logic is non-trivial enough that a single bug fix would need to land in multiple places.
+
+**"Long method"** — orchestration functions in route handlers and service entry points are legitimately procedural. If the method has clear top-level sections (each with its own comment or whitespace block) and the sections don't share state in confusing ways, it's a sequence, not a smell. Downgrade to `low` or skip. Flag only when the method mixes abstraction levels (HTTP handling + business logic + DB calls in one body).
+
+**"Feature envy"** — service injects another service and calls a method on it. That's dependency injection, not envy. Real feature envy is when a method reaches deep into another object's data (`other.config.thing.value.x`) to do work that should live on `other`. Don't flag DI-mediated cross-layer calls.
+
+**"Primitive obsession"** — PlexTrac uses raw `string` for cuids, ids, and tenant identifiers throughout. That's the codebase's chosen primitive. Don't flag every `cuid: string` parameter as obsession — only flag when the primitive is genuinely ambiguous or used in math (e.g., a `string` that should be a typed currency value with cents handling).
+
+**"Manager / Helper / Handler / Util" naming** — this is a Python services rule (export and MCP), NOT a backend rule. The backend repo uses these names freely (`JobManager`, `RBACHandler`). Check the file path before flagging — only Python files in `product-services-export` and `product-services-mcp` are bound by this convention.
+
+**"Class too long"** — controllers in product-core-backend can legitimately exceed 200 lines because they have one method per route. Check the file's role before flagging size. The 200-line guideline applies to services and domain classes, not route controllers or test fixtures.
+
+If a finding fails this check, downgrade or drop. Note in your reasoning that you ran the verification.
 
 ## Communication Rules
 

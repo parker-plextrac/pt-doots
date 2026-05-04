@@ -223,8 +223,8 @@ Parse the PR URL from `$ARGUMENTS`:
 Check if `{WORKSPACE}/notes/pr-reviews/{repo}-{pr_number}.md` exists.
 
 If found, read the file and parse the YAML frontmatter:
-- If `status` is `posted`: ignore the file, start fresh
-- If `status` is `findings_ready` or `drafting`:
+
+- **If `status` is `findings_ready` or `drafting`** (in-progress prior session):
   1. Get the current PR head SHA via `mcp__github__get_pull_request`
   2. Compare with the saved `head_sha` from the file
   3. If they differ, count new commits:
@@ -236,7 +236,82 @@ If found, read the file and parse the YAML frontmatter:
   5. If "resume": always run Step 2 (Context Gathering) first — this includes both worktree setup (2b) and PR metadata (2a). The worktree ensures agents run on the correct code without interfering with whatever branch the main checkout is on (the user may have a parallel session editing it). Then jump based on status: `findings_ready` → Step 5, `drafting` → Step 6. Skip Step 3 (the expensive agent work) since findings are already saved.
   6. If "fresh": proceed to Step 2
 
+- **If `status` is `posted`** — the prior review was already sent. Compare current head SHA with the saved `head_sha`:
+  - If they match: nothing has changed since the prior review.
+    > "Already reviewed #{pr_number} on {date} — no new commits since then. Want to re-review anyway, or skip?"
+    If user says skip, stop. If re-review anyway, proceed to **Step 1b: Re-review flow**.
+  - If they differ: there are new commits since the prior review. Count them:
+    ```bash
+    /opt/homebrew/bin/gh api repos/{owner}/{repo}/compare/{saved_sha}...{current_sha} --jq '.ahead_by'
+    ```
+    Then present:
+    > "Reviewed #{pr_number} on {date} — {N} new commits since then. Want to re-review (focused on the delta + verification of prior findings), full fresh review, or skip?"
+    - "re-review" → proceed to **Step 1b: Re-review flow**
+    - "fresh" → proceed to Step 2 as a brand-new review (the saved file's findings are ignored, but keep the file as historical record)
+    - "skip" → stop
+
 If no file found, proceed to Step 2.
+
+### Step 1b: Re-review flow
+
+This flow runs when a prior review is `posted` and the user wants a delta-focused re-review. The goal is to verify whether prior findings were addressed and flag NEW concerns introduced in the new commits — without re-running a full fresh review.
+
+#### 1b.1: Gather re-review context
+
+1. Run **Step 2 (Context Gathering)** in full — fetch PR metadata, files, comments, set up the worktree, fetch Jira context. This produces `{WORKTREE_DIR}` and the prior comment threads.
+2. Capture the **delta diff** between the prior-reviewed SHA and current head, scoped to PR-relevant directories. Save to `/tmp/{repo}-{pr_number}-delta.patch`:
+   ```bash
+   git -C "$WORKTREE_DIR" diff {saved_sha}..HEAD -- {pr_top_level_dirs} > /tmp/{repo}-{pr_number}-delta.patch
+   ```
+   Determine `{pr_top_level_dirs}` from `mcp__github__get_pull_request_files` — group changed files by their top-level directory (e.g., `apps/plextracapi/src/domains/jira/module/`) and pass those paths to scope the diff.
+
+3. Parse the GitHub PR comments to assemble **author replies** to each prior finding. For each saved finding, find the matching inline comment (by file:line proximity) and extract any `in_reply_to_id` replies from the author.
+
+#### 1b.2: Spawn re-review agents in parallel
+
+Launch THREE parallel agents:
+
+**Agent 1 — Re-reviewer (verifier)** (`subagent_type: "pt-doots:re-reviewer"`)
+
+Pass the agent:
+- The full prior findings list (from the saved review file's "## Findings" table) with severity and original concern
+- Author replies parsed from PR comments (file:line + reply text)
+- `WORKTREE_DIR` path
+- Delta diff path: `/tmp/{repo}-{pr_number}-delta.patch`
+
+The agent returns a structured verdict per finding (Addressed / Partial / Not addressed / Pushback warrants accepting / Explicitly deferred) with current-state line citations. See `pt-doots:re-reviewer` agent definition for full output format.
+
+**Agent 2 — Edge-case scan of the delta** (`subagent_type: "pt-doots:edge-case-qa"`)
+
+Scope the prompt tightly: examine ONLY new code introduced in the delta. List the prior findings as "already raised — do not re-flag" so the agent doesn't duplicate them. Cap at 8 findings.
+
+**Agent 3 — Test smell scan of the delta** (`subagent_type: "pt-doots:test-reviewer"`)
+
+Only spawn if the delta includes test files. Scope to new tests added in the delta. Cap at 8 findings.
+
+#### 1b.3: Consolidate and present
+
+Show the user:
+1. The verifier's per-finding verdicts (table format)
+2. New concerns from edge-case + test reviewers (if any), filtered to high/medium severity
+3. A net recommendation line — e.g., "PR is in good shape, ready for approving follow-up" or "1 unaddressed concern remains"
+
+Then ask:
+> "Want to walk through new findings one-at-a-time (proceed to Step 5b), drop a top-level approval comment, or skip?"
+
+Approval shortcut: if the user says "approve" or "approve with classic," skip directly to Step 8 with `event: APPROVE` and body `🎺 💀 🤖`.
+
+#### 1b.4: Update the saved review file
+
+After posting (or skipping), update the saved review file in place:
+- Set `re_reviewed_at: {ISO timestamp}`
+- Set `re_review_outcome: approved` / `commented` / `skipped`
+- Update `head_sha` to the current SHA
+- Append a new `## Re-review {date}` section below the original findings, with the verifier's verdicts table
+
+Do NOT delete or rewrite the original findings — keep the historical record intact.
+
+Then proceed to Step 9 (clean up worktree).
 
 ### Step 2: Context Gathering
 
@@ -540,11 +615,36 @@ The `head_sha` field is used on resume to detect new commits since the review.
 
 ### Step 5: Present Findings
 
-Show the consolidated findings table:
+#### 5a: Orchestrator pre-promotion check (HIGH and MED findings only)
+
+Reviewer agents work from inlined diffs and tend to over-flag plausible-sounding concerns without verification (per `feedback_reviewer_agent_overflagging.md`). Each agent is now responsible for its own "Verify Before Flag" pass, but the orchestrator still does a final sanity check before showing HIGH/MED findings to the user.
+
+For each HIGH or MED finding, run this quick check:
+
+1. **Did the agent note that it ran the Verify Before Flag pass?** Look for "verified caller," "checked enclosing try/catch," "ran sanity check," etc. If absent, treat the finding as un-verified and run the verification yourself (see below).
+
+2. **For HIGH findings, do a 30-second caller trace** before presenting:
+   - "Missing FF gate / Server-vs-Cloud / version compat" → grep the file for feature flag references and trace one level of callers. If a flag wraps the path, downgrade to MED and rephrase as "worth confirming the flag covers all call sites" or drop entirely.
+   - "Throw not caught / breaks batch" → read the immediate caller's loop body. If there's a per-iteration `try/catch` pushing to `errors[]`, downgrade or drop.
+   - "Race condition / concurrent access" → confirm there's an actual `await` between read and write, OR the state lives in Redis/Postgres. Single-threaded JS object access is not a race. If neither, drop.
+
+3. **For both HIGH and MED, check for cross-agent duplication.** Two agents may have flagged the same underlying issue from different angles (e.g., code-reviewer and edge-case-qa both flagging the same null check). Merge into one finding, keep the higher severity, cite both agents.
+
+4. **For findings that survived the check, mark them with a small ✓ symbol** in your internal notes — this signals to your future self (when drafting comments) that the finding was sanity-checked and the framing is sound.
+
+5. **Track demotions in an internal sanity-check log** so you can mention them once at the top when presenting. Don't quietly drop findings without saying so — Parker likes seeing what got pruned and why.
+
+If after this pass NO HIGH findings remain, default-tone the recommendation toward "ready for an approving follow-up" rather than "needs another round."
+
+#### 5b: Show the consolidated findings table
 
 ```
 ## Review: #{pr_number} {ticket_key} — {pr_title}
 Jira: {ticket_key} | Author: @{author} | Files: {file_count} | Base: {base_branch}
+
+### Pre-promotion sanity check
+- {N} findings demoted/dropped — examples: "HIGH on jira_sdk.ts:649 demoted to MED (FF gate present at call site)"
+(omit this section if nothing was demoted)
 
 ### Findings ({count})
 | # | Severity | File | Finding |
@@ -554,7 +654,7 @@ Jira: {ticket_key} | Author: @{author} | Files: {file_count} | Base: {base_branc
 | 3 | NICE | test-file.ts | Positive observation |
 ```
 
-If **no findings** (all agents returned NO_FINDINGS):
+If **no findings** (all agents returned NO_FINDINGS or all were demoted):
 > "No issues found! This PR looks clean. Want to leave an approving review, or skip?"
 
 Otherwise:

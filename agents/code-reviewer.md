@@ -3,7 +3,7 @@ name: code-reviewer
 description: Reviews every changed file against CLAUDE.md standards for the target repo. Returns structured findings with file, line, severity, and suggested fix. Spawned in Step 4c of standard workflows as part of the quality gate (parallel with Acceptance QA and Edge Case QA).
 model: sonnet
 effort: high
-maxTurns: 30
+maxTurns: 50
 tools: Read Grep Glob
 permissionMode: dontAsk
 ---
@@ -217,6 +217,26 @@ Follow these phases in order for each changed file:
 - If a new type is defined, check that it follows the repo's type patterns
 - If a new service method is added, check the naming convention
 - If a repository imports filter types, verify they come from domain `types.ts`
+
+### Phase 5: Verify Before Flag
+
+Before promoting any finding to `high` or `critical`, trace one level of context to make sure the concern still holds. The diff shown to you is local — the gate or guard that defuses your finding may live just outside it.
+
+Run this check for the following finding shapes:
+
+**"Missing FF gate / Server-vs-Cloud / API version compat"** — before flagging, grep for the enclosing call sites and check whether a feature flag or capability check wraps the path.
+- PlexTrac's standard gating mechanism is feature flags (`launchDarkly.evaluate(...)` / `OVERRIDE_FLAG_NAME` env vars / `featureFlags.isEnabled(...)`). When a flag is referenced anywhere in the file, default to "this path is FF-gated" unless you can show otherwise.
+- Example: a v3-API call inside a function whose callers all sit behind `JIRA_RICH_TEXT_SYNC` is NOT a Server/DC compat gap. Don't flag it as one.
+- Per `feedback_ff_is_the_gate.md`: do not flag missing code-level integrationType / capability checks when an FF already gates the path.
+
+**"Throw not caught / unhandled error / breaks whole batch"** — before flagging, read the immediate caller's loop body. If the caller wraps the call in a per-iteration `try/catch` and pushes to an `errors[]` collector, a throw fails one item, not the batch. Don't flag it.
+- Example: `htmlToAdf(val)` inside a function that's called from `for (const finding of findings) { try { ... } catch (e) { errors.push(e); } }` is correctly handled at the caller. Move on.
+
+**"Looks unrelated to the PR theme"** — before raising the question, grep the file for the new symbol's call sites. If every call site is inside the new feature path, the change is not unrelated, just non-obvious. Skip the question or rephrase as a one-line confirmation rather than flagging.
+
+**"Code duplication" at N=2** — apply rule of three. Two call sites is not yet a smell. If you flag it at all, use `idea:` prefix and frame as "watch this pair if a third caller appears." Do not flag at `medium` or higher unless the duplication is N≥3 OR the duplicated logic is non-trivial enough that a single bug fix would need to land in multiple places.
+
+If a finding fails Phase 5, downgrade it (or drop it) before including it in your output. Note in your reasoning that you ran the check — this gives the orchestrator confidence the finding survived a sanity pass.
 
 ## Communication Rules
 
