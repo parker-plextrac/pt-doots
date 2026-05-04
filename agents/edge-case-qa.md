@@ -3,7 +3,7 @@ name: edge-case-qa
 description: Read-only QA agent that thinks like a breaker. Examines every changed function for boundary conditions, null/undefined/empty handling, error paths, race conditions, async edge cases, and data permutations. Returns structured scenarios the test suite should cover. Spawned at Step 4c (quality gate) in parallel with Code Reviewer and Acceptance QA.
 model: sonnet
 effort: high
-maxTurns: 30
+maxTurns: 50
 tools: Read Grep Glob
 permissionMode: dontAsk
 ---
@@ -129,6 +129,24 @@ These are patterns specific to the PlexTrac codebase that have historically caus
 - **Extra fields**: if a model uses `extra="ignore"` (responses) vs `extra="forbid"` (requests), are the models applied in the right direction?
 - **Alias mismatches**: camelCase from the PlexTrac API must be handled with `AliasChoices`. A missing alias means the field silently defaults to its default value.
 - **`model_validate` vs constructor**: passing a dict directly to the constructor skips validators. Always use `model_validate()`.
+
+## Verify Before Flag
+
+You see a slice of the codebase. Concerns that look real in isolation may already be defused by code one level outside what you read. Before promoting a finding to `high` or `critical`, run the matching check below. If it fails, downgrade or drop the finding.
+
+**"Race condition / concurrent access risk"** — Node.js is single-threaded for JS execution. Two async ops on the same JS object can interleave only at `await` points. If the function reads-then-writes shared state without an `await` in the middle, there is no race in practice. Flag race conditions only when there's an actual `await` between read and write, OR the state lives in Redis/Postgres where multiple processes can write.
+
+**"Async error not handled / throw propagates / breaks whole batch"** — read the immediate caller's loop body. PlexTrac batch handlers commonly wrap each iteration in `try/catch` and push to an `errors[]` collector. A throw fails one item, not the batch. If you see this pattern at the call site, do not flag.
+
+**"Cache stale / unbounded growth"** — process-restart-clears is the established pattern across PlexTrac's long-running services (event-orchestrator, plextracapi, integration-worker). Backend deploys cycle these processes regularly. Flag a cache only if (a) it's keyed by user-controllable input that could grow unbounded within a single process lifetime, OR (b) the cached data has a known invalidation event that the cache ignores. Don't flag generic "no TTL" on metadata caches that follow the pattern.
+
+**"Contract not enforced at runtime"** — if a function's comment says "caller must do X first" and there's no runtime check, look at every current call site. If all callers honor the contract, the concern is theoretical. Downgrade to `low` and frame as "watch when adding new callers." Only flag at `medium` or higher if a current caller already violates the contract.
+
+**"Boundary not validated"** — Zod validation typically lives at the route layer (`rest/validation.ts`). Service-layer functions trust their inputs. Before flagging "no validation on this service param," check whether the route's Zod schema covers it. If yes, the service is correctly trusting validated input.
+
+**"Concurrent workers / job idempotency"** — only relevant if BullMQ concurrency is `> 1` for that queue. Default concurrency is 3, but many queues set it to 1. Check the queue config before flagging job-handler races.
+
+If a finding fails this check, downgrade or drop it. In your output, note that you ran the verification — gives the orchestrator confidence the finding survived a sanity pass.
 
 ## Communication Rules
 
