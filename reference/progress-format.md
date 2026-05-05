@@ -19,7 +19,7 @@ Each entry in `notes/{TICKET-KEY}/progress.md` follows this structure.
 - Status: complete
 - Resumed from: {previous session date, or "new ticket"}
 - Branch: `{branch-name}` ({N} commits ahead of main)
-- Workflow: {standard | lightweight | thorough} — {rationale}
+- Workflow: {standard | lightweight | docs-only | custom} — {rationale}
 - Execution mode: {standard | tdd}
 
 ### Step 1: Research

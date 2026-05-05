@@ -1,5 +1,7 @@
 # pt-doots v2 — Design Spec
 
+> **Historical — superseded.** This was the design doc for the v2 refactor that produced the current `commands/pt-doots.md` and `reference/workflow.md`. References to a `thorough` workflow type and an ECC second-pass reviewer were dropped during reconciliation; the live workflow types are `standard | lightweight | docs-only | custom` (see `agents/scrum-master.md`).
+
 **Date:** 2026-04-07
 **Status:** Draft
 **Goal:** Refactor the pt-doots command from a 455-line monolith into a thin orchestrator that references docs, uses the pt-doots agent roster, and routes workflows dynamically.

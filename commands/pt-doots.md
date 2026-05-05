@@ -87,9 +87,8 @@ Step 3:   Create Branch       (main)
 Step 4a:  Implement           (pt-doots:developer) → /verify
 Step 4b:  Write Tests         (pt-doots:test-writer) → /verify
 Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer + test-reviewer, parallel)
-          If thorough:        (+ ECC language-matched reviewer as second pass)
 Step 4d:  Fix Findings        (pt-doots:developer, fix-cycle mode) → /verify
-Step 4e:  Documentation       (pt-doots:documentarian — if workflow includes it)
+Step 4e:  Documentation       (pt-doots:documentarian — when scrum-master sets Documentation: yes, or workflow is docs-only)
 Step 5:   Commit              (main — commit gate)
 Step 6:   Handoff             (main — summary, offer /create-pr)
 ```
@@ -103,20 +102,22 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 | 4a, 4d | `pt-doots:developer` | Worktree isolation. 4d = fix-cycle mode. |
 | 4b | `pt-doots:test-writer` | Worktree isolation. |
 | 4c | `pt-doots:code-reviewer` | Read-only. PlexTrac standards. |
-| 4c | `pt-doots:acceptance-qa` | Read-only. Acceptance criteria. |
-| 4c | `pt-doots:edge-case-qa` | Read-only. Boundary conditions. |
+| 4c | `pt-doots:acceptance-qa` | Read-only. Acceptance criteria. Skipped on lightweight. |
+| 4c | `pt-doots:edge-case-qa` | Read-only. Boundary conditions. Skipped on lightweight. |
 | 4c | `pt-doots:code-smells-reviewer` | Read-only. Design quality. |
 | 4c | `pt-doots:test-reviewer` | Read-only. Test quality. |
-| 4c | `everything-claude-code:typescript-reviewer` or `python-reviewer` | Only for "thorough" workflow. |
-| 4e | `pt-doots:documentarian` | Only when scrum-master recommends it. |
+| 4e | `pt-doots:documentarian` | When scrum-master sets `Documentation: yes`, or workflow is `docs-only`. |
 
 ### Workflow Types (from scrum-master)
 
-| Type | Skip | Review depth |
-|------|------|-------------|
-| **lightweight** | Research (or minimal), acceptance-qa, edge-case-qa | Single reviewer |
-| **standard** | Nothing | Parallel quality gate (5 reviewers) |
-| **thorough** | Nothing | Parallel quality gate + ECC second pass + documentation |
+The scrum-master returns one of these four types, plus orthogonal flags (`Documentation: yes/no`, `TDD: yes/no`).
+
+| Type | When | Pipeline |
+|------|------|----------|
+| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; parallel quality gate (5 reviewers) |
+| **lightweight** | Single-file fixes, dependency bumps, additive changes | Skips acceptance-qa + edge-case-qa; smaller review surface |
+| **docs-only** | Documentation-only tickets (READMEs, comments, reference docs) | Researcher → documentarian → code-reviewer → commit |
+| **custom** | Tickets that don't fit a template | Scrum-master proposes the variant with rationale |
 
 User can override the scrum-master's recommendation.
 

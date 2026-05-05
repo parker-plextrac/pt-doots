@@ -1,5 +1,7 @@
 # pt-doots v2 Implementation Plan
 
+> **Historical — superseded.** This was the implementation plan for the v2 refactor that produced the current `commands/pt-doots.md` and `reference/workflow.md`. References to a `thorough` workflow type and an ECC second-pass reviewer were dropped during reconciliation; the live workflow types are `standard | lightweight | docs-only | custom` (see `agents/scrum-master.md`).
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Refactor the pt-doots command from a 455-line monolith into a ~120-line orchestrator that references docs, uses pt-doots agents, and routes workflows dynamically.
