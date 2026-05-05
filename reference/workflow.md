@@ -53,12 +53,13 @@ It returns a structured recommendation:
 ```
 WORKFLOW RECOMMENDATION
 
-Workflow: standard | lightweight | thorough
-Review depth: standard | thorough
+Workflow: standard | lightweight | docs-only | custom
 Documentation: yes | no
 TDD: yes | no
 Rationale: {why this workflow}
 ```
+
+`Documentation` and `TDD` are orthogonal flags — they apply on top of any workflow type. `docs-only` implies `Documentation: yes`.
 
 Show the recommendation to the user. They can override.
 
@@ -185,18 +186,19 @@ Implement → Verify → Test → Verify → Review → Fix → Verify → Commi
 
 Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
 
-**Thorough workflow** — after the parallel gate, also spawn:
-- `everything-claude-code:typescript-reviewer` (for TS repos) or `everything-claude-code:python-reviewer` (for Python repos)
-- This provides broader industry-pattern review on top of PlexTrac-specific standards
-
 **Lightweight workflow** — spawn only:
 - `pt-doots:code-reviewer` (single reviewer)
 - `pt-doots:code-smells-reviewer` (design quality)
 - `pt-doots:test-reviewer` (test quality — if changeset includes test files)
 
+**Docs-only workflow** — spawn only:
+- `pt-doots:code-reviewer` — verifies the doc changes for accuracy and consistency
+
+**Custom workflow** — follow the reviewer set the scrum-master included in its WORKFLOW PLAN steps.
+
 Consolidate all findings from all reviewers before proceeding.
 
-**Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail}. Edge Case QA: {N}. Code Smells: {N}. Test Review: {N}. [ECC: {N} if thorough]`
+**Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail or skipped}. Edge Case QA: {N or skipped}. Code Smells: {N}. Test Review: {N or skipped}.`
 
 ### 4d. Fix Findings (`pt-doots:developer`, fix-cycle mode)
 
@@ -211,7 +213,7 @@ Only if quality gate has actionable findings.
 
 ### 4e. Documentation (`pt-doots:documentarian`)
 
-Only when the scrum-master recommended it (typically "thorough" workflow).
+Only when the scrum-master set `Documentation: yes` in its recommendation, or when the workflow type is `docs-only`.
 
 - Spawn with the **Documentarian Prompt** from [agent-prompts.md](agent-prompts.md)
 - Returns: files updated + any Confluence suggestions
