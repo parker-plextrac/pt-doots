@@ -15,3 +15,14 @@
   - Structured output with risk levels: critical/high/medium/low with clear definitions ensures the Developer can prioritize fixes and the orchestrator can decide merge-readiness.
   - Separate "Untested Scenarios" section: creates a direct handoff to the Test Writer — each scenario can become a test case without reinterpretation.
   - Minimum 3 untested scenarios requirement: forces thoroughness. The spec's success criteria require at least 3, so this is enforced in the prompt.
+
+## 2026-05-07 — Audit finding: silent maxTurns drift
+- Audit finding: maxTurns silently changed from 15 to 50. Same flag as code-reviewer.
+
+## 2026-05-07 — Inline-context investigation (follow-up)
+- Investigated `reference/agent-prompts.md` (Edge Case QA Prompt, lines 240-259), `reference/workflow.md` (Step 4c), and `commands/pt-doots.md` (Step 4c table). Edge Case QA spawn prompt passes only `{list from implementation}` — does NOT inline diffs or function bodies. Reviewer must read files itself to inspect each changed function.
+- Regresses inline-context discipline documented in `.local/team-manager/learned-patterns.md` lines 65-77.
+- TODO: roll back maxTurns once spawn prompts are updated to inline diffs.
+
+## 2026-05-07 — Followup
+- Followup: rolled back maxTurns 50 → 15 after fixing spawn prompts.

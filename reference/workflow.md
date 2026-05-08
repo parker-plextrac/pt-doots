@@ -213,7 +213,15 @@ Only if quality gate has actionable findings.
 
 ### 4e. Documentation (`pt-doots:documentarian`)
 
-Only when the scrum-master set `Documentation: yes` in its recommendation, or when the workflow type is `docs-only`.
+Spawn whenever the scrum-master returns `Documentation: yes` (the default polarity — the scrum-master only sets `no` when the ticket has zero documentation surface, e.g. a pure refactor with no behavior change). Always spawn when the workflow type is `docs-only`.
+
+The documentarian walks its priority order:
+1. **Nested CLAUDE.md** files in changed directories — verify they still match reality, fix stale claims, create one for directories whose shape meaningfully changed.
+2. **Repo READMEs** — update setup/run/config/API sections affected by the change.
+3. **Inline JSDoc/docstrings** — add or refresh doc comments on new or modified public surfaces.
+4. **Confluence** — only when the spawn prompt or workflow plan explicitly names a Confluence target (or the ticket is cross-team-visible). Writes always require user approval via `[CONFLUENCE]` sections.
+
+The agent does not skip a higher-priority level just because work exists at a lower one.
 
 - Spawn with the **Documentarian Prompt** from [agent-prompts.md](agent-prompts.md)
 - Returns: files updated + any Confluence suggestions
@@ -283,8 +291,16 @@ Ask: **"Ready to create a PR? I can use `/create-pr` to push and open a PR with 
 
 ---
 
+## Telemetry
+
+Run-level metrics (per-agent and per-workflow) are recorded under `{PLUGIN}/.local/` after every spawn and at workflow completion. The contract — when to write, what to write, and how to initialize the files — lives in [`commands/pt-doots.md` § Telemetry](../commands/pt-doots.md#telemetry). The schema for both files lives in [metrics-format.md](metrics-format.md). Do not duplicate the contract here; `pt-doots.md` is the source of truth.
+
+---
+
 ## References
 
 - Branch naming: [branch-naming.md](branch-naming.md)
 - Agent spawn prompts: [agent-prompts.md](agent-prompts.md)
 - Progress log format: [progress-format.md](progress-format.md)
+- Metrics schema: [metrics-format.md](metrics-format.md)
+- Telemetry contract: [../commands/pt-doots.md](../commands/pt-doots.md) § Telemetry

@@ -72,6 +72,29 @@ job, a locked tool surface, and a prompt tuned to PlexTrac standards.
 | `documentarian` | Updates READMEs and Confluence after merge (when scrum-master sets `Documentation: yes`, or workflow is `docs-only`) |
 | `team-manager` | Creates and tunes the team itself; used by `/bootstrap-team` and `/team-audit` |
 
+## Developer modes
+
+Pt-doots ships two implementation agents:
+
+- **`implementer`** (default, strict). Locks the file surface from the plan, audits its own diff against forbidden patterns, and reports every plan deviation. Slower, higher signal.
+- **`developer`** (opt-in, loose). Faster, less ceremony, more latitude. Default for `lightweight` workflows.
+
+The orchestrator picks based on:
+1. Env var `PT_DOOTS_DEV_MODE=loose` → `developer`
+2. Scrum-master classifies workflow as `lightweight` → `developer`
+3. Otherwise → `implementer`
+
+Other engineers who want the looser flow as their default can `export PT_DOOTS_DEV_MODE=loose` in their shell rc.
+
+## Review Log Discipline
+
+Every change to an agent definition (model tier, prompt, tools, maxTurns, role) MUST append a dated entry to `agents/reviews/{agent}.md` with:
+- **Date** of the change
+- **What changed** (current → proposed value)
+- **Why** — linked ticket, observation, or learned pattern
+
+Silent drift (changes without log entries) makes audits blind to regressions. The team-manager enforces this discipline at every `/team-audit` run; unexplained drift is flagged as a finding.
+
 ## Workflow
 
 ```

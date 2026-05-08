@@ -23,11 +23,15 @@ Full roster audit. Run end-of-day, end-of-sprint, or whenever you want a thoroug
    ```
    If missing: "Team Manager agent not found. Run `/bootstrap-team` first to create the agent team."
 
-2. **Verify `.local/` has metrics data:**
+2. **Check `.local/` for metrics data (warning, not blocker):**
    ```bash
    test -f "{PLUGIN}/.local/team-manager/metrics-summary.md" && echo "HAS_METRICS" || echo "NO_METRICS"
+   test -f "{PLUGIN}/.local/scrum-master/workflow-history.md" && echo "HAS_HISTORY" || echo "NO_HISTORY"
    ```
-   If no metrics: "No workflow metrics found. Run at least one ticket through `/pt-doots` first so the Team Manager has data to analyze."
+   If either file is missing: print a warning and proceed with a qualitative-only audit:
+   > "Metrics files not found — audit will be qualitative-only (agent definitions and review logs, no run-count or fix-cycle data). To get full audit data, ensure pt-doots telemetry is wired (see `commands/pt-doots.md` § Telemetry)."
+
+   The audit still proceeds. Treat any missing files as empty data sets in subsequent steps.
 
 3. **Initialize directories** (in case they exist but are incomplete):
    ```bash

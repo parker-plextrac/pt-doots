@@ -14,3 +14,7 @@
   - Nested CLAUDE.md creation: developer is the only agent that both writes code and has full codebase context, making it the natural owner of local documentation.
   - Fix cycle mode: explicit section for handling re-spawns with QA findings, preventing wasteful re-implementation.
   - PlexTrac standards quick reference: embedded in prompt so the developer does not need to re-read the full workspace CLAUDE.md every spawn, but is instructed to read the full version for the target repo.
+
+## 2026-05-07 — Status change
+
+Status change: kept active as opt-in alternative to `implementer`. Orchestrator now defaults to `implementer`; `developer` fires for `lightweight` workflows or when `PT_DOOTS_DEV_MODE=loose`. Description updated to reflect the new role.
