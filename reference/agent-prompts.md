@@ -197,13 +197,21 @@ Mark any missed requirements as [GOVERNANCE] if they suggest the plan needs revi
 
 ## Code Smells Reviewer Prompt (pt-doots:code-smells-reviewer)
 
+The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+
 ```
 Review the changes for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch} for code smells.
 
-Changed files:
-{list from implementation}
+All code is provided below. Do NOT use the Read tool — your context is already complete.
 
-Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md
+Plan summary:
+{1-3 sentence summary of what the plan delivers}
+
+Full diff of changed files:
+{INLINED_DIFF}
+
+Full bodies of changed functions (where the diff above is partial / context-truncated):
+{INLINED_FUNCTION_BODIES}
 
 Look for design smells in the changed code:
 - Structural: long methods, large classes, god objects
@@ -229,13 +237,21 @@ Return "SMELLS: clean" explicitly if no issues found.
 
 ## Test Reviewer Prompt (pt-doots:test-reviewer)
 
+The orchestrator MUST inline the full `git diff` of changed files (BOTH test files AND their corresponding production files — the reviewer needs to judge whether tests cover real behavior) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+
 ```
 Review the test files changed for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
 
-Changed files:
-{list from implementation — include ALL files so the reviewer can identify test files and their corresponding production files}
+All code is provided below — both the test files and their corresponding production files. Do NOT use the Read tool — your context is already complete.
 
-Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md
+Plan summary:
+{1-3 sentence summary of what the plan delivers}
+
+Full diff of changed files (test + production):
+{INLINED_DIFF}
+
+Full bodies of changed functions (where the diff above is partial / context-truncated):
+{INLINED_FUNCTION_BODIES}
 
 Review test quality:
 - Are assertions testing real behavior or just verifying mocks?
