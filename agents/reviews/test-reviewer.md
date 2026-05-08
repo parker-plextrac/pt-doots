@@ -14,3 +14,6 @@
   - Framework Misuse category covers repo-specific anti-patterns: top-level before() for DI, Readable.from() instead of createMockStream, shared mutable state.
   - Explicit "Does NOT" boundaries: no production code review (Code Reviewer), no edge case hunting (Edge Case QA), no test writing (Test Writer). Prevents overlap with the 4 existing reviewers.
   - High severity reserved for false-confidence tests — tests that pass regardless of production correctness. This aligns severity with real risk rather than style preference.
+
+## 2026-05-08 followup
+- Spawn prompt in `reference/agent-prompts.md` updated to inline diffs (`{INLINED_DIFF}` + `{INLINED_FUNCTION_BODIES}` placeholders) and explicitly tell the agent "do NOT use the Read tool"; matches the inline-context discipline fix from yesterday's audit. test-reviewer's inline diff explicitly includes both test files AND their corresponding production files since the reviewer cannot judge assertion quality without seeing the production code under test.

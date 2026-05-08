@@ -108,6 +108,36 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 | 4c | `pt-doots:test-reviewer` | Read-only. Test quality. |
 | 4e | `pt-doots:documentarian` | When scrum-master sets `Documentation: yes`, or workflow is `docs-only`. |
 
+### Step 4c — Inline-Diff Substitution Contract (MANDATORY)
+
+All five quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`) require their full review surface inlined in the spawn prompt. The agent prompts in `reference/agent-prompts.md` contain `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders. The orchestrator MUST populate them before spawning.
+
+**Guardrail**: the orchestrator reads files / runs `git`, NOT the reviewer agents. Reviewer prompts explicitly tell the agent "do NOT use the Read tool" — passing them file lists or plan paths instead of inlined diffs is the regression that caused turn-budget exhaustion (see `.local/team-manager/learned-patterns.md` lines 65-77 and the 2026-05-07 audit notes).
+
+**Per-spawn substitution steps**:
+
+1. Before fan-out, capture the diff against the base branch for the files the implementation/test-writer reported as changed:
+   ```bash
+   git -C {WORKSPACE}/{repo} diff main...HEAD -- {file1} {file2} ...
+   ```
+   (Substitute the actual base branch — usually `main`, sometimes `release/v2.X`. Use whatever the branch was created from in Step 3.) Capture stdout as `{INLINED_DIFF}`.
+
+2. If the diff is partial — i.e., a hunk shows only a few lines of a function whose body the reviewer needs to judge correctness — also capture the full body of each such function. Two acceptable mechanisms:
+   - `git -C {WORKSPACE}/{repo} show HEAD:{path}` and extract the function block in main context, OR
+   - Use `Read` on the file in main context and slice the relevant lines.
+   Concatenate these into `{INLINED_FUNCTION_BODIES}` with a header per function (e.g. `--- {path}: {functionName} ---`). For tiny diffs where every changed function is fully visible in `{INLINED_DIFF}`, set `{INLINED_FUNCTION_BODIES}` to `(none — full bodies present in the diff above)`.
+
+3. For `test-reviewer` specifically, `{INLINED_DIFF}` MUST include both the test files AND their corresponding production files — the reviewer cannot judge whether assertions verify real behavior without seeing the production code.
+
+4. For each reviewer in the fan-out, take its prompt template from `reference/agent-prompts.md`, substitute every `{...}` placeholder (including `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}`), and pass the fully-rendered prompt as the agent's spawn input. Do NOT spawn an agent with placeholders still present.
+
+5. If the diff is enormous (>30k tokens estimated), split the review surface into logical chunks and spawn multiple parallel reviewer instances per role rather than dropping content. Note the split in `progress.md` so the consolidation step accounts for all chunks.
+
+**Do NOT**:
+- Pass `Changed files: {list}` and expect the agent to Read them.
+- Pass `Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md` and expect the agent to open it — paste the relevant plan summary inline.
+- Bump reviewer `maxTurns` to compensate for missing inline context — that is the wrong fix and inflates cost.
+
 ### Implementation Agent Selection (Steps 4a / 4d)
 
 The orchestrator picks between `implementer` (strict, plan-fidelity) and `developer` (loose, opt-in) using this exact precedence:

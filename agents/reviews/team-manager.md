@@ -15,3 +15,9 @@
 - `commands/prs.md` only spawns read-only reviewers: `pt-doots:edge-case-qa`, `pt-doots:acceptance-qa`, `pt-doots:researcher`, `pt-doots:code-reviewer`, `pt-doots:code-smells-reviewer`, `pt-doots:test-reviewer`, and (re-review path) `pt-doots:re-reviewer`. No `developer` or `implementer` spawn anywhere.
 - `agents/re-reviewer.md` mentions "developer" only in the SendMessage Communication Rules example (Fast Tier) — talking to a hypothetical teammate, not spawning one. No change needed.
 - Author fix-ups happen on the PR side (the human author addresses comments after we post). The /prs flow is purely observe-and-comment, so the implementer/developer precedence rule from `commands/pt-doots.md` does not apply here. No edits made. Logging this so future audits don't re-investigate.
+
+## 2026-05-08 followup to 2026-05-07 audit
+- Extended inline-diff prompt fix to `code-smells-reviewer` and `test-reviewer` (both were missed in yesterday's pass — they still passed `{list from implementation}` and required Read-time file exploration).
+- Wired `{INLINED_DIFF}` substitution into `commands/pt-doots.md` Step 4c via a new "Step 4c — Inline-Diff Substitution Contract (MANDATORY)" subsection. Contract: orchestrator runs `git diff main...HEAD -- {files}` before fan-out, populates both `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders, and passes fully-rendered prompts to each reviewer. Explicit guardrail: "the orchestrator reads files / runs git, NOT the reviewer agents."
+- For `test-reviewer` the diff must include both test files AND their corresponding production files.
+- Inline-context discipline now fully restored across all 5 quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`).

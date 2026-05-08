@@ -10,3 +10,6 @@
 - maxTurns: 15
 - Intended use: Spawned at the Step 4c quality gate in parallel with code-reviewer, acceptance-qa, edge-case-qa, and test-reviewer. Complements code-reviewer (standards-focused) by surfacing structural design issues the standards check would not catch.
 - Status: File backfilled retroactively. The agent has been active in the workflow but had no review log entry until today.
+
+## 2026-05-08 followup
+- Spawn prompt in `reference/agent-prompts.md` updated to inline diffs (`{INLINED_DIFF}` + `{INLINED_FUNCTION_BODIES}` placeholders) and explicitly tell the agent "do NOT use the Read tool"; matches the inline-context discipline fix from yesterday's audit. Brings code-smells-reviewer in line with code-reviewer / acceptance-qa / edge-case-qa.
