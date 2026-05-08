@@ -24,3 +24,7 @@
   - Does the audit catch deviations the agent would have hidden? (compare report against actual diff)
   - Does `[PLAN-TEST-CONFLICT]` actually fire when warranted, or does the agent still rewrite around tests?
   - Does the locked surface hold under fix-cycle pressure, or does scope creep return when findings demand cross-cutting changes?
+
+## 2026-05-07 — Status change
+
+Status change: promoted to default implementation agent for standard/medium workflows. Original migration plan (retire `developer.md` after one successful ticket) was modified — `developer` stays available for engineers who prefer the looser flow. Implementer remains canonical for strict plan-fidelity work.

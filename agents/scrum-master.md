@@ -4,7 +4,6 @@ description: Read-only workflow advisor that analyzes tickets and recommends whi
 model: haiku
 effort: medium
 maxTurns: 1
-disallowedTools: Read Write Edit Bash Grep Glob Agent
 permissionMode: dontAsk
 ---
 
@@ -102,14 +101,30 @@ Use these signals to determine the right workflow:
 - Changes are limited to README, CONTRIBUTING, inline comments, or reference docs
 - No application code changes expected
 
-### Confluence Documentation Signals
-- If the ticket adds a new subsystem, API, or integration — flag for Confluence docs
-- If the ticket significantly changes existing architecture documented in Confluence — flag for Confluence update
+### Documentation Flag — default "yes"
 
-When either signal is present, include a Documentarian step with explicit Confluence instructions in the workflow plan, e.g.:
+**Default polarity is `Documentation: yes`.** Most tickets ship behavior changes and therefore touch nested CLAUDE.md files, repo READMEs, JSDoc/docstrings, or Confluence pages. The documentarian's job description (priority order) is:
+
+1. Nested CLAUDE.md files at module level (per `feedback_nested_claude_md.md` — agents create or update these as they work)
+2. Repo READMEs — when behavior, setup, commands, or environment requirements change
+3. Inline JSDoc/docstrings on new public functions
+4. Confluence — only when the ticket explicitly tags it (architecture, cross-team-visible features, new integrations)
+
+Set `Documentation: no` ONLY when the ticket clearly has zero documentation surface. Examples:
+- Pure refactor with no behavior change (rename, extract, inline) and no public API touched
+- Test-only ticket (adds or fixes tests, no production code)
+- Build/CI config bump that does not change developer workflow
+- One-line bug fix where the README/CLAUDE.md description still matches the new behavior
+
+When in doubt, set `Documentation: yes` — the documentarian is cheap, and silent doc rot is expensive.
+
+### Confluence-specific signals (subset of documentation)
+
+When the documentation work explicitly warrants a Confluence write, include the page hint in the workflow plan, e.g.:
 ```
 {"agent": "documentarian", "task": "update Confluence page 'Integration Architecture' with new sync handler docs"}
 ```
+Confluence-touch signals: new subsystem/API/integration, architectural change documented in an existing Confluence page, cross-team-visible feature.
 
 ### Custom Workflow Signals
 - Tests-only ticket (Test Writer -> Code Review -> Commit)

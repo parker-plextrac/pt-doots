@@ -131,13 +131,24 @@ Write the tests. When done, return:
 
 ## Code Reviewer Prompt (pt-doots:code-reviewer)
 
+The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+
 ```
 Review the changes for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
 
-Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md
+All code is provided below. Do NOT use the Read tool — your context is already complete.
+
+Plan summary:
+{1-3 sentence summary of what the plan delivers + acceptance criteria bullets}
+
+Full diff of changed files:
+{INLINED_DIFF}
+
+Full bodies of changed functions (where the diff above is partial / context-truncated):
+{INLINED_FUNCTION_BODIES}
 
 Review against:
-- The plan's acceptance criteria
+- The plan's acceptance criteria (above)
 - CLAUDE.md standards for {repo}
 - Code quality, security, naming, architecture
 
@@ -155,16 +166,24 @@ Return "REVIEW: clean" explicitly if no issues found.
 
 ## Acceptance QA Prompt (pt-doots:acceptance-qa)
 
+The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+
 ```
 You are verifying ticket {TICKET-KEY} meets its acceptance criteria.
+
+All code is provided below. Do NOT use the Read tool — your context is already complete.
 
 Ticket content:
 {title, description, acceptance criteria from Jira or plan.md}
 
-Changed files:
-{list from implementation}
+Plan summary:
+{1-3 sentence summary of what the plan delivers}
 
-Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md
+Full diff of changed files:
+{INLINED_DIFF}
+
+Full bodies of changed functions (where the diff above is partial / context-truncated):
+{INLINED_FUNCTION_BODIES}
 
 Review the implementation against EACH acceptance criterion. For each:
 - Criterion text
@@ -239,11 +258,21 @@ Return "TESTS: clean" explicitly if no issues found.
 
 ## Edge Case QA Prompt (pt-doots:edge-case-qa)
 
+The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+
 ```
 You are looking for failure modes in ticket {TICKET-KEY} changes.
 
-Changed files:
-{list from implementation}
+All code is provided below. Do NOT use the Read tool — your context is already complete.
+
+Plan summary:
+{1-3 sentence summary of what the plan delivers}
+
+Full diff of changed files:
+{INLINED_DIFF}
+
+Full bodies of changed functions (where the diff above is partial / context-truncated):
+{INLINED_FUNCTION_BODIES}
 
 For each changed function/module:
 - Boundary conditions (empty arrays, null, max values)

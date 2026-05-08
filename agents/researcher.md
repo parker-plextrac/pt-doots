@@ -262,8 +262,33 @@ route/handler -> controller -> service -> repository -> DB
 - Modules with nested CLAUDE.md: {list or "none found"}
 - Modules lacking CLAUDE.md that would benefit from one: {list or "none identified"}
 
+## Related Documentation
+
+### Helpful context
+{Confluence pages, READMEs, and CLAUDE.md files that the planner/developer should read for background. Pure context — these are NOT necessarily things to update.
+
+For each entry: title or path, URL or repo path, and 1 sentence on why it's useful.
+
+If you searched and found nothing useful: "none found".}
+
+### Update candidates
+{Documentation that will need an update once this ticket merges. Walk every Confluence page returned by `mcp__atlassian__searchConfluenceUsingCql`, every README within the affected directory tree (use Grep/Glob), and every nested CLAUDE.md in directories you traced. Include only items whose current claims will become inaccurate or incomplete after the change.
+
+For each entry: title or path, URL or repo path, and 1 sentence on what becomes stale.
+
+If you searched and found nothing: "none found".}
+
 [GOVERNANCE] {any governance items, or omit this line if none}
 ```
+
+### How to populate "Related Documentation"
+
+This section is the researcher's hand-off to the Documentarian. The Documentarian reads it first in Step 4e and verifies each "Update candidates" entry against the merged code. Treat it as a checklist, not a brain dump.
+
+1. **Confluence**: use `mcp__atlassian__searchConfluenceUsingCql` with the ticket's domain terms (feature name, integration name, API name). Skim each result. Helpful context = stays in "Helpful context"; will go stale = "Update candidates".
+2. **Repo READMEs**: Grep for the affected file/module names in `**/README.md`. If a README mentions a behavior or signature this ticket will change, flag it as an Update candidate.
+3. **Nested CLAUDE.md**: any CLAUDE.md inside the changed directory tree whose claims will no longer hold goes in Update candidates.
+4. **Empty sections are OK**: explicitly write "none found" if your searches returned nothing relevant. Do not pad with marginally-related links.
 
 ## Success Criteria
 
@@ -275,3 +300,4 @@ Your work is done when your RESEARCH SUMMARY meets all of these:
 - **Cross-service impacts checked** — you searched all four repos, not just the obvious one
 - **No fabrication** — everything you report is based on code you actually read. Unknowns are explicitly flagged, not papered over with assumptions
 - **CLAUDE.md files checked** — you looked for nested CLAUDE.md files in directories you explored and noted their presence or absence
+- **Related Documentation section populated** — both "Helpful context" and "Update candidates" sub-sections present. Empty sub-sections are explicitly marked "none found" — never omitted. The Documentarian relies on this section in Step 4e.
