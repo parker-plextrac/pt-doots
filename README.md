@@ -40,6 +40,7 @@ Restart Claude Code after install.
 | `/bootstrap-team` | One-time setup — spawns the team-manager to create every agent locally |
 | `/team-audit` | Roster health check + agent performance review |
 | `/new-integration` | Scaffold a new EM integration across BE + FE repos |
+| `/voice-profile` | Customize your personal voice overlay for the `voice-stylist` agent |
 
 ### Talking to `/pt-doots`
 
@@ -70,6 +71,7 @@ job, a locked tool surface, and a prompt tuned to PlexTrac standards.
 | `test-reviewer` | Catches hollow assertions, over-mocking, and AI-test smells |
 | `re-reviewer` | Verifies prior review findings on subsequent commits (used by `/prs`) |
 | `documentarian` | Updates READMEs and Confluence after merge (when scrum-master sets `Documentation: yes`, or workflow is `docs-only`) |
+| `voice-stylist` | Final voice pass on every human-facing draft (PR comments, Slack, Jira). Used by `/prs` between rough draft and approval gate |
 | `team-manager` | Creates and tunes the team itself; used by `/bootstrap-team` and `/team-audit` |
 
 ## Developer modes
@@ -128,6 +130,27 @@ The scrum-master picks one of four types, plus orthogonal flags
 | **custom** | Tickets that don't fit a template | Scrum-master proposes the variant with rationale |
 
 You can override the recommendation when prompted.
+
+## Customizing Your Voice
+
+The `voice-stylist` agent rewrites human-facing drafts (PR comments, Slack
+pings, Jira replies) into your voice before they're shown for approval. It
+reads two layers of rules:
+
+1. **Bundle** at `agents/voice-stylist/profile.md` — universal good-prose
+   rules shipped with the plugin (banned-phrases starter list, prefix scheme,
+   em-dash rule, plain-verb mappings). Works out of the box for everyone.
+2. **User overlay** in your local user memory
+   (`~/.claude/projects/{workspace}/memory/voice_*.md`) — personal additions
+   that override or extend the bundle. Your audience tiers, signature
+   emojis, phrases YOU don't use, prefix tweaks.
+
+To set up or refresh your overlay, run `/voice-profile`. The command walks
+you through a short interview and writes the overlay files for you. You
+can also just ask Claude directly: "help me edit my voice profile."
+
+Without an overlay, the agent runs on the bundle alone — still useful,
+just less personal.
 
 ## Local development
 

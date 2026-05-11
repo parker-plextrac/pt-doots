@@ -683,7 +683,11 @@ If "none": ask if they want a top-level comment only, approve, or skip entirely.
 **Comment, skip, or tweak?**
 ```
 
-Then wait for the user's response. If they say comment, draft the inline comment in Parker's voice and show it for approval. If skip, move to the next. If tweak, apply their change and re-show.
+Then wait for the user's response. If they say comment, draft the inline comment, then **MANDATORY: spawn `pt-doots:voice-stylist` and pipe the draft through it before showing it for approval**. Pass the agent the raw draft text only — no preamble, no "please rewrite this" framing. Take its output verbatim and show that to Parker. If skip, move to the next. If tweak, apply their change, run the new draft through `pt-doots:voice-stylist` again, and re-show.
+
+**Why mandatory:** voice rewrite loops (Parker calls out drift, orchestrator re-reads memory files, redrafts) burn more tokens than one focused haiku call. The agent reads the canonical voice memories on every invocation, so it stays current as Parker's preferences evolve. Skipping the agent and "drafting in voice yourself" is a guaranteed regression — do not do it.
+
+**One call per comment.** Do not batch multiple comments into a single `pt-doots:voice-stylist` invocation. Per-comment calls keep the no-op rule clean (clean drafts return unchanged) and avoid cross-comment voice bleed.
 
 **Format rules (strict):**
 - One section header per `what / why / suggestions` block. Don't merge them.
@@ -706,42 +710,41 @@ After walking through all findings, show the complete batch (blurb + all approve
 
 **This step MUST happen in the main context (not a sub-agent) to preserve voice consistency.**
 
-Based on the user's selection, draft a single GitHub review:
+Based on the user's selection, assemble a single GitHub review. Every prose draft you generate in this step — the top-level blurb AND every inline comment — MUST go through `pt-doots:voice-stylist` before being shown to Parker for batch approval. The agent reads the canonical voice memories, normalizes prefixes, strips banned phrases, and returns paste-ready text. One call per draft, no batching.
 
 #### Top-level blurb
 
 Write a 2-3 sentence review comment that:
 - Calls out what the PR does well (specific, not generic praise)
 - Sets the tone for inline comments ("Left a couple small thoughts inline but nothing blocking")
-- Sounds like Parker — warm, collaborative
 - If any findings can't be posted inline (outside the diff), include them in the blurb with **GitHub permalink links** (`[description](https://github.com/{owner}/{repo}/blob/{head_sha}/{path}#L{line})`)
+
+Then spawn `pt-doots:voice-stylist` with the blurb as input. Use its output verbatim.
+
+> **Note:** Parker has `feedback_no_pr_blurb.md` indicating blurbs are usually skipped. Check the user's prior preference and skip the blurb entirely if that's the standing rule.
 
 #### Inline comments
 
-For each selected finding, rewrite it as a review comment in Parker's voice:
+For each selected finding, write a rough draft of the comment, then spawn `pt-doots:voice-stylist` on it. Take the agent's output verbatim and queue it for the batch approval gate.
 
-**Voice rules:**
-- These comments are for humans. Write like a teammate, not a report generator
-- **Prefix every comment with its type**: `nit:`, `question:`, `observation:`, or `bug:`. Pick exactly one. Do NOT stack prefixes (no `nit: nit:` or `observation: nit:`). The prefix sets expectation:
-  - `nit:` purely cosmetic / take it or leave it
-  - `question:` asking for clarification or intent
-  - `observation:` substantive concern worth discussing — author may push back
-  - `bug:` an actual defect that will produce wrong behavior in production. Not "could be improved" — "will break". When in doubt between `observation:` and `bug:`, ask: does this produce incorrect output for real user input? If yes, it's `bug:`.
-- Get to the point. No filler openers ("Hey!", "Just wanted to flag", "Just thinking out loud", "Just a heads up")
-- "Would it be worth..." is fine for suggestions, but don't overuse hedging language
-- Frame feedback as observations, not commands: "feels a bit heavy-handed" NOT "you should change this"
-- No CLAUDE.md citations. Frame as personal observations
-- "nit:" prefix already signals low pressure. No need to further soften with disclaimers
-- Skip findings already covered by another comment in the review. Cross-reference related comments instead ("Similar theme to the credential table comment")
-- Offer concrete suggestions when possible (code examples, specific alternatives, renamed values)
-- For pre-existing issues, check git blame to see if the PR author owns the code. If yes, "while you're in here" is fair. If not, acknowledge it's not from this PR
-- No cheesy encouragement ("Could be a nice boy scout opportunity if you're up for it")
+**What to write in the rough draft (the agent handles the rest):**
+- Lead with the prefix. Parker's canonical scheme (per `feedback_review_comment_prefixes.md`):
+  - `must:` blocking — has to change before merge. Reserved for data corruption on the normal flow, security holes, anything that hits a customer on day one, anything that breaks the PR's stated goal.
+  - `should:` strong recommendation. Author should address; can push back with a reason. Use for real bugs that only trigger under unusual conditions, missing error handling on edge paths, things you'd accept as a follow-up ticket if not done now.
+  - `nit:` purely cosmetic. Take it or leave it.
+  - `opinion:` taste call, non-blocking.
+  - `idea:` brainstorm / forward-looking proposal.
+  - `question:` asking for clarification or intent. Not asserting anything is wrong.
+  - `praise:` positive callout (use sparingly; weave most praise into the blurb).
+- Pick exactly one prefix. The voice-stylist will fix capitalization or swap unknown prefixes (`observation:`, `bug:`) silently — but you should still pick from the canonical set.
+- Structure: (1) what's wrong, (2) why it matters, (3) suggested fix.
+- Offer concrete code-shaped suggestions when possible.
+- Skip findings already covered by another comment. Cross-reference instead.
+- For pre-existing issues, check git blame to see if the PR author owns the code. If yes, "while you're in here" is fair. If not, acknowledge it's not from this PR.
 
-**AI tells to avoid (these are dead ringers for AI-generated text):**
-- NO em dashes (—) in running text. Use periods, commas, or restructure the sentence
-- NO "Hey!" or similar greetings
-- NO trailing disclaimers ("Not blocking!", "Totally not blocking")
-- Contractions are fine and sound more human
+**The voice-stylist agent handles voice scrubbing.** It strips banned phrases, replaces em/en dashes, swaps Latinate verbs for plain Anglo-Saxon ones, and normalizes prefixes — so don't burn cycles polishing the rough draft. Get the substance right and let the agent finish the voice pass.
+
+**NEVER hand-edit a voice-stylist output before showing Parker.** If the output reads wrong, that's signal to either (a) fix the source draft and re-run the agent, or (b) flag a voice-stylist regression for the next `/team-audit`. Hand-editing defeats the consistency the agent provides.
 
 **Formatting rules (readability matters):**
 - Break comments into short paragraphs. Never post a wall of text
