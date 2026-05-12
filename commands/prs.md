@@ -680,6 +680,9 @@ If "none": ask if they want a top-level comment only, approve, or skip entirely.
 **your suggestions:**
 {1-2 concrete code-shaped fixes — extract X helper, add Y log line, change ?? to ||. No hedging. No "consider improving."}
 
+**my opinion:**
+{your recommendation: comment / skip / downgrade. This is YOUR judgment call as the orchestrator, NOT a quote from the agent. Parker can always override. Tie it to a concrete reason: "I'd skip — pre-existing code JQ didn't touch, off-scope." / "I'd flag as `should:` — customer-visible regression in report output." / "I'd downgrade to a nit — real but minor, low ROI on review attention." Where helpful, surface tradeoffs (e.g. "real LOW but flagging dilutes the must-fix list"). This section is mandatory for every finding — it's how Parker decides which battles to fight.}
+
 **Comment, skip, or tweak?**
 ```
 
@@ -694,6 +697,7 @@ Then wait for the user's response. If they say comment, draft the inline comment
 - "what the agent said" is paraphrased, not quoted verbatim. Tight.
 - "why this matters" should go into **decent detail** — Parker hasn't seen the code. Walk through the actual code path that produces the bug, name the surrounding functions, show a concrete real-world input that triggers it, and explain why the existing tests miss it. The user is reading review findings to *learn*, not just to approve. Be specific to the consequence (e.g. "operators won't have a log breadcrumb to debug from"), not abstract style/violation framing.
 - "your suggestions" should be concrete and actionable, ideally code-shaped.
+- "my opinion" is required, not optional. Parker reads this to decide whether to even spend a review slot on the finding. Tie the recommendation to a real reason (scope, severity, ROI, customer impact); never just "I'd skip" with no rationale.
 - No jokes, no "(may be downgrade-worthy)" asides, no "Counter:" sections, no "So: flag or skip?" editorializing.
 - Pre-filter: if a finding matches existing convention in untouched code and the PR author is following it, skip before presenting.
 
