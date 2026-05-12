@@ -427,9 +427,21 @@ This gives the orchestrator (and user) context on what's already been discussed.
 
 (Legacy fallback: if the user opted into in-place review, the checks instead confirm `pwd` is `{WORKSPACE}/{repo}` and the PR branch is checked out there.)
 
-**Context strategy:** For each agent, prepare the full diff content from Call 2 and **inline it directly in the prompt**. Agents should NOT need to read files or run git commands to find the changed code — give them everything they need upfront. They CAN read additional files for surrounding context (e.g., CLAUDE.md, imports, types), but the diff itself must be in the prompt.
+**Context strategy — diff inlining is mandatory, not optional:**
 
-For PRs with very large diffs (>200KB of patch content), split files across agents by domain instead of duplicating the entire diff to all agents. Note which agent got which files.
+Before spawning ANY agent, the prompt MUST contain the full patch content for every changed non-binary, non-fixture file. Pointing the agent at the worktree with "run `git diff main..HEAD` to see the changes" is NOT acceptable — agents that have to discover the diff themselves will burn 10-20 tool calls running git, listing files, and reading them one at a time, and routinely run out of turns BEFORE producing findings. This has happened on real reviews; do not repeat it.
+
+Pre-spawn checklist (run this mentally for every agent prompt before calling the Agent tool):
+
+1. Does the prompt contain the patch/diff content for every changed file the agent is responsible for? Not a file list — the actual `+`/`-` lines.
+2. For newly-added files, does the prompt contain the FULL file content (not just a description of what was added)?
+3. If the agent is scoped to a subset of files (split-diff strategy), is that scope spelled out explicitly?
+
+If any answer is "no," fix the prompt before spawning. A 20KB prompt that runs in 60s is strictly better than a 5KB prompt that times out at 90s with no findings.
+
+Agents CAN read additional files from the worktree for surrounding context (CLAUDE.md, imports, types, peer plugin patterns) — but they should never need to read a CHANGED file to learn what changed.
+
+For PRs with very large diffs (>200KB of patch content total), split files across agents by domain instead of duplicating the entire diff to all agents. Note which agent got which files. Still inline the relevant subset for each agent — don't fall back to "go look in the worktree."
 
 Launch **5-7 parallel sub-agents** via the Agent tool (6th is conditional on test files, 7th+ are conditional on artifact types — see below). Each agent returns **structured findings ONLY** — no posting, no GitHub interaction.
 
