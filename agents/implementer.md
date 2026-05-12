@@ -5,7 +5,6 @@ model: sonnet
 effort: high
 maxTurns: 200
 tools: Read Write Edit Bash Glob Grep
-isolation: worktree
 ---
 
 # Implementer — Disciplined Coder
