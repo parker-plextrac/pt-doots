@@ -24,6 +24,7 @@ Two modes based on arguments:
 | product-core-frontend | `PlexTrac/product-core-frontend` |
 | product-services-export | `PlexTrac/product-services-export` |
 | product-services-mcp | `PlexTrac/product-services-mcp` |
+| agent-skills | `PlexTrac/agent-skills` |
 
 ---
 
@@ -64,7 +65,7 @@ Examine `$ARGUMENTS` (the text after `/prs`):
 
 ### Step 1: Data Gathering
 
-Make **parallel** GitHub MCP calls across all 4 target repos. For each repo:
+Make **parallel** GitHub MCP calls across all 5 target repos. For each repo:
 
 ```
 mcp__github__list_pull_requests(owner: "PlexTrac", repo: "{repo_name}", state: "open")
