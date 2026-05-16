@@ -23,6 +23,10 @@ echo 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1' >> ~/.claude/settings.local.json
 
 Restart Claude Code after install.
 
+## Tuning agent behavior
+
+Per-user tweaks go in overlay files in your memory dir, not in the plugin tree. See [OVERLAYS.md](./OVERLAYS.md). Bundle vs overlay separation keeps your customizations upgrade-safe.
+
 ## Prerequisites
 
 - Claude Code with agent teams enabled (above)

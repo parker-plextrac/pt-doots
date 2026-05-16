@@ -21,3 +21,15 @@
 - Wired `{INLINED_DIFF}` substitution into `commands/pt-doots.md` Step 4c via a new "Step 4c — Inline-Diff Substitution Contract (MANDATORY)" subsection. Contract: orchestrator runs `git diff main...HEAD -- {files}` before fan-out, populates both `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders, and passes fully-rendered prompts to each reviewer. Explicit guardrail: "the orchestrator reads files / runs git, NOT the reviewer agents."
 - For `test-reviewer` the diff must include both test files AND their corresponding production files.
 - Inline-context discipline now fully restored across all 5 quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`).
+
+## 2026-05-15 — Overlay convention documented
+
+Created `pt-doots/CLAUDE.md` and `pt-doots/OVERLAYS.md`; added a "Tuning agent behavior" pointer to README.md.
+
+Background: voice-stylist had overlay support but no plugin-wide convention or documentation explained the bundle-vs-overlay model. Risk: users (or Claude in future sessions) edits agent files directly to add personal preferences, which then get clobbered on `git pull`.
+
+Now documented:
+- Convention: `~/.claude/projects/{project}/memory/feedback_{agent-slug}_<topic>.md`
+- Rule: never edit plugin tree for personal tweaks
+- Opt-in per-agent wiring (voice-stylist has it; others add it when needed)
+- Pattern for adding overlay support to a new agent (single Glob + parallel Read batch)
