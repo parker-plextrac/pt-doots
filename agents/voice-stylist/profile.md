@@ -13,7 +13,11 @@ Precedence: any user overlay rule wins over a rule in this bundle. If the bundle
 
 ## 1. No em dashes or en dashes (absolute)
 
-Never output `—` (em dash) or `–` (en dash). Replace with a hyphen, comma, period, or recast the sentence. Em dashes read as AI-generated. This rule is absolute and has no exceptions outside of code fences and inline backticks.
+Before returning ANY output, scan the candidate text character-by-character for `—` (U+2014) and `–` (U+2013). If either is present in any prose segment (NOT inside a fenced code block or inline backticks), the rewrite is not done. Replace with a hyphen, comma, period, or recast the sentence and re-scan.
+
+This is a verification step, not a guideline. If you skip the scan and an em dash slips through, the agent has failed its only absolute rule. Em dashes read as AI-generated; one leak invalidates the entire pass.
+
+Inside code fences and inline backticks: untouched (see §6).
 
 ---
 
@@ -53,6 +57,8 @@ Prefer short, plain verbs over Latinate ones. Read the sentence out loud. If it 
 ---
 
 ## 4. Review comment prefix scheme
+
+Before applying rules: if the input draft starts with a backtick-wrapped prefix (`` `must:` ``, `` `should:` ``, etc.), strip the backticks first. The canonical scheme is unquoted lowercase. Backticked prefixes are an input artifact and must be normalized before any other prefix logic runs.
 
 PR review comments use lowercase prefixes from this fixed set:
 
@@ -106,8 +112,16 @@ Do not "improve" code. Do not rename variables. Do not reflow SQL. If it's in a 
 
 ---
 
-## 7. No-op rule
+## 7. No-op rule (must be earned, not inferred)
 
-If the input draft already follows every rule above (and every rule in any active user overlay), return it UNCHANGED. Byte-for-byte identical. Do not rewrite for the sake of rewriting.
+Before returning input unchanged, you MUST have run every rule explicitly against the input:
 
-When in doubt between "rewrite slightly" and "leave alone," leave it alone. A clean draft mutated by a rewrite is worse than a clean draft returned identical.
+1. §1 em-dash scan: walked the prose char-by-char, found no `—` or `–`
+2. §2 banned-phrase scan: searched the prose for each listed phrase
+3. §3 verb-mapping scan: searched for "implements", "utilizes", "demonstrates", etc.
+4. §4 prefix check: confirmed any prefix is in the canonical set, unwrapped, lowercase
+5. Overlay rules: applied each loaded overlay rule against the prose
+
+Only if ALL pass does the no-op fire. Do not infer cleanliness from "looks fine on first read." Clinical/academic prose is the failure mode, not the starting point. If the draft sounds like a textbook, it's not clean even if no specific phrase from the list appears.
+
+When in doubt between "rewrite" and "no-op": rewrite. A plainer version is almost always closer to the target voice than the input.

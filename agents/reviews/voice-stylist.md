@@ -26,3 +26,23 @@
 - Tool change: added `Glob` alongside `Read`. Still no Write, no Bash. maxTurns bumped from 2 to 3 to cover bundle-read + overlay-glob + rewrite.
 - Fallback: if no profile is loadable (no bundle, no overlay), the agent returns the input unchanged. Explicit instruction not to invent voice rules from training data.
 - Why: the original prompt was implicitly Parker-specific because it relied on user-memory files that don't ship with the plugin. Bundling universal rules makes the agent work for any user out of the box. User overlay still customizes via memory files.
+
+## 2026-05-15 — Audit pass: discovery thrashing + leak fixes (4 changes)
+
+Run-data: PR review session for #8782 (product-core-backend, IO-2251) surfaced 4 distinct failure modes in voice-stylist: (1) overlay-discovery thrashing requiring orchestrator nudge on 3/4 invocations, (2) em dash leaked through Section 1 absolute rule, (3) engineer-textbook vocabulary ("derive", "canonical", "consumers", "back-compat", "domain types live") passed through unchanged, (4) backticked `should:` prefix returned without normalization.
+
+Changes applied:
+
+1. **Constrained overlay discovery** (voice-stylist.md, Layer 2 section). Replaced multi-pattern Glob list with a single brace-expansion Glob plus a single parallel Read batch. Contract: exactly two tool messages for overlays, no exploratory re-discovery. Addresses Failure 1.
+
+2. **Reframed absolute rules as a character scan** (profile.md §1 and §4 prelude). Section 1 (em dash ban) now mandates a char-by-char scan as a verification step, not a guideline. Section 4 adds a backtick-stripping pre-step on prefixes ahead of any other prefix logic. Addresses Failures 2 and 4.
+
+3. **Tightened the no-op rule** (profile.md §7). No-op now requires explicit run of every numbered rule against the input; "looks fine on first read" is not enough. "When in doubt" default flipped from "leave alone" to "rewrite". Addresses Failures 2/3/4 systemically.
+
+4. **Dropped silent overlay-fallback escape hatch** (voice-stylist.md Fallback paragraph). Bundle is always loadable; overlay-missing is not a degraded state. Removed the mental model that motivated the discovery thrashing. Reinforces Pitch 1.
+
+Pitch 2 from the audit (engineer-textbook vocabulary) shipped as a user overlay at `~/.claude/projects/-Users-parker-workspaces-plextrac/memory/feedback_voice_engineer_textbook.md` rather than in the bundle, because the vocabulary is Parker-specific (other users may want to use those terms).
+
+Files modified:
+- agents/voice-stylist.md
+- agents/voice-stylist/profile.md

@@ -26,16 +26,15 @@ This contains the UNIVERSAL good-prose rules: banned phrases, em-dash ban, Anglo
 
 ### Layer 2 — User overlay (per-user customizations)
 
-Then, look for user-specific overlay files. Use Glob to find them:
+Discover user overlay files via a SINGLE Glob call with brace expansion, then a SINGLE parallel Read batch over the matches. Total: exactly two tool messages for overlays. Do not run a second Glob, do not exploratory-Read unrelated files.
 
-- `~/.claude/projects/*/memory/voice_*.md`
-- `~/.claude/projects/*/memory/user_voice_profile.md`
-- `~/.claude/projects/*/memory/feedback_voice_*.md`
-- `~/.claude/projects/*/memory/feedback_review_voice.md`
-- `~/.claude/projects/*/memory/feedback_review_comment_prefixes.md`
-- `~/.claude/projects/*/memory/feedback_no_em_dashes.md`
+Glob pattern (one call):
 
-Read every match. These overlay files extend or override bundle rules with the specific user's personal preferences (extra banned phrases, audience-specific tone notes, comment-style nudges, etc.).
+`~/.claude/projects/*/memory/{user_voice_profile,feedback_voice_*,feedback_no_em_dashes,feedback_review_voice,feedback_review_comment_prefixes}.md`
+
+Then Read every match in a single batched tool message (multiple Read invocations in one parallel call). Silently skip any Read that 404s.
+
+If the Glob returns zero matches, do not retry with different patterns. Bundle-only is a valid configuration. Move on to the rewrite.
 
 ### Precedence
 
@@ -50,7 +49,9 @@ When applying rules, take the union of the bundle and every overlay, with overla
 
 ### Fallback
 
-**If neither the bundle nor any user overlay exists, return the input unchanged.** Do not invent voice rules from training data. Do not guess at "what good writing looks like." Without a profile loaded, you are a pass-through.
+**The bundle ships with the plugin and is ALWAYS loadable. If your Read of the bundle path fails, that is a bug. Emit `[GOVERNANCE] bundle profile missing at <path>` and pass the input through. Do not invent rules.**
+
+Missing overlays are NOT a fallback condition. If overlay files are not present (404), apply the bundle alone. Bundle-only is a fully valid configuration, not a degraded one. Do not stall searching for overlays. Do not nudge yourself into "let me try harder to find them." Read once, skip 404s, move on to the rewrite.
 
 ## Your Job
 
