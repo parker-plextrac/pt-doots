@@ -41,6 +41,7 @@ Per-user tweaks go in overlay files in your memory dir, not in the plugin tree. 
 | `/pt-doots` | Orchestrator — detects intent from your message |
 | `/prs` | PR dashboard for all open PlexTrac PRs |
 | `/prs <PR-url>` | Structured review of a single PR using the team |
+| `/prs self [TICKET-KEY]` | Run the full review swarm against your own inflight code; saves findings to `notes/{TICKET}/`. Auto-detects the ticket from your current branches if you omit the key. Handles multi-repo tickets (FE + BE) as parallel arms. |
 | `/bootstrap-team` | One-time setup — spawns the team-manager to create every agent locally |
 | `/team-audit` | Roster health check + agent performance review |
 | `/new-integration` | Scaffold a new EM integration across BE + FE repos |

@@ -8,9 +8,10 @@ argument-hint: "[pr-url]"
 
 # PRs — PlexTrac PR Dashboard & Review
 
-Two modes based on arguments:
+Three modes based on arguments:
 - **No arguments** → Dashboard mode (show all open PRs)
-- **GitHub PR URL** → Direct Review mode (multi-agent code review)
+- **GitHub PR URL** → Direct Review mode (multi-agent code review of someone else's PR)
+- **`self` or `self <TICKET-KEY>`** → Self-Review mode (multi-agent review of your own inflight code across one or more repos; output saved to `notes/{TICKET}/`)
 
 **GitHub user:** `parker-plextrac`
 
@@ -57,7 +58,9 @@ Examine `$ARGUMENTS` (the text after `/prs`):
 |-------|------|
 | *(empty)* | **Dashboard** |
 | URL matching `https://github.com/PlexTrac/*/pull/*` | **Direct Review** — extract `owner`, `repo`, and `pr_number` from the URL |
-| Anything else | Show usage: `/prs` for dashboard, `/prs <github-pr-url>` to review a specific PR |
+| `self` (alone) | **Self-Review** — auto-detect ticket from current branches |
+| `self <TICKET-KEY>` (e.g. `self IO-2168`) | **Self-Review** — review your inflight work for that ticket across all repos |
+| Anything else | Show usage: `/prs` for dashboard, `/prs <github-pr-url>` to review a specific PR, `/prs self [TICKET-KEY]` to review your own inflight code |
 
 ---
 
@@ -907,6 +910,288 @@ If the restore fails (e.g. the branch was deleted), stay on the PR branch and in
 
 ---
 
+## Mode 3: Self-Review
+
+Run the full review swarm against Parker's own inflight code so he holds his own work to the same bar he holds others'. Handles multi-repo tickets (FE + BE) by treating each repo with relevant work as a separate **arm** and reviewing them in parallel. Output is saved to `{WORKSPACE}/notes/{TICKET}/` — nothing is posted to GitHub.
+
+**Voice-stylist is skipped in this mode** — self-review notes are private to Parker, so the stylist's outbound-voice purpose doesn't apply. Findings, opinions, and action items are written raw.
+
+### Step S1: Resolve the ticket key
+
+Parse `$ARGUMENTS`:
+
+- `self IO-2168` → ticket key is `IO-2168`
+- `self` (alone) → auto-detect (see below)
+
+**Auto-detect procedure:**
+
+For each of the 5 target repos in parallel, read the current branch name:
+
+```bash
+git -C {WORKSPACE}/{repo} rev-parse --abbrev-ref HEAD
+```
+
+Extract ticket keys from each branch name using regex `[A-Z]+-\d+`. Build a frequency map.
+
+- If exactly one ticket key is found across all repos → use it.
+- If multiple ticket keys appear → list them inline (one short sentence: "Found IO-2168 on backend+frontend, ES1-1607 on mcp. Which one?") and wait for a one-word answer.
+- If no ticket key is found in any branch name → tell the user "No ticket detected from current branches. Re-run as `/prs self <TICKET-KEY>`." and stop.
+
+Store the resolved key as `TICKET`.
+
+### Step S2: Discover arms
+
+An **arm** is a (repo, source) pair representing one chunk of inflight work for `TICKET`. For each of the 5 target repos in parallel:
+
+1. **Check for an open PR** — `mcp__github__list_pull_requests(owner: "PlexTrac", repo: {repo}, state: "open")`. Filter where `title` or `head.ref` contains `TICKET`. If a match exists, the arm uses the PR diff (source: `pr`).
+2. **Else check for a local branch** — list branches in `{WORKSPACE}/{repo}`:
+   ```bash
+   git -C {WORKSPACE}/{repo} for-each-ref --format='%(refname:short)' refs/heads/ | grep -E "^${TICKET}-"
+   ```
+   If a single match → arm uses `branch vs origin/main` diff (source: `branch`). If multiple matches → list them and ask which one (one short prose question).
+3. **Else** → skip this repo.
+
+If after the scan there are **zero arms**:
+> "No inflight work found for {TICKET} (no open PRs, no matching local branches). Stopping."
+
+Display what was found, one line per arm, then proceed:
+
+```
+Self-review for {TICKET} — {N} arm(s):
+  - product-core-backend → PR #8540 (head abc1234)
+  - product-core-frontend → branch IO-2168-fe-table (5 commits ahead of main)
+```
+
+### Step S3: Fetch shared context (Jira)
+
+Fetch the Jira ticket once (shared across arms):
+
+```
+mcp__atlassian__getJiraIssue(cloudId: "plextrac.atlassian.net", issueIdOrKey: TICKET, responseContentFormat: "markdown")
+```
+
+Extract summary, description, acceptance criteria. If the call fails, proceed without — note "Jira unavailable" in the saved file header.
+
+### Step S4: Set up worktrees (one per arm, parallel)
+
+For each arm, set up an isolated worktree under a self-review-specific path so they don't collide with PR-review worktrees:
+
+```bash
+WORKTREE_DIR={WORKSPACE}/.worktrees/self-{repo}-{branch_or_pr_head_ref}
+
+# Fetch latest
+git -C {WORKSPACE}/{repo} fetch origin {head_ref}
+
+if [ -d "$WORKTREE_DIR" ]; then
+    git -C "$WORKTREE_DIR" fetch origin {head_ref}
+    git -C "$WORKTREE_DIR" reset --hard origin/{head_ref}
+else
+    git -C {WORKSPACE}/{repo} worktree add "$WORKTREE_DIR" origin/{head_ref}
+fi
+```
+
+- For `source: pr` arms, `{head_ref}` is `pr.head.ref` from the GitHub API.
+- For `source: branch` arms, `{head_ref}` is the local branch name. Push the branch to origin first if it doesn't exist on the remote, OR use the local ref directly (`git worktree add "$WORKTREE_DIR" {branch_name}`) — prefer the local-ref form so unpushed work is reviewable.
+
+Store each arm's `WORKTREE_DIR` and `head_sha` (`git -C "$WORKTREE_DIR" rev-parse HEAD`).
+
+### Step S5: Compute per-arm diffs
+
+For each arm, produce the same diff-content shape Mode 2 inlines into agent prompts.
+
+**PR arms:** call `mcp__github__get_pull_request_files` — identical to Mode 2.
+
+**Branch arms:** generate the diff against `origin/main` (or the configured default branch — check `git -C "$WORKTREE_DIR" symbolic-ref refs/remotes/origin/HEAD` to confirm):
+
+```bash
+git -C "$WORKTREE_DIR" fetch origin main
+git -C "$WORKTREE_DIR" diff origin/main...HEAD --name-only > /tmp/self-{repo}-files.txt
+git -C "$WORKTREE_DIR" diff origin/main...HEAD > /tmp/self-{repo}-diff.patch
+git -C "$WORKTREE_DIR" log origin/main..HEAD --pretty=format:"%h %s%n%b" > /tmp/self-{repo}-commits.txt
+```
+
+The commit log replaces the "PR description" input that PR arms get. Parse it into a single string the agents can read as context.
+
+For both arm types, skip binary files and test fixtures from the diff inlined to agents (same rule as Mode 2). If the total inlined diff exceeds ~200KB, fall back to Mode 2's split-by-domain strategy.
+
+### Step S6: Spawn the swarm — all arms in parallel
+
+For each arm, spawn the same 5-7 reviewer agents Mode 2 uses (edge-case-qa, acceptance-qa, researcher, code-reviewer, code-smells-reviewer, conditional test-reviewer, conditional dynamic specialists). **Critical: dispatch ALL arms' agents in a single message** so they actually run concurrently — a 2-arm review is 10-14 parallel agents, not 2 sequential batches.
+
+Use the same agent prompt templates Mode 2 uses (see Step 3 of Mode 2), with these substitutions:
+
+- `PR title` → `Branch: {head_ref} ({N} commits ahead of main)` for branch arms; PR title as-is for PR arms.
+- `PR description` → recent commit messages (from `/tmp/self-{repo}-commits.txt`) for branch arms; PR description for PR arms.
+- `Jira context` → the shared Jira fetch from S3.
+- `{WORKTREE_DIR}` → the arm's worktree path.
+- Inline the diff content from S5 just like Mode 2 — full patches, not file lists.
+
+Agents return structured findings the same way. No agent needs to know about other arms.
+
+### Step S7: Save raw findings file
+
+Create the notes directory if needed:
+
+```bash
+mkdir -p {WORKSPACE}/notes/{TICKET}
+```
+
+Save to `{WORKSPACE}/notes/{TICKET}/self-review-{YYYY-MM-DD-HHMM}.md` (timestamped so multiple self-reviews on the same ticket don't overwrite each other):
+
+```markdown
+---
+ticket: {TICKET}
+mode: self-review
+timestamp: {ISO 8601}
+jira_status: {fetched | unavailable}
+arms:
+  - repo: product-core-backend
+    source: pr
+    pr: 8540
+    head_ref: IO-2168-backend
+    head_sha: abc1234
+    base: main
+  - repo: product-core-frontend
+    source: branch
+    branch: IO-2168-fe-table
+    head_sha: def5678
+    base: main
+status: findings_ready
+---
+
+## Ticket: {TICKET}
+
+{Jira summary + acceptance criteria, or "Jira unavailable"}
+
+---
+
+## Arm 1 — product-core-backend (PR #8540)
+
+### Findings ({count})
+| # | Severity | Agent | File:Line | Finding |
+|---|----------|-------|-----------|---------|
+| 1 | HIGH | code-reviewer | apps/.../jira-service.ts:142 | ... |
+...
+
+---
+
+## Arm 2 — product-core-frontend (branch IO-2168-fe-table)
+
+### Findings ({count})
+| # | Severity | Agent | File:Line | Finding |
+...
+
+---
+
+## Cross-Arm Observations
+
+{populated in Step S8}
+
+---
+
+## Action Items
+
+(walk-through pending)
+```
+
+Apply Mode 2's **Step 5a pre-promotion sanity check** to each arm's HIGH/MED findings before saving — same caller-tracing rules, same FF-gate checks. Track demotions per arm.
+
+### Step S8: Cross-arm consolidation (orchestrator pass)
+
+After all arms return, the orchestrator (still in main context — no agent spawn) scans the combined findings for **cross-arm patterns** that no single-repo agent could catch:
+
+- **Contract mismatches**: BE response field renamed but FE still reads the old name (compare BE controller/validation changes vs FE API call sites).
+- **Naming drift**: same domain concept named differently across arms (e.g. BE calls it `assetCuid`, FE calls it `asset_id`).
+- **Missing FE wiring**: BE adds a new endpoint or response shape that FE doesn't appear to consume.
+- **Missing BE support**: FE adds a request shape or query param BE doesn't handle.
+
+Write findings into the `## Cross-Arm Observations` section as a short prose list (no severity, no agent attribution — these are orchestrator observations):
+
+```markdown
+## Cross-Arm Observations
+
+- BE response in `jira-controller.ts:88` adds `lastSyncedAt` field; FE `useJiraSync.ts:42` only destructures `{ id, name, status }` and would silently drop the new field. Worth confirming it's intentional or wiring up the FE to surface it.
+- BE renames `tenantCuid` → `tenant_cuid` in the validation schema (`validation.ts:67`); FE still sends `tenantCuid` from `JiraConfigForm.tsx:113`. Will 400 at runtime.
+```
+
+Skip the section entirely (drop the header) if no cross-arm observations land. Don't pad with weak observations to fill the section.
+
+### Step S9: Present consolidated findings
+
+Show the user a single table that groups findings by arm:
+
+```
+## Self-Review: {TICKET}
+Arms: {N} | Jira: {fetched | unavailable} | Saved: {path}
+
+### Pre-promotion sanity check
+{demotions across all arms, if any — e.g. "BE HIGH on jira-service.ts:142 demoted to MED (FF gate present)"}
+
+### Arm 1 — product-core-backend ({count} findings)
+| # | Severity | File | Finding |
+|---|----------|------|---------|
+| 1 | HIGH | jira-service.ts:142 | ... |
+| 2 | MED | jira-repository.ts:88 | ... |
+
+### Arm 2 — product-core-frontend ({count} findings)
+| # | Severity | File | Finding |
+|---|----------|------|---------|
+| 3 | MED | JiraConfigForm.tsx:113 | ... |
+
+### Cross-Arm Observations
+- {bullet 1}
+- {bullet 2}
+```
+
+**Findings are numbered globally** (continuing across arms) so the user can say "walk #1, #3, #5" without ambiguity.
+
+Then:
+> "Want to walk through the findings, or just save the file and move on? (walk / save / pick: 1,3,5)"
+
+### Step S10: Optional walk-through
+
+If the user picks `walk` or `pick: ...`, walk through the selected findings one at a time using the same `### Finding N — SEV — {file:line}` format Mode 2's Step 5b uses (`what the agent said / why this matters / your suggestions / my opinion`).
+
+**Skip the voice-stylist agent entirely in this mode.** Write `my opinion` and any captured action-item text in plain prose. Self-review output never leaves the laptop, so the stylist's purpose (consistent outbound voice) doesn't apply.
+
+For each finding, ask: `Capture as action item, skip, or downgrade?`
+
+- **Capture** → append to the `## Action Items` section of the saved file as `- [ ] {file:line} — {short description from the finding + any extra notes the user dictated}`.
+- **Skip** → mark internally; don't write anything.
+- **Downgrade** → re-categorize in the saved file (the finding stays in the findings table but gets a `~~strikethrough~~` and a brief note explaining why it was dropped).
+
+After the walk-through, set `status: walked` in the file frontmatter and add a `walked_at: {ISO 8601}` timestamp.
+
+### Step S11: Clean up worktrees
+
+For each arm, remove the worktree (same as Mode 2 Step 9):
+
+```bash
+git -C {WORKSPACE}/{repo} worktree remove "$WORKTREE_DIR" --force
+```
+
+If any removal fails, leave it in place and report — don't `rm -rf`. The user can clean up manually.
+
+### Step S12: Done
+
+Print a one-line summary:
+
+> "Self-review for {TICKET} saved to `{path}`. {N} findings, {M} action items captured."
+
+If the user `save`d without walking, mention:
+> "You can re-open `{path}` and run another self-review later — each run is timestamped, so nothing gets overwritten."
+
+---
+
+## Self-Review Notes
+
+- **No GitHub posting.** This mode never calls the GitHub PR comment APIs. The output is local-only by design.
+- **Multiple runs accumulate.** Each self-review run produces a new timestamped file under `notes/{TICKET}/`. Useful for "review → fix → review again" iterations before pushing.
+- **Branch arms can be unpushed.** A local branch with no remote tracking ref still works — the worktree picks up the local commits via `git worktree add "$WORKTREE_DIR" {branch_name}`.
+- **No voice-stylist invocations.** This is deliberate. Don't second-guess and route findings through it "for consistency" — Parker explicitly opted out.
+
+---
+
 ## Error Handling
 
 | Scenario | Behavior |
@@ -920,6 +1205,10 @@ If the restore fails (e.g. the branch was deleted), stay on the PR branch and in
 | Review post fails | Show error, keep state at `drafting` for retry. |
 | Invalid PR URL format | Show usage message. |
 | PR URL from non-PlexTrac repo | Show: "This PR is not in a PlexTrac repo. Supported repos: {list}" |
+| Self-review: no ticket detected | "No ticket detected from current branches. Re-run as `/prs self <TICKET-KEY>`." and stop. |
+| Self-review: no arms found | "No inflight work found for {TICKET} (no open PRs, no matching local branches). Stopping." |
+| Self-review: multiple branches match in one repo | List them and ask which one (single prose question). |
+| Self-review: worktree add fails | Report the error per-arm; continue with arms that succeeded. If all arms fail, stop. |
 
 ---
 
