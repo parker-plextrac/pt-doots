@@ -127,16 +127,20 @@ All five quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa
    - Use `Read` on the file in main context and slice the relevant lines.
    Concatenate these into `{INLINED_FUNCTION_BODIES}` with a header per function (e.g. `--- {path}: {functionName} ---`). For tiny diffs where every changed function is fully visible in `{INLINED_DIFF}`, set `{INLINED_FUNCTION_BODIES}` to `(none — full bodies present in the diff above)`.
 
-3. For `test-reviewer` specifically, `{INLINED_DIFF}` MUST include both the test files AND their corresponding production files — the reviewer cannot judge whether assertions verify real behavior without seeing the production code.
+3. **Caller bodies are MANDATORY** whenever a changed function has a signature change, a precondition change, an invariant the caller relies on, a return-type/shape change, OR is being renamed. In practice this is almost every quality-gate cycle. For each changed function, `git -C {WORKSPACE}/{repo} grep -n "{functionName}"` (or equivalent) to find every direct caller, then slice each caller's full body into `{INLINED_FUNCTION_BODIES}` with a header (e.g. `--- {path}: {callerName} (calls {changedFn}) ---`). Without caller bodies, edge-case-qa cannot judge contract fragility ("caller pre-checks empties but callee doesn't"), code-reviewer cannot judge rename completeness ("did every call site update?"), and code-smells-reviewer cannot judge duplication across the call graph. **The 2026-05-26 IO-2183 PR #215 regression — incomplete `_NEW_FORMAT_` → `_BY_ISSUE_` rename + double-parse + empty-key bug — happened because callers weren't inlined.** Inlining caller bodies once at the orchestrator level is cheaper than five reviewers each running out of turns trying to Read them.
 
-4. For each reviewer in the fan-out, take its prompt template from `reference/agent-prompts.md`, substitute every `{...}` placeholder (including `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}`), and pass the fully-rendered prompt as the agent's spawn input. Do NOT spawn an agent with placeholders still present.
+4. For `test-reviewer` specifically, `{INLINED_DIFF}` MUST include both the test files AND their corresponding production files — the reviewer cannot judge whether assertions verify real behavior without seeing the production code.
 
-5. If the diff is enormous (>30k tokens estimated), split the review surface into logical chunks and spawn multiple parallel reviewer instances per role rather than dropping content. Note the split in `progress.md` so the consolidation step accounts for all chunks.
+5. For each reviewer in the fan-out, take its prompt template from `reference/agent-prompts.md`, substitute every `{...}` placeholder (including `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}`), and pass the fully-rendered prompt as the agent's spawn input. Do NOT spawn an agent with placeholders still present.
+
+6. If the diff is enormous (>30k tokens estimated), split the review surface into logical chunks and spawn multiple parallel reviewer instances per role rather than dropping content. Note the split in `progress.md` so the consolidation step accounts for all chunks.
 
 **Do NOT**:
 - Pass `Changed files: {list}` and expect the agent to Read them.
 - Pass `Plan: {WORKSPACE}/notes/{TICKET-KEY}/plan.md` and expect the agent to open it — paste the relevant plan summary inline.
 - Bump reviewer `maxTurns` to compensate for missing inline context — that is the wrong fix and inflates cost.
+- Skip step 3 (caller inlining) because "this is a pure rename" or "the diff is small." Renames in particular REQUIRE caller inlining — the only way to verify rename completeness is to see every reference, and skipping this is what caused the IO-2183 PR #215 incomplete-rename regression. A "pure rename with no logic change" justifies running fewer reviewers, not less context per reviewer.
+- Skip Step 4c entirely on fix cycles (even rename-only ones). At minimum run `code-reviewer` + `test-reviewer` with full caller bodies — they catch consistency drift exactly when the orchestrator is most tempted to say "this is too small to review."
 
 ### Implementation Agent Selection (Steps 4a / 4d)
 
