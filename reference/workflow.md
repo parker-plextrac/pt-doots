@@ -289,6 +289,8 @@ Ask: **"Ready to create a PR? I can use `/create-pr` to push and open a PR with 
 **Must be sequential:**
 - Research → Plan → Branch → Implement → Verify → Test → Verify → Review → Fix → Verify → Commit
 
+**Multi-item / multi-wave swarms:** see [swarm-coordination.md](swarm-coordination.md) for concurrency caps, worktree isolation, `.worktreeinclude` for env copying, sub-agents vs agent teams, and the wave-based pattern for production backlog burndowns.
+
 ---
 
 ## Telemetry
@@ -303,4 +305,5 @@ Run-level metrics (per-agent and per-workflow) are recorded under `{PLUGIN}/.loc
 - Agent spawn prompts: [agent-prompts.md](agent-prompts.md)
 - Progress log format: [progress-format.md](progress-format.md)
 - Metrics schema: [metrics-format.md](metrics-format.md)
+- Multi-item / multi-wave swarms: [swarm-coordination.md](swarm-coordination.md)
 - Telemetry contract: [../commands/pt-doots.md](../commands/pt-doots.md) § Telemetry
