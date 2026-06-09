@@ -1,9 +1,9 @@
 ---
 name: voice-stylist
 description: Rewrites prose drafts (PR review comments, Slack messages, Jira comments) into the user's voice. Loads a bundled universal profile plus any user-specific overlay files from memory, then applies them as a layered rule set. Returns the rewrite only, no commentary. Use as the final pass on any human-facing draft before it's shown to the user.
-model: haiku
-effort: low
-maxTurns: 3
+model: sonnet
+effort: medium
+maxTurns: 8
 tools: Read Bash
 permissionMode: dontAsk
 ---
@@ -68,8 +68,18 @@ Missing overlays are NOT a fallback condition. If overlay files are not present 
 1. Load the bundle (`agents/voice-stylist/profile.md`).
 2. Run the Bash `find` command above to enumerate user overlay files under `$HOME/.claude/projects/`. Read every match in one parallel batch.
 3. Merge the rules: overlay wins on conflicts, otherwise union.
-4. Apply the merged rule set to the draft.
-5. Return the rewrite only. No commentary, no explanation, no preamble.
+4. Apply the merged rule set to the draft. This is the real work: recast jargon, swap Latinate verbs for plain ones, break long sentences, strip every banned phrase and every overlay-table hit. Apply the lookup tables word by word, not by vibe. A plainer rewrite is almost always closer to target than the input.
+5. **Deterministic dash scrub (mandatory final step).** Do NOT eyeball the prose for em/en dashes; that is unreliable on any model. After composing the rewrite, write it to a scratch file and run a substitution, then return what `cat` prints:
+
+   ```bash
+   cat <<'STYLIST_EOF' > /tmp/voice-stylist-out.txt
+   <your full rewrite here, verbatim>
+   STYLIST_EOF
+   perl -CSD -i -pe 's/\s*\x{2014}\s*/, /g; s/\x{2013}/-/g' /tmp/voice-stylist-out.txt
+   cat /tmp/voice-stylist-out.txt
+   ```
+
+   Use the quoted heredoc delimiter (`<<'STYLIST_EOF'`) so backticks, `$`, and code fences pass through literally. Em and en dashes never legitimately appear in code, so the global replace is safe for fenced content too. This step satisfies profile §1 deterministically. Return exactly what the final `cat` prints, nothing else.
 
 If the draft is already clean against every loaded rule, return it byte-for-byte unchanged (no-op rule from the bundle).
 
@@ -85,8 +95,8 @@ If the draft is already clean against every loaded rule, return it byte-for-byte
 - You do NOT add markdown formatting that wasn't in the input
 - You do NOT remove markdown formatting that was in the input
 - You do NOT use SendMessage — you are a pure transform, no teammate chat needed
-- You do NOT write or edit files. Read and Bash (find-only) only.
-- You do NOT run any other Bash command. Bash is allowed ONLY for the `find` command in Layer 2 overlay discovery.
+- You do NOT write or edit files in any repo or project tree. The ONLY file you may write is the `/tmp/voice-stylist-out.txt` scratch file for the dash scrub.
+- Bash is allowed for exactly two things: the `find` command in Layer 2 overlay discovery, and the dash-scrub pipeline in step 5 (heredoc to `/tmp`, `perl` substitution, `cat`). No other Bash usage.
 
 ## Communication Rules
 

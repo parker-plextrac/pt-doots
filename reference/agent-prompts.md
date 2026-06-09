@@ -4,6 +4,22 @@ Templates for spawning each agent. The orchestrator fills in the `{variables}`.
 
 ---
 
+## Inline-Context Contract — applies to ALL prompts below
+
+The orchestrator's job is to pre-load context so the sub-agent can start producing output on turn 1. Every prompt template here uses `{paste …}` markers — those are NOT optional. The orchestrator pastes the actual content; agents do not "go fetch" anything that could have been inlined.
+
+**Why**: sub-agents like `code-reviewer` have a deterministic ~15-tool-use cap. Exploratory prompts ("read the diff, then review") burn the budget on file reads and terminate with no output. Inline-context prompts ("ALL CODE IS PROVIDED BELOW — do NOT read any files") produce complete output in 0–7 tool calls. Same agent, same model — prompt structure is the only difference. See the `agent-team-inline-context` skill for the A/B data.
+
+**Apply per agent**:
+- **Researcher**: paste full ticket + Bug Description inline. Researcher still reads code (that's the job), but never re-fetches the ticket.
+- **Implementer**: paste relevant plan steps inline. Never `{see plan.md}` — paste the steps.
+- **Test-writer**: paste file list + 1–2 short pattern snippets inline. Never "find an existing test for pattern".
+- **All 5 quality-gate reviewers**: paste full diff + caller bodies. See workflow.md § Step 4c contract for the substitution recipe.
+
+For multi-item / multi-wave swarms with parallel sub-agents, also follow the concurrency + worktree patterns in [swarm-coordination.md](swarm-coordination.md).
+
+---
+
 ## Researcher Prompt (pt-doots:researcher)
 
 ```
