@@ -6,7 +6,7 @@ implement → test → review → commit.
 
 Opinionated for our repos (`product-core-backend`, `product-core-frontend`,
 `product-services-export`, `product-services-mcp`), our standards
-(per-repo CLAUDE.md), and our tooling (Jira, Confluence, GitHub MCP).
+(per-repo CLAUDE.md), and our tooling (Jira/Confluence REST, GitHub via `gh` CLI).
 
 ## Install (from marketplace)
 
@@ -30,9 +30,16 @@ Per-user tweaks go in overlay files in your memory dir, not in the plugin tree. 
 ## Prerequisites
 
 - Claude Code with agent teams enabled (above)
-- [PlexTrac agent-skills plugin](https://github.com/PlexTrac/agent-skills) — provides `/verify`, `/logs`, `/create-pr`, `/setup`, etc.
-- MCP servers configured for GitHub + Atlassian (Jira/Confluence) — run `/setup` from agent-skills if you haven't
 - Workspace laid out with PlexTrac repos checked out side-by-side under one parent directory
+- **[PlexTrac agent-skills plugin](https://github.com/PlexTrac/agent-skills) installed and `/setup` completed.** This is the hard requirement — pt-doots delegates verify, PR, ticket, log, and stack work to commands from agent-skills (`/verify`, `/create-pr`, `/ticket`, `/logs`, `/stack-up`, etc.) and its `/setup` provisions every credential and CLI listed below.
+
+Agent-skills `/setup` installs/verifies:
+
+- **`gh` CLI** authenticated against PlexTrac's GitHub org — primary tool for PR work; the GitHub MCP is a fallback when `gh` is unavailable
+- **Atlassian API token** at `~/.jira-attlasian-cred` — pt-doots talks to Jira and Confluence via REST directly; the Atlassian MCP is **not** used because its OAuth flow fails mid-workflow
+- **`~/bin/jira-attachment`** symlink to the bundled download script (used for tickets with attached repro files)
+
+Install agent-skills first, run `/setup`, then come back here.
 
 ## Commands
 
