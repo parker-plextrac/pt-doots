@@ -30,9 +30,10 @@ import { isRecord } from "../util/guards.ts";
 // Import .ptrac:
 //   POST /api/v1/client/{clientId}/report/import
 //     multipart field "file" — the .ptrac file bytes
-//     NOTE: the API does not accept reportId in URL or form data; the .ptrac
-//     carries its own report structure. The reportId parameter is held for
-//     API symmetry with future increments.
+//     response: { status: "success" } — NO report id in response (confirmed)
+//     The created report id is recovered via a pre/post GET /reports diff.
+//   List reports:
+//   GET /api/v1/client/{clientId}/reports → array of { id: number, data: [...] }
 
 export class PlexTracApi {
   private readonly cfg: HarnessConfig;
@@ -125,7 +126,34 @@ export class PlexTracApi {
     return { reportId: String(data["report_id"]) };
   }
 
-  async importPtrac(clientId: string, _reportId: string, ptracPath: string): Promise<void> {
+  // The import endpoint returns {"status":"success"} with no report id (confirmed empirically).
+  // We use a pre/post report-list diff to discover the new report id.
+  private async listReportIds(clientId: string): Promise<Set<string>> {
+    const url = `${this.cfg.appUrl}/api/v1/client/${clientId}/reports`;
+    const response = await undiciFetch(url, {
+      dispatcher: this.agent,
+      headers: this.authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(`listReportIds failed: HTTP ${response.status} ${response.statusText}`);
+    }
+    const data = await response.json();
+    if (!Array.isArray(data)) {
+      throw new Error("Unexpected listReportIds response shape");
+    }
+    const ids = new Set<string>();
+    for (const item of data) {
+      if (isRecord(item) && typeof item["id"] === "number") {
+        ids.add(String(item["id"]));
+      }
+    }
+    return ids;
+  }
+
+  async importPtrac(clientId: string, ptracPath: string): Promise<{ reportId: string }> {
+    // Snapshot existing reports so we can identify the newly-created one after import.
+    const before = await this.listReportIds(clientId);
+
     // Build multipart body as a Buffer to avoid the FormData type conflict between
     // @types/node and undici. Buffer is NodeJS.ArrayBufferView, which IS in BodyInit.
     const fileBytes = readFileSync(ptracPath);
@@ -152,5 +180,16 @@ export class PlexTracApi {
       const errBody = await response.text();
       throw new Error(`importPtrac failed: HTTP ${response.status} ${errBody}`);
     }
+
+    const after = await this.listReportIds(clientId);
+    const newIds = [...after].filter((id) => !before.has(id));
+    if (newIds.length !== 1) {
+      throw new Error(`Expected 1 new report after import, found ${newIds.length}`);
+    }
+    const reportId = newIds[0];
+    if (reportId === undefined) {
+      throw new Error("Internal: newIds[0] unexpectedly undefined");
+    }
+    return { reportId };
   }
 }
