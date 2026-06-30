@@ -1,544 +1,538 @@
 {
-    "status": "success",
-    "data": {
-        "systemLevel": "DEVELOPMENT",
-        "featureFlags": {
-            "PENDO_ENABLED": {
-                "title": "Pendo Enabled",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Flag to enable/disable analytics reporting to the Pendo platform.",
-                "feature": "PENDO_ENABLED",
-                "reason": "This feature has been set to OFF"
-            },
-            "SENTRY_FRONTEND_ENABLED": {
-                "title": "Sentry Frontend Enabled",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Flag to enable/disable reporting performance monitoring and bug reporting to Sentry in the frontend.",
-                "feature": "SENTRY_FRONTEND_ENABLED",
-                "reason": "This feature has been set to OFF"
-            },
-            "FARO_ENABLED": {
-                "title": "Faro Enabled",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Flag to enable/disable Grafana Faro Frontend Observability in the frontend.",
-                "feature": "FARO_ENABLED",
-                "reason": "This feature has been set to OFF"
-            },
-            "CKEDITOR_AUTO_NUMBERING": {
-                "title": "CK Editor Auto Numbering",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Allow users to use auto numbering for captions on CKEditor feature.",
-                "feature": "CKEDITOR_AUTO_NUMBERING",
-                "reason": "Feature Flag passed all checks."
-            },
-            "CTF_MODE": {
-                "title": "CTF Mode",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Allow users to use CTF mode.",
-                "feature": "CTF_MODE",
-                "reason": "This feature has been set to OFF"
-            },
-            "IMPORT_ENGAGEMENT_ENABLED": {
-                "title": "Import Engagement Enabled",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Override default import engagement support.",
-                "feature": "IMPORT_ENGAGEMENT_ENABLED",
-                "reason": "Feature Flag passed all checks."
-            },
-            "MULTIPLE_JIRA_INSTANCES": {
-                "title": "Multiple Jira Instances",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Flag to enable/disable allowing tenants to configure multiple Jira instances.",
-                "feature": "MULTIPLE_JIRA_INSTANCES",
-                "reason": "Feature Flag passed all checks."
-            },
-            "JIRA_RICH_TEXT_SYNC": {
-                "title": "JIRA Rich Text Sync",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "When enabled, syncs finding description, recommendations, and references to JIRA as Confluence markup with embedded images; also rewrites image URLs when syncing from JIRA. When off, uses plain text (pre-feature behavior).",
-                "feature": "JIRA_RICH_TEXT_SYNC",
-                "reason": "Environment Override 'OVERRIDE_JIRA_RICH_TEXT_SYNC' was set to true."
-            },
-            "PLEXAI_FINDING_EMBEDDING_GENERATION": {
-                "title": "PlexAI Finding Embedding Generation Enabled",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Flag to enable/disable PlexAI finding embedding generation.",
-                "feature": "PLEXAI_FINDING_EMBEDDING_GENERATION",
-                "reason": "Feature Flag passed all checks."
-            },
-            "PLEXAI_USE_CLOUD_RUN_EMBEDDINGS": {
-                "title": "PlexAI Use Cloud Run Embeddings",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "When enabled, finding embeddings are generated via the Cloud Run TEI endpoint; when disabled (default), the legacy Vertex AI endpoint is used.",
-                "feature": "PLEXAI_USE_CLOUD_RUN_EMBEDDINGS",
-                "reason": "This feature has been set to OFF"
-            },
-            "SLA_NOTIFICATIONS": {
-                "title": "SLA Notifications",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Provide access to SLA notification configuration area and enable/disable notifications.",
-                "feature": "SLA_NOTIFICATIONS",
-                "reason": "Feature Flag passed all checks."
-            },
-            "FEATURE_FLAG_DASHBAORD": {
-                "title": "Feature Flag Dashboard",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Flag to enable/disable viewing the feature flag dashboard.",
-                "feature": "FEATURE_FLAG_DASHBAORD",
-                "reason": "Feature Flag passed all checks."
-            },
-            "CHECK_ASSESSMENTS_LICENSE": {
-                "title": "Check Assessments License",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Determines whether or not we should perform a check for the Assessments License Key",
-                "feature": "CHECK_ASSESSMENTS_LICENSE",
-                "reason": "This feature has been set to OFF"
-            },
-            "DATALAKE_ETL": {
-                "title": "Datalake ETL",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Run Datalake ETL Cronjob",
-                "feature": "DATALAKE_ETL",
-                "reason": "This feature has been set to OFF"
-            },
-            "UPDATE_SINGLE_CUSTOM_FIELD": {
-                "title": "Findings: update a single custom field",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Update a single custom field on a finding",
-                "feature": "UPDATE_SINGLE_CUSTOM_FIELD",
-                "reason": "This feature has been set to OFF"
-            },
-            "RUNBOOKS_V1": {
-                "title": "Runbooks v1",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Runbooks v1",
-                "feature": "RUNBOOKS_V1",
-                "reason": "This feature has been set to OFF"
-            },
-            "ROUTE_LEVEL_METRICS": {
-                "title": "Route level metrics",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Flag used to enable route level metrics for monitoring",
-                "feature": "ROUTE_LEVEL_METRICS",
-                "reason": "This feature has been set to OFF"
-            },
-            "FINDINGS_CONTEXTUAL_SCORING": {
-                "title": "Findings Contextual Scoring",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables Findings Contextual Scoring",
-                "feature": "FINDINGS_CONTEXTUAL_SCORING",
-                "reason": "Feature Flag passed all checks."
-            },
-            "REPORT_DETAILS_REVAMP": {
-                "title": "Report Details",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Flag used to enable the new report details page",
-                "feature": "REPORT_DETAILS_REVAMP",
-                "reason": "This feature has been set to OFF"
-            },
-            "IO_1243_OAUTH_EMAIL_CONFIG": {
-                "title": "OAuth Email Configuration",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Allows configuration of OAuth email settings",
-                "feature": "IO_1243_OAUTH_EMAIL_CONFIG",
-                "reason": "Feature Flag passed all checks."
-            },
-            "PLEXAI_ASK_AI": {
-                "title": "Plex AI Ask AI",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Plex AI Ask AI",
-                "feature": "PLEXAI_ASK_AI",
-                "reason": "Feature Flag passed all checks."
-            },
-            "PLEXAI_CHAT": {
-                "title": "Plex AI Chat",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Plex AI chat with your data",
-                "feature": "PLEXAI_CHAT",
-                "reason": "Feature Flag passed all checks."
-            },
-            "CLEAR_DEFAULT_PARSER_ACTIONS": {
-                "title": "Clear Default Parser Actions",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Allows the user to clear out default parser actions for a parser type via import",
-                "feature": "CLEAR_DEFAULT_PARSER_ACTIONS",
-                "reason": "This feature has been set to OFF"
-            },
-            "BEEF_1832_FRONTEND_EVENT_LOGGING": {
-                "title": "Frontend event logging",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables logging of frontend events to our api.",
-                "feature": "BEEF_1832_FRONTEND_EVENT_LOGGING",
-                "reason": "Feature Flag passed all checks."
-            },
-            "COLLABORATION": {
-                "title": "Real Time Collaboration",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "This is a non-standard feature flag. It should NOT be disabled unless this is a very good reason.",
-                "feature": "COLLABORATION",
-                "reason": "Feature Flag passed all checks."
-            },
-            "ANALYTICS_GRAPH_REBUILD": {
-                "title": "Analytics Graph Rebuild Enabled",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables the Analytics Graph rebuild cron job",
-                "feature": "ANALYTICS_GRAPH_REBUILD",
-                "reason": "Feature Flag passed all checks."
-            },
-            "FLUSH_CKE_DOCUMENT_ON_DISCONNECT": {
-                "title": "Flush CKEditor Document on Disconnect",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Flush CKEditor document on disconnect",
-                "feature": "FLUSH_CKE_DOCUMENT_ON_DISCONNECT",
-                "reason": "Feature Flag passed all checks."
-            },
-            "EXCLUDE_EVIDENCE_FROM_EXPORT": {
-                "title": "Exclude Evidence from Export",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Forces evidence to be excluded from word and PDF exports regardless of report settings",
-                "feature": "EXCLUDE_EVIDENCE_FROM_EXPORT",
-                "reason": "This feature has been set to OFF"
-            },
-            "EXCLUDE_INFORMATIONAL_FINDINGS_FROM_EXPORT": {
-                "title": "Exclude Informational Findings from Export",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Excludes informational findings from word and PDF exports",
-                "feature": "EXCLUDE_INFORMATIONAL_FINDINGS_FROM_EXPORT",
-                "reason": "This feature has been set to OFF"
-            },
-            "CTEM_FINDING_ANALYTICS_CRON": {
-                "title": "CTEM Finding Analytics Cron",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables the CTEM Finding Analytics Cron",
-                "feature": "CTEM_FINDING_ANALYTICS_CRON",
-                "reason": "Feature Flag passed all checks."
-            },
-            "PDF_EXPORT_TRIM_WHITESPACE": {
-                "title": "PDF Export Trim Whitespace",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "If enabled, we will trim whitespace from the PDF export",
-                "feature": "PDF_EXPORT_TRIM_WHITESPACE",
-                "reason": "Feature Flag passed all checks."
-            },
-            "PDF_EXPORT_DEBUG_HTML_FILE": {
-                "title": "PDF Export Debug HTML File",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "If enabled, we will save a debug HTML file during the PDF export process. Once written the file location can be found in the logs.",
-                "feature": "PDF_EXPORT_DEBUG_HTML_FILE",
-                "reason": "Feature Flag passed all checks."
-            },
-            "EVENT_ORCHESTRATOR_KILL_SWITCH": {
-                "title": "Disable Event Orchestrator",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Allows disabling the event orchestrator. This is for use during emergencies if we need to shed load",
-                "feature": "EVENT_ORCHESTRATOR_KILL_SWITCH",
-                "reason": "This feature has been set to OFF"
-            },
-            "EVENT_ORCHESTRATOR_WORKER_CONCURRENCY": {
-                "title": "Tune Event Orchestrator Worker Concurrency",
-                "variation": 3,
-                "variationType": "number",
-                "description": "Allows us to tune the concurrency of the event orchestrator workers. This is for use during emergencies if we need to shed load",
-                "feature": "EVENT_ORCHESTRATOR_WORKER_CONCURRENCY",
-                "reason": "Feature Flag passed all checks."
-            },
-            "SERVICE_NOW_MARKETPLACE_APP": {
-                "title": "Service Now Marketplace App",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "If enabled, users can configure the service now marketplace integration and create tickets.",
-                "feature": "SERVICE_NOW_MARKETPLACE_APP",
-                "reason": "Environment Override 'OVERRIDE_SERVICE_NOW_MARKETPLACE_APP' was set to true."
-            },
-            "SHOW_REPORTING_REMEDIATION_TICKETS": {
-                "title": "Show Reporting Remediation Tickets",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "If enabled, legacy reporting-layer Jira and ServiceNow ticket links are surfaced on CTEM instances to assist migration workflows. Intended as a temporary 6-12 month stopgap.",
-                "feature": "SHOW_REPORTING_REMEDIATION_TICKETS",
-                "reason": "This feature has been set to OFF"
-            },
-            "BURP_IO_1611_MAPPING": {
-                "title": "Burp Parser IO-1611 Mapping Changes",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "adds mapping for burp parser changes to vulnerability parameters and asset paths ",
-                "feature": "BURP_IO_1611_MAPPING",
-                "reason": "This feature has been set to OFF"
-            },
-            "IO_1652_EXPOSURE_MANAGEMENT_API_INTEGRATIONS": {
-                "title": "Exposure Management Api Integrations",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables automated api integration processing for exposure management",
-                "feature": "IO_1652_EXPOSURE_MANAGEMENT_API_INTEGRATIONS",
-                "reason": "Environment Override 'OVERRIDE_IO_1652_EXPOSURE_MANAGEMENT_API_INTEGRATIONS' was set to true."
-            },
-            "SHOW_CONTEXTUAL_SCORING_DEPRECATION_WARNING": {
-                "title": "Show contextual scoring deprecation warning",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Show a deprecation warning banner for contextual scoring.",
-                "feature": "SHOW_CONTEXTUAL_SCORING_DEPRECATION_WARNING",
-                "reason": "Feature Flag passed all checks."
-            },
-            "DAILY_JIRA_INVESTIGATION": {
-                "title": "Daily Jira Investigation",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Enables daily jira investigation.",
-                "feature": "DAILY_JIRA_INVESTIGATION",
-                "reason": "This feature has been set to OFF"
-            },
-            "ASSET_IMPORT_QUEUE": {
-                "title": "Asset Import Queue",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Use integration worker queue for CSV asset imports instead of direct processing",
-                "feature": "ASSET_IMPORT_QUEUE",
-                "reason": "Environment Override 'OVERRIDE_ASSET_IMPORT_QUEUE' was set to true."
-            },
-            "NMAP_CSV_ASSET_TYPESCRIPT_PARSER": {
-                "title": "Nmap CSV Asset TypeScript Parser",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Use TypeScript parser for Nmap CSV asset files instead of Python parser",
-                "feature": "NMAP_CSV_ASSET_TYPESCRIPT_PARSER",
-                "reason": "Environment Override 'OVERRIDE_NMAP_CSV_ASSET_TYPESCRIPT_PARSER' was set to true."
-            },
-            "NMAP_XML_ASSET_TYPESCRIPT_PARSER": {
-                "title": "Nmap XML Asset TypeScript Parser",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Use TypeScript parser for Nmap XML asset files instead of Python parser",
-                "feature": "NMAP_XML_ASSET_TYPESCRIPT_PARSER",
-                "reason": "Environment Override 'OVERRIDE_NMAP_XML_ASSET_TYPESCRIPT_PARSER' was set to true."
-            },
-            "NMAP_XML_FINDINGS_TYPESCRIPT_PARSER": {
-                "title": "Nmap XML Findings TypeScript Parser",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Use TypeScript parser for Nmap XML findings files instead of Python parser",
-                "feature": "NMAP_XML_FINDINGS_TYPESCRIPT_PARSER",
-                "reason": "Environment Override 'OVERRIDE_NMAP_XML_FINDINGS_TYPESCRIPT_PARSER' was set to true."
-            },
-            "IO_2158_SCANGROUP_TYPESCRIPT_PARSER": {
-                "title": "ScanGroup XML TypeScript Parser",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Use TypeScript parser for ScanGroup XML files (Invicti Cloud Agent / Acunetix) instead of Python parser",
-                "feature": "IO_2158_SCANGROUP_TYPESCRIPT_PARSER",
-                "reason": "Environment Override 'OVERRIDE_IO_2158_SCANGROUP_TYPESCRIPT_PARSER' was set to true."
-            },
-            "CLASSIFICATION_TIERS_VISIBLE": {
-                "title": "Classification Tiers Visible",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Controls whether the classification tiers feature is visible. When disabled, the feature will be hidden from the UI unless the tenant is already using classification tiers.",
-                "feature": "CLASSIFICATION_TIERS_VISIBLE",
-                "reason": "This feature has been set to OFF"
-            },
-            "EXPOSURE_MANAGEMENT_REMEDIATION_AZURE_DEV_OPS": {
-                "title": "Azure Devops",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "",
-                "feature": "EXPOSURE_MANAGEMENT_REMEDIATION_AZURE_DEV_OPS",
-                "reason": "Environment Override 'OVERRIDE_EXPOSURE_MANAGEMENT_REMEDIATION_AZURE_DEV_OPS' was set to true."
-            },
-            "ASYNC_EXPORT": {
-                "title": "Use Async Export",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables use of async export",
-                "feature": "ASYNC_EXPORT",
-                "reason": "Environment Override 'OVERRIDE_ASYNC_EXPORT' was set to true."
-            },
-            "IO_2023_QUALYS_INTEGRATION": {
-                "title": "Qualys Integration",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables the Qualys integration.",
-                "feature": "IO_2023_QUALYS_INTEGRATION",
-                "reason": "Environment Override 'OVERRIDE_IO_2023_QUALYS_INTEGRATION' was set to true."
-            },
-            "IO_2141_TENABLE_TVM_SYNQLY_INTEGRATION": {
-                "title": "Tenable VM Synqly Integration",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Enables the Synqly-mediated Tenable Vulnerability Management integration.",
-                "feature": "IO_2141_TENABLE_TVM_SYNQLY_INTEGRATION",
-                "reason": "This feature has been set to OFF"
-            },
-            "IO_2141_CROWDSTRIKE_INTEGRATION": {
-                "title": "Crowdstrike Integration",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables the Crowdstrike integration.",
-                "feature": "IO_2141_CROWDSTRIKE_INTEGRATION",
-                "reason": "Environment Override 'OVERRIDE_IO_2141_CROWDSTRIKE_INTEGRATION' was set to true."
-            },
-            "IO_2141_SNYK_INTEGRATION": {
-                "title": "Snyk Integration",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Enables the Snyk integration.",
-                "feature": "IO_2141_SNYK_INTEGRATION",
-                "reason": "This feature has been set to OFF"
-            },
-            "IO_2141_HORIZON3_INTEGRATION": {
-                "title": "Horizon3 Integration",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables the Horizon3 integration.",
-                "feature": "IO_2141_HORIZON3_INTEGRATION",
-                "reason": "Environment Override 'OVERRIDE_IO_2141_HORIZON3_INTEGRATION' was set to true."
-            },
-            "IO_2141_RAPID7_INTEGRATION": {
-                "title": "Rapid7 Integration",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables the Rapid7 integration.",
-                "feature": "IO_2141_RAPID7_INTEGRATION",
-                "reason": "Environment Override 'OVERRIDE_IO_2141_RAPID7_INTEGRATION' was set to true."
-            },
-            "IO_2141_WIZ_INTEGRATION": {
-                "title": "Wiz Integration",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Enables the Wiz integration.",
-                "feature": "IO_2141_WIZ_INTEGRATION",
-                "reason": "This feature has been set to OFF"
-            },
-            "MCP_SERVER": {
-                "title": "MCP Server",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Enables the MCP server functionality.",
-                "feature": "MCP_SERVER",
-                "reason": "This feature has been set to OFF"
-            },
-            "STRIP_CKEDITOR_SUGGESTIONS_UI": {
-                "title": "Strip CKEditor Suggestions in UI",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Strip CKEditor suggestions when viewing a read-only ckeditor backed field in the UI.",
-                "feature": "STRIP_CKEDITOR_SUGGESTIONS_UI",
-                "reason": "This feature has been set to OFF"
-            },
-            "LEGACY_DUPLICATE_REQUEST_LIMITER": {
-                "title": "Legacy Duplicate Request Limiter",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables the legacy duplicate request limiter functionality.",
-                "feature": "LEGACY_DUPLICATE_REQUEST_LIMITER",
-                "reason": "Feature Flag passed all checks."
-            },
-            "AFFECTED_ASSET_DRAWER": {
-                "title": "Affected Asset Drawer",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables the affected asset drawer.",
-                "feature": "AFFECTED_ASSET_DRAWER",
-                "reason": "Feature Flag passed all checks."
-            },
-            "IO_2128_BURP_HTML_IMPORTER": {
-                "title": "Burp HTML Importer",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Enables the Burp (html) file import. Disable to hide from the UI and block API uploads for this legacy importer.",
-                "feature": "IO_2128_BURP_HTML_IMPORTER",
-                "reason": "Environment Override 'OVERRIDE_IO_2128_BURP_HTML_IMPORTER' was set to false."
-            },
-            "SCHEDULER_CUSTOM_FORMS": {
-                "title": "Scheduler Custom Forms",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Enables custom forms for the scheduler.",
-                "feature": "SCHEDULER_CUSTOM_FORMS",
-                "reason": "Feature Flag passed all checks."
-            },
-            "TAG_CASCADE_DELETE": {
-                "title": "Tag Cascade Deletion",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Cascade delete a tag across the entire system",
-                "feature": "TAG_CASCADE_DELETE",
-                "reason": "This feature has been set to OFF"
-            },
-            "HIDE_SUGGESTIONS_ON_VIEW": {
-                "title": "Hide Annotations on View",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Hide CKEditor annotations from view mode UIs + APIs",
-                "feature": "HIDE_SUGGESTIONS_ON_VIEW",
-                "reason": "Feature Flag passed all checks."
-            },
-            "CUSTOM_HELP_CENTER_LINK": {
-                "title": "Custom Help Center Link",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Allows administrators to configure a custom Help Center URL via white labeling, overriding the default PlexTrac help center link.",
-                "feature": "CUSTOM_HELP_CENTER_LINK",
-                "reason": "Feature Flag passed all checks."
-            },
-            "CUSTOM_PRIVACY_POLICY_LINK": {
-                "title": "Custom Privacy Policy Link",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Allows administrators to configure a custom Privacy Policy URL via white labeling, overriding the default PlexTrac privacy policy link.",
-                "feature": "CUSTOM_PRIVACY_POLICY_LINK",
-                "reason": "Feature Flag passed all checks."
-            },
-            "CUSTOM_TERMS_OF_SERVICE_LINK": {
-                "title": "Custom Terms of Service Link",
-                "variation": true,
-                "variationType": "boolean",
-                "description": "Allows administrators to configure a custom Terms of Service URL via white labeling, overriding the default PlexTrac terms of use link.",
-                "feature": "CUSTOM_TERMS_OF_SERVICE_LINK",
-                "reason": "Feature Flag passed all checks."
-            },
-            "REPORT_LEVEL_PERMISSIONS": {
-                "title": "Report Level Permissions",
-                "variation": false,
-                "variationType": "boolean",
-                "description": "Allows reports to be restricted to certain users.",
-                "feature": "REPORT_LEVEL_PERMISSIONS",
-                "reason": "This feature has been set to OFF"
-            }
-        }
+    "PENDO_ENABLED": {
+        "title": "Pendo Enabled",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Flag to enable/disable analytics reporting to the Pendo platform.",
+        "feature": "PENDO_ENABLED",
+        "reason": "This feature has been set to OFF"
+    },
+    "SENTRY_FRONTEND_ENABLED": {
+        "title": "Sentry Frontend Enabled",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Flag to enable/disable reporting performance monitoring and bug reporting to Sentry in the frontend.",
+        "feature": "SENTRY_FRONTEND_ENABLED",
+        "reason": "This feature has been set to OFF"
+    },
+    "FARO_ENABLED": {
+        "title": "Faro Enabled",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Flag to enable/disable Grafana Faro Frontend Observability in the frontend.",
+        "feature": "FARO_ENABLED",
+        "reason": "This feature has been set to OFF"
+    },
+    "CKEDITOR_AUTO_NUMBERING": {
+        "title": "CK Editor Auto Numbering",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Allow users to use auto numbering for captions on CKEditor feature.",
+        "feature": "CKEDITOR_AUTO_NUMBERING",
+        "reason": "Feature Flag passed all checks."
+    },
+    "CTF_MODE": {
+        "title": "CTF Mode",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Allow users to use CTF mode.",
+        "feature": "CTF_MODE",
+        "reason": "This feature has been set to OFF"
+    },
+    "IMPORT_ENGAGEMENT_ENABLED": {
+        "title": "Import Engagement Enabled",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Override default import engagement support.",
+        "feature": "IMPORT_ENGAGEMENT_ENABLED",
+        "reason": "Feature Flag passed all checks."
+    },
+    "MULTIPLE_JIRA_INSTANCES": {
+        "title": "Multiple Jira Instances",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Flag to enable/disable allowing tenants to configure multiple Jira instances.",
+        "feature": "MULTIPLE_JIRA_INSTANCES",
+        "reason": "Feature Flag passed all checks."
+    },
+    "JIRA_RICH_TEXT_SYNC": {
+        "title": "JIRA Rich Text Sync",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "When enabled, syncs finding description, recommendations, and references to JIRA as Confluence markup with embedded images; also rewrites image URLs when syncing from JIRA. When off, uses plain text (pre-feature behavior).",
+        "feature": "JIRA_RICH_TEXT_SYNC",
+        "reason": "Environment Override 'OVERRIDE_JIRA_RICH_TEXT_SYNC' was set to true."
+    },
+    "PLEXAI_FINDING_EMBEDDING_GENERATION": {
+        "title": "PlexAI Finding Embedding Generation Enabled",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Flag to enable/disable PlexAI finding embedding generation.",
+        "feature": "PLEXAI_FINDING_EMBEDDING_GENERATION",
+        "reason": "Feature Flag passed all checks."
+    },
+    "PLEXAI_USE_CLOUD_RUN_EMBEDDINGS": {
+        "title": "PlexAI Use Cloud Run Embeddings",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "When enabled, finding embeddings are generated via the Cloud Run TEI endpoint; when disabled (default), the legacy Vertex AI endpoint is used.",
+        "feature": "PLEXAI_USE_CLOUD_RUN_EMBEDDINGS",
+        "reason": "This feature has been set to OFF"
+    },
+    "SLA_NOTIFICATIONS": {
+        "title": "SLA Notifications",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Provide access to SLA notification configuration area and enable/disable notifications.",
+        "feature": "SLA_NOTIFICATIONS",
+        "reason": "Feature Flag passed all checks."
+    },
+    "FEATURE_FLAG_DASHBAORD": {
+        "title": "Feature Flag Dashboard",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Flag to enable/disable viewing the feature flag dashboard.",
+        "feature": "FEATURE_FLAG_DASHBAORD",
+        "reason": "Feature Flag passed all checks."
+    },
+    "CHECK_ASSESSMENTS_LICENSE": {
+        "title": "Check Assessments License",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Determines whether or not we should perform a check for the Assessments License Key",
+        "feature": "CHECK_ASSESSMENTS_LICENSE",
+        "reason": "This feature has been set to OFF"
+    },
+    "DATALAKE_ETL": {
+        "title": "Datalake ETL",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Run Datalake ETL Cronjob",
+        "feature": "DATALAKE_ETL",
+        "reason": "This feature has been set to OFF"
+    },
+    "UPDATE_SINGLE_CUSTOM_FIELD": {
+        "title": "Findings: update a single custom field",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Update a single custom field on a finding",
+        "feature": "UPDATE_SINGLE_CUSTOM_FIELD",
+        "reason": "This feature has been set to OFF"
+    },
+    "RUNBOOKS_V1": {
+        "title": "Runbooks v1",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Runbooks v1",
+        "feature": "RUNBOOKS_V1",
+        "reason": "This feature has been set to OFF"
+    },
+    "ROUTE_LEVEL_METRICS": {
+        "title": "Route level metrics",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Flag used to enable route level metrics for monitoring",
+        "feature": "ROUTE_LEVEL_METRICS",
+        "reason": "This feature has been set to OFF"
+    },
+    "FINDINGS_CONTEXTUAL_SCORING": {
+        "title": "Findings Contextual Scoring",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables Findings Contextual Scoring",
+        "feature": "FINDINGS_CONTEXTUAL_SCORING",
+        "reason": "Feature Flag passed all checks."
+    },
+    "REPORT_DETAILS_REVAMP": {
+        "title": "Report Details",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Flag used to enable the new report details page",
+        "feature": "REPORT_DETAILS_REVAMP",
+        "reason": "This feature has been set to OFF"
+    },
+    "IO_1243_OAUTH_EMAIL_CONFIG": {
+        "title": "OAuth Email Configuration",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Allows configuration of OAuth email settings",
+        "feature": "IO_1243_OAUTH_EMAIL_CONFIG",
+        "reason": "Feature Flag passed all checks."
+    },
+    "PLEXAI_ASK_AI": {
+        "title": "Plex AI Ask AI",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Plex AI Ask AI",
+        "feature": "PLEXAI_ASK_AI",
+        "reason": "Feature Flag passed all checks."
+    },
+    "PLEXAI_CHAT": {
+        "title": "Plex AI Chat",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Plex AI chat with your data",
+        "feature": "PLEXAI_CHAT",
+        "reason": "Feature Flag passed all checks."
+    },
+    "CLEAR_DEFAULT_PARSER_ACTIONS": {
+        "title": "Clear Default Parser Actions",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Allows the user to clear out default parser actions for a parser type via import",
+        "feature": "CLEAR_DEFAULT_PARSER_ACTIONS",
+        "reason": "This feature has been set to OFF"
+    },
+    "BEEF_1832_FRONTEND_EVENT_LOGGING": {
+        "title": "Frontend event logging",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables logging of frontend events to our api.",
+        "feature": "BEEF_1832_FRONTEND_EVENT_LOGGING",
+        "reason": "Feature Flag passed all checks."
+    },
+    "COLLABORATION": {
+        "title": "Real Time Collaboration",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "This is a non-standard feature flag. It should NOT be disabled unless this is a very good reason.",
+        "feature": "COLLABORATION",
+        "reason": "Feature Flag passed all checks."
+    },
+    "ANALYTICS_GRAPH_REBUILD": {
+        "title": "Analytics Graph Rebuild Enabled",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables the Analytics Graph rebuild cron job",
+        "feature": "ANALYTICS_GRAPH_REBUILD",
+        "reason": "Feature Flag passed all checks."
+    },
+    "FLUSH_CKE_DOCUMENT_ON_DISCONNECT": {
+        "title": "Flush CKEditor Document on Disconnect",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Flush CKEditor document on disconnect",
+        "feature": "FLUSH_CKE_DOCUMENT_ON_DISCONNECT",
+        "reason": "Feature Flag passed all checks."
+    },
+    "EXCLUDE_EVIDENCE_FROM_EXPORT": {
+        "title": "Exclude Evidence from Export",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Forces evidence to be excluded from word and PDF exports regardless of report settings",
+        "feature": "EXCLUDE_EVIDENCE_FROM_EXPORT",
+        "reason": "This feature has been set to OFF"
+    },
+    "EXCLUDE_INFORMATIONAL_FINDINGS_FROM_EXPORT": {
+        "title": "Exclude Informational Findings from Export",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Excludes informational findings from word and PDF exports",
+        "feature": "EXCLUDE_INFORMATIONAL_FINDINGS_FROM_EXPORT",
+        "reason": "This feature has been set to OFF"
+    },
+    "CTEM_FINDING_ANALYTICS_CRON": {
+        "title": "CTEM Finding Analytics Cron",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables the CTEM Finding Analytics Cron",
+        "feature": "CTEM_FINDING_ANALYTICS_CRON",
+        "reason": "Feature Flag passed all checks."
+    },
+    "PDF_EXPORT_TRIM_WHITESPACE": {
+        "title": "PDF Export Trim Whitespace",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "If enabled, we will trim whitespace from the PDF export",
+        "feature": "PDF_EXPORT_TRIM_WHITESPACE",
+        "reason": "Feature Flag passed all checks."
+    },
+    "PDF_EXPORT_DEBUG_HTML_FILE": {
+        "title": "PDF Export Debug HTML File",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "If enabled, we will save a debug HTML file during the PDF export process. Once written the file location can be found in the logs.",
+        "feature": "PDF_EXPORT_DEBUG_HTML_FILE",
+        "reason": "Feature Flag passed all checks."
+    },
+    "EVENT_ORCHESTRATOR_KILL_SWITCH": {
+        "title": "Disable Event Orchestrator",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Allows disabling the event orchestrator. This is for use during emergencies if we need to shed load",
+        "feature": "EVENT_ORCHESTRATOR_KILL_SWITCH",
+        "reason": "This feature has been set to OFF"
+    },
+    "EVENT_ORCHESTRATOR_WORKER_CONCURRENCY": {
+        "title": "Tune Event Orchestrator Worker Concurrency",
+        "variation": 3,
+        "variationType": "number",
+        "description": "Allows us to tune the concurrency of the event orchestrator workers. This is for use during emergencies if we need to shed load",
+        "feature": "EVENT_ORCHESTRATOR_WORKER_CONCURRENCY",
+        "reason": "Feature Flag passed all checks."
+    },
+    "SERVICE_NOW_MARKETPLACE_APP": {
+        "title": "Service Now Marketplace App",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "If enabled, users can configure the service now marketplace integration and create tickets.",
+        "feature": "SERVICE_NOW_MARKETPLACE_APP",
+        "reason": "Environment Override 'OVERRIDE_SERVICE_NOW_MARKETPLACE_APP' was set to true."
+    },
+    "SHOW_REPORTING_REMEDIATION_TICKETS": {
+        "title": "Show Reporting Remediation Tickets",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "If enabled, legacy reporting-layer Jira and ServiceNow ticket links are surfaced on CTEM instances to assist migration workflows. Intended as a temporary 6-12 month stopgap.",
+        "feature": "SHOW_REPORTING_REMEDIATION_TICKETS",
+        "reason": "This feature has been set to OFF"
+    },
+    "BURP_IO_1611_MAPPING": {
+        "title": "Burp Parser IO-1611 Mapping Changes",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "adds mapping for burp parser changes to vulnerability parameters and asset paths ",
+        "feature": "BURP_IO_1611_MAPPING",
+        "reason": "This feature has been set to OFF"
+    },
+    "IO_1652_EXPOSURE_MANAGEMENT_API_INTEGRATIONS": {
+        "title": "Exposure Management Api Integrations",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables automated api integration processing for exposure management",
+        "feature": "IO_1652_EXPOSURE_MANAGEMENT_API_INTEGRATIONS",
+        "reason": "Environment Override 'OVERRIDE_IO_1652_EXPOSURE_MANAGEMENT_API_INTEGRATIONS' was set to true."
+    },
+    "SHOW_CONTEXTUAL_SCORING_DEPRECATION_WARNING": {
+        "title": "Show contextual scoring deprecation warning",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Show a deprecation warning banner for contextual scoring.",
+        "feature": "SHOW_CONTEXTUAL_SCORING_DEPRECATION_WARNING",
+        "reason": "Feature Flag passed all checks."
+    },
+    "DAILY_JIRA_INVESTIGATION": {
+        "title": "Daily Jira Investigation",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Enables daily jira investigation.",
+        "feature": "DAILY_JIRA_INVESTIGATION",
+        "reason": "This feature has been set to OFF"
+    },
+    "ASSET_IMPORT_QUEUE": {
+        "title": "Asset Import Queue",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Use integration worker queue for CSV asset imports instead of direct processing",
+        "feature": "ASSET_IMPORT_QUEUE",
+        "reason": "Environment Override 'OVERRIDE_ASSET_IMPORT_QUEUE' was set to true."
+    },
+    "NMAP_CSV_ASSET_TYPESCRIPT_PARSER": {
+        "title": "Nmap CSV Asset TypeScript Parser",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Use TypeScript parser for Nmap CSV asset files instead of Python parser",
+        "feature": "NMAP_CSV_ASSET_TYPESCRIPT_PARSER",
+        "reason": "Environment Override 'OVERRIDE_NMAP_CSV_ASSET_TYPESCRIPT_PARSER' was set to true."
+    },
+    "NMAP_XML_ASSET_TYPESCRIPT_PARSER": {
+        "title": "Nmap XML Asset TypeScript Parser",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Use TypeScript parser for Nmap XML asset files instead of Python parser",
+        "feature": "NMAP_XML_ASSET_TYPESCRIPT_PARSER",
+        "reason": "Environment Override 'OVERRIDE_NMAP_XML_ASSET_TYPESCRIPT_PARSER' was set to true."
+    },
+    "NMAP_XML_FINDINGS_TYPESCRIPT_PARSER": {
+        "title": "Nmap XML Findings TypeScript Parser",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Use TypeScript parser for Nmap XML findings files instead of Python parser",
+        "feature": "NMAP_XML_FINDINGS_TYPESCRIPT_PARSER",
+        "reason": "Environment Override 'OVERRIDE_NMAP_XML_FINDINGS_TYPESCRIPT_PARSER' was set to true."
+    },
+    "IO_2158_SCANGROUP_TYPESCRIPT_PARSER": {
+        "title": "ScanGroup XML TypeScript Parser",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Use TypeScript parser for ScanGroup XML files (Invicti Cloud Agent / Acunetix) instead of Python parser",
+        "feature": "IO_2158_SCANGROUP_TYPESCRIPT_PARSER",
+        "reason": "Environment Override 'OVERRIDE_IO_2158_SCANGROUP_TYPESCRIPT_PARSER' was set to true."
+    },
+    "CLASSIFICATION_TIERS_VISIBLE": {
+        "title": "Classification Tiers Visible",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Controls whether the classification tiers feature is visible. When disabled, the feature will be hidden from the UI unless the tenant is already using classification tiers.",
+        "feature": "CLASSIFICATION_TIERS_VISIBLE",
+        "reason": "This feature has been set to OFF"
+    },
+    "EXPOSURE_MANAGEMENT_REMEDIATION_AZURE_DEV_OPS": {
+        "title": "Azure Devops",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "",
+        "feature": "EXPOSURE_MANAGEMENT_REMEDIATION_AZURE_DEV_OPS",
+        "reason": "Environment Override 'OVERRIDE_EXPOSURE_MANAGEMENT_REMEDIATION_AZURE_DEV_OPS' was set to true."
+    },
+    "ASYNC_EXPORT": {
+        "title": "Use Async Export",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables use of async export",
+        "feature": "ASYNC_EXPORT",
+        "reason": "Environment Override 'OVERRIDE_ASYNC_EXPORT' was set to true."
+    },
+    "IO_2023_QUALYS_INTEGRATION": {
+        "title": "Qualys Integration",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables the Qualys integration.",
+        "feature": "IO_2023_QUALYS_INTEGRATION",
+        "reason": "Environment Override 'OVERRIDE_IO_2023_QUALYS_INTEGRATION' was set to true."
+    },
+    "IO_2141_TENABLE_TVM_SYNQLY_INTEGRATION": {
+        "title": "Tenable VM Synqly Integration",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Enables the Synqly-mediated Tenable Vulnerability Management integration.",
+        "feature": "IO_2141_TENABLE_TVM_SYNQLY_INTEGRATION",
+        "reason": "This feature has been set to OFF"
+    },
+    "IO_2141_CROWDSTRIKE_INTEGRATION": {
+        "title": "Crowdstrike Integration",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables the Crowdstrike integration.",
+        "feature": "IO_2141_CROWDSTRIKE_INTEGRATION",
+        "reason": "Environment Override 'OVERRIDE_IO_2141_CROWDSTRIKE_INTEGRATION' was set to true."
+    },
+    "IO_2141_SNYK_INTEGRATION": {
+        "title": "Snyk Integration",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Enables the Snyk integration.",
+        "feature": "IO_2141_SNYK_INTEGRATION",
+        "reason": "This feature has been set to OFF"
+    },
+    "IO_2141_HORIZON3_INTEGRATION": {
+        "title": "Horizon3 Integration",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables the Horizon3 integration.",
+        "feature": "IO_2141_HORIZON3_INTEGRATION",
+        "reason": "Environment Override 'OVERRIDE_IO_2141_HORIZON3_INTEGRATION' was set to true."
+    },
+    "IO_2141_RAPID7_INTEGRATION": {
+        "title": "Rapid7 Integration",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables the Rapid7 integration.",
+        "feature": "IO_2141_RAPID7_INTEGRATION",
+        "reason": "Environment Override 'OVERRIDE_IO_2141_RAPID7_INTEGRATION' was set to true."
+    },
+    "IO_2141_WIZ_INTEGRATION": {
+        "title": "Wiz Integration",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Enables the Wiz integration.",
+        "feature": "IO_2141_WIZ_INTEGRATION",
+        "reason": "This feature has been set to OFF"
+    },
+    "MCP_SERVER": {
+        "title": "MCP Server",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Enables the MCP server functionality.",
+        "feature": "MCP_SERVER",
+        "reason": "This feature has been set to OFF"
+    },
+    "STRIP_CKEDITOR_SUGGESTIONS_UI": {
+        "title": "Strip CKEditor Suggestions in UI",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Strip CKEditor suggestions when viewing a read-only ckeditor backed field in the UI.",
+        "feature": "STRIP_CKEDITOR_SUGGESTIONS_UI",
+        "reason": "This feature has been set to OFF"
+    },
+    "LEGACY_DUPLICATE_REQUEST_LIMITER": {
+        "title": "Legacy Duplicate Request Limiter",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables the legacy duplicate request limiter functionality.",
+        "feature": "LEGACY_DUPLICATE_REQUEST_LIMITER",
+        "reason": "Feature Flag passed all checks."
+    },
+    "AFFECTED_ASSET_DRAWER": {
+        "title": "Affected Asset Drawer",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables the affected asset drawer.",
+        "feature": "AFFECTED_ASSET_DRAWER",
+        "reason": "Feature Flag passed all checks."
+    },
+    "IO_2128_BURP_HTML_IMPORTER": {
+        "title": "Burp HTML Importer",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Enables the Burp (html) file import. Disable to hide from the UI and block API uploads for this legacy importer.",
+        "feature": "IO_2128_BURP_HTML_IMPORTER",
+        "reason": "Environment Override 'OVERRIDE_IO_2128_BURP_HTML_IMPORTER' was set to false."
+    },
+    "SCHEDULER_CUSTOM_FORMS": {
+        "title": "Scheduler Custom Forms",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Enables custom forms for the scheduler.",
+        "feature": "SCHEDULER_CUSTOM_FORMS",
+        "reason": "Feature Flag passed all checks."
+    },
+    "TAG_CASCADE_DELETE": {
+        "title": "Tag Cascade Deletion",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Cascade delete a tag across the entire system",
+        "feature": "TAG_CASCADE_DELETE",
+        "reason": "This feature has been set to OFF"
+    },
+    "HIDE_SUGGESTIONS_ON_VIEW": {
+        "title": "Hide Annotations on View",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Hide CKEditor annotations from view mode UIs + APIs",
+        "feature": "HIDE_SUGGESTIONS_ON_VIEW",
+        "reason": "Feature Flag passed all checks."
+    },
+    "CUSTOM_HELP_CENTER_LINK": {
+        "title": "Custom Help Center Link",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Allows administrators to configure a custom Help Center URL via white labeling, overriding the default PlexTrac help center link.",
+        "feature": "CUSTOM_HELP_CENTER_LINK",
+        "reason": "Feature Flag passed all checks."
+    },
+    "CUSTOM_PRIVACY_POLICY_LINK": {
+        "title": "Custom Privacy Policy Link",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Allows administrators to configure a custom Privacy Policy URL via white labeling, overriding the default PlexTrac privacy policy link.",
+        "feature": "CUSTOM_PRIVACY_POLICY_LINK",
+        "reason": "Feature Flag passed all checks."
+    },
+    "CUSTOM_TERMS_OF_SERVICE_LINK": {
+        "title": "Custom Terms of Service Link",
+        "variation": true,
+        "variationType": "boolean",
+        "description": "Allows administrators to configure a custom Terms of Service URL via white labeling, overriding the default PlexTrac terms of use link.",
+        "feature": "CUSTOM_TERMS_OF_SERVICE_LINK",
+        "reason": "Feature Flag passed all checks."
+    },
+    "REPORT_LEVEL_PERMISSIONS": {
+        "title": "Report Level Permissions",
+        "variation": false,
+        "variationType": "boolean",
+        "description": "Allows reports to be restricted to certain users.",
+        "feature": "REPORT_LEVEL_PERMISSIONS",
+        "reason": "This feature has been set to OFF"
     }
 }
