@@ -1,3 +1,5 @@
 # Runtime state — per-developer, not shipped with the plugin.
 # team-manager and scrum-master append audit logs and metrics here on every run.
 .local/
+runner/node_modules/
+runner/.runs/
