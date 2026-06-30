@@ -21,7 +21,13 @@ export type TestSpec = z.infer<typeof TestSpecSchema>;
 
 export function loadSpec(path: string): TestSpec {
   const raw = readFileSync(path, "utf8");
-  const parsed = TestSpecSchema.safeParse(JSON.parse(raw));
+  let data: unknown;
+  try {
+    data = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`Invalid JSON in TestSpec at ${path}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  const parsed = TestSpecSchema.safeParse(data);
   if (!parsed.success) {
     throw new Error(`Invalid TestSpec at ${path}: ${parsed.error.message}`);
   }

@@ -7,6 +7,10 @@ export interface SummaryInput {
   verify: VerifyResult;
 }
 
+function escapeCell(value: string): string {
+  return value.replace(/\|/g, "\\|");
+}
+
 export function renderSummaryMarkdown(input: SummaryInput): string {
   const status = input.verify.pass ? "PASS" : "FAIL";
   const head = `# ${input.ticketKey} export verification: ${status}\n\n`;
@@ -14,7 +18,7 @@ export function renderSummaryMarkdown(input: SummaryInput): string {
   const rows = input.verify.results
     .map(
       (r) =>
-        `| ${r.label} | ${r.expectedLevel} | ${r.actualLevel ?? "missing"} | ${r.pass ? "ok" : "MISMATCH"} |`,
+        `| ${escapeCell(r.label)} | ${r.expectedLevel} | ${r.actualLevel ?? "missing"} | ${r.pass ? "ok" : "MISMATCH"} |`,
     )
     .join("\n");
   return head + tableHead + rows + "\n";
