@@ -27,6 +27,11 @@ import { isRecord } from "../util/guards.ts";
 //     body:    { name: string }
 //     success: { message: "success", report_id: number, doc_id: string, cuid: string }
 //
+// Set narrative (exec summary sections):
+//   PUT /api/v2/tenant/{tenantId}/clients/{clientId}/reports/{reportId}/narrative
+//     body:    [{id: string, label: string, text: string}]
+//     success: { status: "success" }
+//
 // Import .ptrac:
 //   POST /api/v1/client/{clientId}/report/import
 //     multipart field "file" — the .ptrac file bytes
@@ -34,11 +39,30 @@ import { isRecord } from "../util/guards.ts";
 //     The created report id is recovered via a pre/post GET /reports diff.
 //   List reports:
 //   GET /api/v1/client/{clientId}/reports → array of { id: number, data: [...] }
+//
+// Async PDF export:
+//   POST /api/experimental/client/{clientId}/report/{reportId}/export/pdf
+//     body:    { includeEvidence: boolean, templateID: string, timeZone: string }
+//     success: { status: "created", message: string, jobId: string }
+//   Poll job:
+//   GET /api/experimental/client/{clientId}/report/{reportId}/exports/{jobId}
+//     response: { jobId, status: "pending"|"running"|"completed"|"failed", outputFilename, outputMetadata }
+//   Download:
+//   GET /api/experimental/client/{clientId}/report/{reportId}/exports/{jobId}/download
+//     response: PDF bytes (Content-Type: application/pdf)
 
 export class PlexTracApi {
   private readonly cfg: HarnessConfig;
   private readonly agent: Agent;
   private jwtToken: string | null = null;
+  private _tenantId: number | null = null;
+
+  get tenantId(): number {
+    if (this._tenantId === null) {
+      throw new Error("Not authenticated: call authenticate() first");
+    }
+    return this._tenantId;
+  }
 
   constructor(cfg: HarnessConfig) {
     this.cfg = cfg;
@@ -61,6 +85,9 @@ export class PlexTracApi {
       throw new Error("Authentication response missing token field");
     }
     this.jwtToken = data["token"];
+    if (typeof data["tenant_id"] === "number") {
+      this._tenantId = data["tenant_id"];
+    }
   }
 
   private authHeaders(): Record<string, string> {
@@ -191,5 +218,109 @@ export class PlexTracApi {
       throw new Error("Internal: newIds[0] unexpectedly undefined");
     }
     return { reportId };
+  }
+
+  async setNarrative(
+    tenantId: number,
+    clientId: string,
+    reportId: string,
+    sections: ReadonlyArray<{ id: string; label: string; text: string }>,
+  ): Promise<void> {
+    const url = `${this.cfg.appUrl}/api/v2/tenant/${tenantId}/clients/${clientId}/reports/${reportId}/narrative`;
+    const response = await undiciFetch(url, {
+      method: "PUT",
+      dispatcher: this.agent,
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify(sections),
+    });
+    if (!response.ok) {
+      const errBody = await response.text();
+      throw new Error(`setNarrative failed: HTTP ${response.status} ${errBody}`);
+    }
+  }
+
+  async triggerExportPdf(
+    clientId: string,
+    reportId: string,
+    templateId: string,
+  ): Promise<{ jobId: string }> {
+    const url = `${this.cfg.appUrl}/api/experimental/client/${clientId}/report/${reportId}/export/pdf`;
+    const response = await undiciFetch(url, {
+      method: "POST",
+      dispatcher: this.agent,
+      headers: { ...this.authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        includeEvidence: false,
+        templateID: templateId,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      }),
+    });
+    if (!response.ok) {
+      const errBody = await response.text();
+      throw new Error(`triggerExportPdf failed: HTTP ${response.status} ${errBody}`);
+    }
+    const data = await response.json();
+    if (!isRecord(data) || typeof data["jobId"] !== "string") {
+      throw new Error("Unexpected triggerExportPdf response shape");
+    }
+    return { jobId: data["jobId"] };
+  }
+
+  // Polls until the job reaches a terminal state (completed or failed).
+  // Throws if the job fails or the timeout is exceeded.
+  async pollExportJob(
+    clientId: string,
+    reportId: string,
+    jobId: string,
+    maxWaitMs = 120_000,
+  ): Promise<void> {
+    const url = `${this.cfg.appUrl}/api/experimental/client/${clientId}/report/${reportId}/exports/${jobId}`;
+    const deadline = Date.now() + maxWaitMs;
+    while (Date.now() < deadline) {
+      await new Promise<void>((resolve) => setTimeout(resolve, 2_000));
+      const response = await undiciFetch(url, {
+        dispatcher: this.agent,
+        headers: this.authHeaders(),
+      });
+      if (!response.ok) {
+        throw new Error(`pollExportJob failed: HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      if (!isRecord(data) || typeof data["status"] !== "string") {
+        throw new Error("Unexpected pollExportJob response shape");
+      }
+      const status = data["status"];
+      if (status === "completed") {
+        return;
+      }
+      if (status === "failed") {
+        const meta = data["outputMetadata"];
+        let msg = "unknown error";
+        if (Array.isArray(meta)) {
+          const first = meta[0];
+          if (isRecord(first) && typeof first["message"] === "string") {
+            msg = first["message"];
+          }
+        }
+        throw new Error(`Export job failed: ${msg}`);
+      }
+    }
+    throw new Error(`pollExportJob timed out after ${maxWaitMs}ms`);
+  }
+
+  async downloadExport(
+    clientId: string,
+    reportId: string,
+    jobId: string,
+  ): Promise<Buffer> {
+    const url = `${this.cfg.appUrl}/api/experimental/client/${clientId}/report/${reportId}/exports/${jobId}/download`;
+    const response = await undiciFetch(url, {
+      dispatcher: this.agent,
+      headers: this.authHeaders(),
+    });
+    if (!response.ok) {
+      throw new Error(`downloadExport failed: HTTP ${response.status}`);
+    }
+    return Buffer.from(await response.arrayBuffer());
   }
 }
