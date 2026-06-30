@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>IO-2294-report</title>
+<style type="text/css">
+        /* Start Fonts */
+            @font-face {
+                font-family: "YourFontName";/* Type in the name of your Font here */
+                src: url("") format("truetype");/* Embed your font in the url parenthesis */
+                font-weight: normal;
+                font-style: normal;
+            }
+        /* End Fonts */
+
+
+        /* Start Page Setup */
+            @page {
+                size: letter portrait; /* can use also 'landscape' for orientation */
+                margin: 1in;
+
+                @top-left {
+                content: element(header);
+                }
+
+                @bottom-left {
+                content: element(footer);
+                }
+
+                @bottom-right {
+                    content: counter(page);
+                    font-family: "Arial";
+                    font-size: 10pt;
+                    opacity: 0.5;
+                    margin-bottom: 6pt;
+                }
+            }
+
+            @page :first {
+                margin: 1in;
+                background: cover;
+                background-size: 8.5in 11in;
+                background-position: center center;
+                background-repeat: no-repeat;
+                background-image: url("data:image/png;base64,PLACEHOLDER");
+
+                @top-left {
+                content: none;
+                }
+
+                @bottom-left {
+                content: none;
+                }
+
+                @bottom-right {
+                    content: none;
+                }
+            }
+
+            body{
+                padding: 0;
+                margin: 0;
+            }
+
+            header {
+                position: running(header);
+                width: 6.5in;
+                height: 0.5in;
+                opacity: 0.5;
+                border-bottom: solid grey 0.5pt;
+            }
+
+            footer {
+                position: running(footer);
+                width: 6.5in;
+                height: 0.5in;
+                opacity: 0.5;
+                text-align: center;
+            }
+
+            .page-break {
+                page-break-after: always;
+            }
+        /* End Page Setup */
+
+        /* Start Table of Contents */
+            .table-of-contents, .table-of-contents tr, .table-of-contents tr td {
+                border-width: 0;
+            }
+
+            .table-of-contents-line-item {
+                width: 90%;
+                text-align: left;
+                font-family: Arial;
+                font-size: 10pt;
+                color: #000;
+                font-weight: 500;
+            }
+
+            .table-of-contents-page {/* TOC PAGE NUMBERS */
+                width: 10%;
+                text-align: right;
+                font-family: Arial;
+                font-size: 10pt;
+                color: #000;
+                font-weight: 500;
+            }
+
+            .table-of-contents-header::before {/* TOC HEADER */
+                content: 'Table of Contents';
+                white-space: pre-wrap;
+                display: inline-block;
+                font-family: Arial;
+                font-size: 20pt;
+                font-weight: bold;
+            }
+
+            .table-of-contents-footer::before {
+                content: '';
+                white-space: pre-wrap;
+                font-family: Arial;
+                font-size: 10pt;
+                font-weight: 500;
+            }
+
+            .table-of-contents-line-item a {/* TOC LINK */
+                color: #000;
+                text-decoration: none;
+                line-height: 1.5;
+            }
+
+            .table-of-contents-line-item.level-0 {/* TOC LEVEL 1 */
+                font-size: 10pt;
+                font-family: Arial;
+                font-weight: 500;
+                text-indent: 0px;
+            }
+
+            .table-of-contents-line-item-row.level-0 a, .table-of-contents-line-item-row.level-0 .table-of-contents-page {
+                font-weight: bold;
+            }
+
+            .table-of-contents-line-item.level-1 {/* TOC LEVEL 2 */
+                font-size: 10pt;
+                font-family: Arial;
+                text-indent: 0.25in;
+                font-weight: 500;
+            }
+
+            .table-of-contents-line-item.level-1, .table-of-contents-line-item.level-1 a {
+                color: #000;
+            }
+
+            .table-of-contents-line-item-row.level-1 {
+            }
+
+            .table-of-contents-line-item.level-2 {/* TOC LEVEL 3 */
+                font-size: 10pt;
+                font-family: Arial;
+                text-indent: 0.5in;
+                font-weight: 500;
+            }
+
+            .table-of-contents-line-item.level-2, .table-of-contents-line-item.level-2 a {
+                color: #000;
+            }
+
+            .table-of-contents-line-item-row.level-2 {
+                display: none
+            }
+
+            .table-of-contents-line-item.level-3 {/* TOC LEVEL 4 */
+                font-size: 10pt;
+                font-family: Arial;
+                text-indent: 0.75in;
+                font-weight: 500;
+            }
+
+            .table-of-contents-line-item.level-3, .table-of-contents-line-item.level-3 a {
+                color: #000;
+            }
+
+            .table-of-contents-line-item-row.level-3 {
+                display: none
+            }
+
+            .table-of-contents-line-item.level-4 {/* TOC LEVEL 5 */
+                font-size: 10pt;
+                font-family: Arial;
+                text-indent: 1in;
+                font-weight: 500;
+            }
+
+            .table-of-contents-line-item.level-4, .table-of-contents-line-item.level-4 a {
+                color: #000;
+            }
+
+            .table-of-contents-line-item-row.level-4 {
+                display: none
+            }
+
+            .table-of-contents-line-item.level-5 {/* TOC LEVEL 6 */
+                font-size: 10pt;
+                font-family: Arial;
+                text-indent: 40px;
+                font-weight: 500;
+            }
+
+            .table-of-contents-line-item.level-5, .table-of-contents-line-item.level-5 a {
+                color: #000;
+            }
+
+            .table-of-contents-line-item-row.level-5 {
+                display: none
+            }
+
+            .table-of-contents-line-item.level-6 {
+                font-size: 10pt;
+                font-family: Arial;
+                text-indent: 40px;
+                font-weight: 500;
+            }
+
+            .table-of-contents-line-item.level-6, .table-of-contents-line-item.level-6 a {
+                color: #000;
+            }
+
+            .table-of-contents-line-item-row.level-6 {
+                display: none
+            }
+        /* End Table of Contents */
+
+        /* Start Text Styles */
+            h1, h2, h3, h4, h5, h6 {
+                font-family: Arial;
+                font-weight: bold;
+                color: black;
+                margin-bottom: 12pt;
+            }
+
+            h1 {
+                font-size: 22pt;
+                color: #7F50F1;
+            }
+
+            h2 {
+                font-size: 18pt;
+            }
+
+            h3 {
+                font-size: 14pt;
+            }
+
+            h4 {
+                font-size: 12pt;
+            }
+
+            h5 {
+                font-size: 10pt;
+            }
+
+            h6 {
+                font-size: 10pt;
+            }
+
+            p {
+                font-family: Arial;
+                font-size: 10pt;
+                margin-top: 0;
+                margin-bottom: 6pt;
+                line-height: 1.15;
+                font-style: auto;/* Ensures italic text from PlexTrac renders italic */
+            }
+
+            p a{/* Hyperlinks from PlexTrac */
+                color: cornflowerblue;
+            }
+
+            ul, ol {
+                margin-top: 0;
+                margin-bottom: 6pt;
+            }
+
+            ul li, ol li {
+                font-family: Arial;
+                font-size: 10pt;
+                margin-top: 0;
+                margin-bottom: 3pt;
+                word-wrap: break-word;/* Ensures text wraps as expected in tables */
+                overflow-wrap: break-word;
+                font-style: auto;/* Ensures italic text from PlexTrac renders italic */
+            }
+        /* End Text Styles */
+
+        /* Start Images */
+            figure {/* Controls alignment of Images from PlexTrac */
+                margin: auto;
+                padding: 0;
+                margin-bottom: 6pt;
+            }
+
+            img {
+                display: block;
+                margin: 0;
+                width: 100%;
+                max-width: 100%;/* Ensures the click and drag functionality works */
+                max-height: 100%;/* Ensures the click and drag functionality works */
+            }
+
+            figure img { /* All images from PlexTrac */
+                display: block;
+                height: 100%;
+                width: 100%;
+                border:  none;
+                margin: auto;
+                padding: 0;
+                aspect-ratio: auto;
+            }
+
+            .image-style-block-align-left img { /* Left aligned images from PlexTrac have this class */
+                margin-left: 0;
+            }
+
+            .image-style-block-align-right  img { /* Right aligned images from PlexTrac have this class */
+                margin-right: 0;
+            }
+
+            .cover-plextrac-logo {
+                width: 80%;
+                margin: 0 auto;
+                margin-top: 25pt;
+            }
+
+            .client-logo {
+                margin: 0 auto;
+                margin-top: 0.5in;
+                max-width: 200px;
+                max-height: 200px;
+            }
+
+            .logo-header {
+                height: 0.66in;
+                width: 0.76in;
+                position: absolute;
+                right: -0.75in;
+                top: -0.10in;
+
+            }
+        /* End Images */
+
+        /* Start Captions */
+            figcaption {/* Captions from PlexTrac */
+                font-size: 8pt;
+                font-family: Arial;
+                text-align: center;
+                font-style: italic;
+            }
+        /* End Captions */
+
+        /* Start Code Blocks and Inline Code */
+            pre code {/* Code Blocks from PlexTrac */
+                line-height: 1.5;
+                display: block;
+                width: min-content;
+                border: solid #C4C4C4 0.5pt;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+
+            code {/* Inline Code from PlexTrac (also affects Code Blocks) */
+                font-size: 9pt;
+                padding: 3pt;
+                background-color: #EEEEEE;
+                color: #525552;
+                font-family: monospace;
+                border: none;
+                white-space: normal;/* Ensures proper text wrapping */
+                word-wrap: break-word;/* Ensures proper text wrapping */
+             }
+        /* End Code Blocks and Inline Code */
+
+        /* Start Tables */
+            table {
+                width: 100%;
+                max-width: 6.5in;
+                border-collapse: collapse;
+            }
+
+            th, td {
+                border: solid black 0.5pt;
+                font-family: Arial;
+                padding-left: 0.08in;
+                padding-right: 0.08in;
+
+            }
+
+            thead {
+                background-color: #7F50F1;
+            }
+
+            th {
+                color: white;
+            }
+            
+
+            tr {
+            }
+
+            td {
+                font-size: 10pt;
+            }
+
+            .table {
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            
+            figure.table table {
+                width: 100% !important;
+                table-layout: fixed;
+                box-sizing: border-box;/* This keeps tables from exceeding body width */
+            }
+
+            figure.table td {
+                box-sizing: border-box;/* This keeps tables from exceeding body width */
+                overflow-wrap: break-word;
+                padding: 0.05in;
+            }
+
+            .findings-summary-table th {
+                height: 0.3in;
+            }
+
+            .findings-summary-table td {
+                height: 0.2in;
+                vertical-align: middle;
+            }
+
+            .findings-summary-table p, .findings-summary-table a {
+                margin: 0;
+                font-family: Arial;
+                font-size: 10pt;
+                color: black;
+                text-decoration: none;
+            }
+
+            .findings-status-table td, .findings-status-table th {
+                text-align: center;
+                height: 0.3in;
+            }
+        /* End Tables */
+
+        /* Start Misc */
+            .cover-container-top {
+                position: absolute;
+                top: 25%;
+                width: 6.5in;
+                text-align: center;
+            }
+
+            .cover-container-bottom {
+                position: absolute;
+                top: 50%;
+                width: 6.5in;
+                text-align: center;
+                margin-bottom: 12pt;
+            }
+
+            .screenshot-container {
+                width: 6.5in;
+            }
+
+            .screenshot-container img {
+                margin: 0 auto;
+            }
+
+            .page-break-before {
+                page-break-before: always;
+            }
+        /* End Misc */
+    </style>
+<div>
+<div>
+</div>
+<div></div>
+<div></div>
+<div></div>
+<div></div>
+</div>
+</head>
+<body>
+<header>
+<p>IO-2294-report</p><p>IO-2294-1782854151826</p>
+<div>
+<img class="logo-header" src="data:image/png;base64,PLACEHOLDER"/>
+</div>
+</header>
+<footer>
+<p>CONFIDENTIAL</p>
+</footer>
+<div>
+<div>
+<img class="cover-plextrac-logo" src="data:image/png;base64,PLACEHOLDER"/>
+</div>
+<div class="cover-container-top">
+<p style="font-size: 24pt; margin-bottom: 12pt;"><b>IO-2294-report</b></p>
+<p style="font-size: 11pt; margin-bottom: 3pt;">Started On: June 30, 2026</p>
+<p style="font-size: 11pt; margin: 0">Completed On: June 30, 2026</p>
+</div>
+<div class="cover-container-bottom">
+<p style="font-size: 16pt; margin-bottom: 3pt;">Prepared For</p>
+<p style="font-size: 18pt; margin: 0;">IO-2294-1782854151826</p>
+<br/>
+<img class="client-logo" src=""/>
+</div>
+<div class="page-break"></div>
+</div>
+<div>
+</div>
+<div>
+<h1 class="page-break-before" id="executive-summary">Executive Summary</h1>
+<h1><a id="heading-one">Heading One</a></h1><h2><a id="heading-two">Heading Two</a></h2><h3><a id="heading-three">Heading Three</a></h3><h4><a id="heading-four">Heading Four</a></h4><h5><a id="heading-five">Heading Five</a></h5><h6><a id="heading-six">Heading Six</a></h6></div>
+<div>
+<h1 class="page-break-before" id="findings-overview">Findings Overview</h1>
+<p>A total of <b>0</b> findings were identified in this report.</p></div>
+<div></div>
+<div></div>
+<div></div>
+</body>
+</html>
