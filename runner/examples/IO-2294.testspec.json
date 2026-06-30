@@ -1,0 +1,15 @@
+{
+  "ticketKey": "IO-2294",
+  "reproContent": {
+    "sectionTitle": "Heading Levels",
+    "narrativeHtml": "<h1>Heading One</h1><h2>Heading Two</h2><h3>Heading Three</h3><h4>Heading Four</h4><h5>Heading Five</h5><h6>Heading Six</h6>"
+  },
+  "expectedAssertions": [
+    { "label": "Heading One",   "expectedLevel": 0 },
+    { "label": "Heading Two",   "expectedLevel": 1 },
+    { "label": "Heading Three", "expectedLevel": 2 },
+    { "label": "Heading Four",  "expectedLevel": 3 },
+    { "label": "Heading Five",  "expectedLevel": 4 },
+    { "label": "Heading Six",   "expectedLevel": 5 }
+  ]
+}

@@ -33,6 +33,7 @@ export async function runBrowserExport(
   api: PlexTracApi,
   ticketKey: string,
   runId: string,
+  narrativeHtml: string,
 ): Promise<BrowserRunResult> {
   const templateId = process.env["PT_PDF_TEMPLATE_ID"] ?? DEFAULT_PDF_TEMPLATE_ID;
   const headless = process.env["PT_HEADLESS"] !== "false";
@@ -48,16 +49,8 @@ export async function runBrowserExport(
 
   // --- Step 1: API seed -------------------------------------------------------
 
-  const { clientId } = await api.createClient(`IO-2294-${runId}`);
-  const { reportId } = await api.createReport(clientId, "IO-2294-report");
-
-  const narrativeHtml =
-    "<h1>Heading One</h1>" +
-    "<h2>Heading Two</h2>" +
-    "<h3>Heading Three</h3>" +
-    "<h4>Heading Four</h4>" +
-    "<h5>Heading Five</h5>" +
-    "<h6>Heading Six</h6>";
+  const { clientId } = await api.createClient(`${ticketKey}-${runId}`);
+  const { reportId } = await api.createReport(clientId, `${ticketKey}-report`);
   await api.setNarrative(api.tenantId, clientId, reportId, [
     { id: "sec-0", label: "Executive Summary", text: narrativeHtml },
   ]);

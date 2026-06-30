@@ -3,7 +3,7 @@
 Drives Playwright to log in and capture the PDF export pipeline for end-to-end repro tests.
 
 ## Key Files
-- `run.ts` — `runBrowserExport(cfg, api, ticketKey, runId)` — main entry point; returns paths to PDF, screenshots, trace
+- `run.ts` — `runBrowserExport(cfg, api, ticketKey, runId, narrativeHtml)` — main entry point; returns paths to PDF, screenshots, trace
 - `steps/login.ts` — `performLogin(page, cfg)` — two-step FE login (username → submit → password → submit)
 
 ## Patterns
