@@ -3,6 +3,7 @@
 import { Agent, fetch as undiciFetch } from "undici";
 import { readFileSync } from "node:fs";
 import type { HarnessConfig } from "../config.ts";
+import { isRecord } from "../util/guards.ts";
 
 // Confirmed API contracts (empirically verified against local stack):
 //
@@ -32,10 +33,6 @@ import type { HarnessConfig } from "../config.ts";
 //     NOTE: the API does not accept reportId in URL or form data; the .ptrac
 //     carries its own report structure. The reportId parameter is held for
 //     API symmetry with future increments.
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
 
 export class PlexTracApi {
   private readonly cfg: HarnessConfig;
