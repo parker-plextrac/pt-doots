@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { TestSpecSchema } from "../../src/spec/testSpec.ts";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { TestSpecSchema, loadSpec } from "../../src/spec/testSpec.ts";
 
 const valid = {
   ticketKey: "IO-2294",
@@ -15,7 +18,8 @@ const valid = {
 };
 
 test("accepts a well-formed spec", () => {
-  assert.equal(TestSpecSchema.parse(valid).ticketKey, "IO-2294");
+  assert.doesNotThrow(() => TestSpecSchema.parse(valid));
+  assert.deepEqual(TestSpecSchema.parse(valid), valid);
 });
 
 test("rejects a bad ticket key", () => {
@@ -28,4 +32,26 @@ test("rejects empty expectedAssertions", () => {
 
 test("rejects unknown top-level keys", () => {
   assert.throws(() => TestSpecSchema.parse({ ...valid, extra: true }));
+});
+
+test("loadSpec round-trips a valid spec file", () => {
+  const dir = mkdtempSync(join(tmpdir(), "testspec-"));
+  const file = join(dir, "spec.json");
+  try {
+    writeFileSync(file, JSON.stringify(valid));
+    assert.deepEqual(loadSpec(file), valid);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
+});
+
+test("loadSpec throws with path context on invalid JSON", () => {
+  const dir = mkdtempSync(join(tmpdir(), "testspec-"));
+  const file = join(dir, "spec.json");
+  try {
+    writeFileSync(file, "{ not json");
+    assert.throws(() => loadSpec(file), /Invalid JSON in TestSpec/);
+  } finally {
+    rmSync(dir, { recursive: true });
+  }
 });

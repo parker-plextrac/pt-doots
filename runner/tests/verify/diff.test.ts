@@ -34,3 +34,13 @@ test("missing heading is a fail with null actual", () => {
   assert.equal(r.pass, false);
   assert.equal(r.results.find((x) => x.label === "Heading Six")?.actualLevel, null);
 });
+
+test("extra rows not in expectedAssertions are ignored and pass stays true", () => {
+  const r = verifyToc(spec, [
+    { label: "Heading One", level: 0 },
+    { label: "Heading Six", level: 5 },
+    { label: "Heading Not In Spec", level: 3 },
+  ]);
+  assert.ok(r.pass);
+  assert.equal(r.results.length, 2);
+});
