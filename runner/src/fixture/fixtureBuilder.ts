@@ -39,7 +39,10 @@ export function buildPtrac(
       created_at: now,
       tags: [],
       reviewers: [],
-      template: "default",
+      // "e2061c6a-..." is the PlexTrac-internal UUID for the "default pdf (PDF)"
+      // report template on this stack.  Discovered empirically by reading the
+      // DOM value attribute of the option element in the Report template combobox.
+      template: "e2061c6a-ad78-4a96-ab54-3705cb9a7bf5",
       logistics: "",
       reportType: "default",
       includeEvidence: false,

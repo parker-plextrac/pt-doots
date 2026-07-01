@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+{#
+  deep-toc-export-template.j2 — harness fixture template for PDF export regression tests.
+
+  Committed upload fixture: this file is uploaded via the UI "Upload template"
+  flow (Export → PDF → PDF export template → Upload template) during browser runs.
+
+  Intentional differences from the default PDF customer template:
+  - No cover page: ToC lands on page 1, content on page 2+.
+    pdfTocParser always reads page 1 to find ToC entries.
+  - Levels 0-3 are all VISIBLE (no display:none).
+    The default customer template hides level-2+; this template lets the parser
+    observe whether skipped headings (e.g. h4 under h2, skipping h3) land at the
+    correct depth (level-3) or incorrectly collapse to level-2.
+  - Levels 4-5 are hidden (not exercised by current tests).
+
+  ToC level indents: 0.25in per level = 18pt in PDF coordinates.
+  pdfTocParser uses x-coordinate differences between levels to calibrate the step
+  and derive each heading's level from its horizontal indent.
+#}
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <style type="text/css">
+    @page {
+      size: letter portrait;
+      margin: 1in;
+    }
+    @page :first { }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* --- Heading styles --- */
+    h1 { font-size: 18pt; font-weight: bold; margin-bottom: 12pt; }
+    h2 { font-size: 14pt; font-weight: bold; margin-bottom: 10pt; }
+    h3 { font-size: 12pt; font-weight: bold; margin-bottom: 8pt; }
+    h4 { font-size: 11pt; font-weight: bold; margin-bottom: 6pt; }
+    h5 { font-size: 10pt; font-weight: bold; margin-bottom: 6pt; }
+    h6 { font-size: 10pt; margin-bottom: 6pt; }
+
+    p { font-size: 10pt; margin-bottom: 6pt; line-height: 1.15; }
+
+    .page-break-before { break-before: always; }
+
+    /* --- Table of Contents --- */
+    .table-of-contents, .table-of-contents tr, .table-of-contents tr td {
+      border-width: 0;
+    }
+    .table-of-contents-header::before {
+      content: 'Table of Contents';
+      display: block;
+      font-size: 14pt;
+      font-weight: bold;
+      margin-bottom: 10pt;
+    }
+    .table-of-contents-footer::before { content: ''; }
+
+    .table-of-contents-page {
+      width: 10%;
+      text-align: right;
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+    }
+    .table-of-contents-line-item {
+      width: 90%;
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+    }
+    .table-of-contents-line-item a {
+      color: #000;
+      text-decoration: none;
+    }
+
+    /* Level indents: 0.25in per level (18pt in PDF coordinates).
+       All four levels are visible. */
+    .table-of-contents-line-item.level-0 { text-indent: 0in;    font-weight: bold; }
+    .table-of-contents-line-item.level-1 { text-indent: 0.25in; }
+    .table-of-contents-line-item.level-2 { text-indent: 0.50in; }
+    .table-of-contents-line-item.level-3 { text-indent: 0.75in; }
+
+    .table-of-contents-line-item-row.level-0 { }
+    .table-of-contents-line-item-row.level-1 { }
+    .table-of-contents-line-item-row.level-2 { }
+    .table-of-contents-line-item-row.level-3 { }
+    .table-of-contents-line-item-row.level-4 { display: none; }
+    .table-of-contents-line-item-row.level-5 { display: none; }
+
+    /* Zero-width-space anchor paragraph: forces WeasyPrint to create a page-0
+       frame in the first (no-ToC) render so that content headings land on page 1
+       (0-indexed).  The export service's generate_outline_str skips headings on
+       page 0 (page < 1 guard); without this anchor ALL headings would be on
+       page 0 and the ToC would be empty.  In the second render the anchor
+       occupies the top of the ToC page alongside the table_of_contents HTML. */
+    .toc-page-anchor {
+      font-size: 0.01pt;
+      line-height: 0;
+      margin: 0;
+      padding: 0;
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <p class="toc-page-anchor">&#x200B;</p>
+  {{- table_of_contents }}
+  <div class="page-break-before"></div>
+
+  {%- if report.exec_summary and report.exec_summary.custom_fields -%}
+    {%- for field in report.exec_summary.custom_fields -%}
+      <h1 id="{{ field.label|lower|replace(' ', '-')|replace('(', '')|replace(')', '') }}">{{ field.label }}</h1>
+      {{ field.text }}
+      <div class="page-break-before"></div>
+    {%- endfor -%}
+  {%- endif -%}
+</body>
+</html>

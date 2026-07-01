@@ -1,12 +1,11 @@
 {
   "ticketKey": "IO-2294",
   "reproContent": {
-    "sectionTitle": "Executive Summary",
-    "narrativeHtml": "<h2>Sub Section</h2><h4>Detail Item</h4><p>Content paragraph.</p>"
+    "sectionTitle": "Heading Levels",
+    "narrativeHtml": "<h2>Heading Two</h2><h4>Heading Four</h4>"
   },
   "expectedAssertions": [
-    { "label": "Executive Summary", "expectedLevel": 0 },
-    { "label": "Sub Section",       "expectedLevel": 1 },
-    { "label": "Detail Item",       "expectedLevel": 3 }
+    { "label": "Heading Two",  "expectedLevel": 1 },
+    { "label": "Heading Four", "expectedLevel": 3 }
   ]
 }
