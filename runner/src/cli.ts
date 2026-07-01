@@ -5,10 +5,8 @@
 //   → parseTocFromPdf → verifyToc → writeRun → print summary
 //   → exit 0 (PASS) / exit 1 (FAIL)
 //
-// Pipeline (--prove mode):
-//   ... same as normal through verifyToc ...
-//   → findLatestDebugHtml → runProveMode (fix sim + main sim + git-switch pair)
-//   → print prove summary → exit 0 (discriminates) / exit 1 (does not discriminate)
+// --prove is reserved for a future RED/GREEN discriminator proof that compares
+// the fix branch against main.  It is not yet implemented for the full UI flow.
 import { argv, exit } from "node:process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,10 +15,8 @@ import { loadSpec } from "./spec/testSpec.ts";
 import { PlexTracApi } from "./api/client.ts";
 import { runPreflight } from "./preflight/preflight.ts";
 import { runBrowserExport } from "./browser/run.ts";
-import { findLatestDebugHtml } from "./verify/debugHtmlParser.ts";
 import { parseTocFromPdf } from "./verify/pdfTocParser.ts";
 import { verifyToc } from "./verify/diff.ts";
-import { runProveMode } from "./verify/proveMode.ts";
 import { writeRun, renderSummaryMarkdown } from "./report/reporter.ts";
 
 interface CliArgs {
@@ -117,42 +113,16 @@ async function main(): Promise<void> {
     console.log(`  level ${row.level}: "${row.label}"`);
   }
 
-  // --prove mode: additionally compare fix vs main via direct WeasyPrint simulation.
+  // --prove mode: RED/GREEN proof comparing fix branch vs main is not yet
+  // implemented for the full UI flow.  The simulation-based approach was
+  // rejected; a replacement has not been designed yet.
   if (prove) {
-    console.log("\n--- Prove mode: comparing fix vs main via simulation ---");
-
-    // The debug HTML is written by the first-pass render during the export job.
-    const debugHtmlPath = findLatestDebugHtml(cfg.beUploadsDir, clientId, reportId);
-    console.log(`  debug HTML: ${debugHtmlPath}`);
-
-    const proveResult = await runProveMode(
-      spec,
-      debugHtmlPath,
-      cfg.exportRepoPath,
-      cfg.exportFixBranch,
-      runDir,
+    console.error(
+      "--prove is not yet reimplemented for the full UI flow.\n" +
+        "The simulation-based approach was rejected.  " +
+        "A replacement RED/GREEN proof has not been built.",
     );
-
-    console.log("\nProve: fix branch simulation:");
-    for (const r of proveResult.fix.results) {
-      const mark = r.pass ? "PASS" : "FAIL";
-      console.log(`  [${mark}] "${r.label}" expected=${r.expectedLevel} actual=${r.actualLevel ?? "null"}`);
-    }
-
-    console.log("\nProve: main branch simulation:");
-    for (const r of proveResult.main.results) {
-      const mark = r.pass ? "PASS" : "FAIL";
-      console.log(`  [${mark}] "${r.label}" expected=${r.expectedLevel} actual=${r.actualLevel ?? "null"}`);
-    }
-
-    if (proveResult.discriminates) {
-      console.log("\nProve DISCRIMINATES: fix PASS, main FAIL — harness correctly detects the bug.");
-      exit(verify.pass ? 0 : 1);
-    } else {
-      console.log("\nProve DOES NOT DISCRIMINATE — both branches produce the same result.");
-      console.log("  This means the harness is not testing the right thing.");
-      exit(1);
-    }
+    exit(1);
   }
 
   exit(verify.pass ? 0 : 1);
