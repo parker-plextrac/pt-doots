@@ -194,8 +194,17 @@ export async function runBrowserExport(
       await dlLocator.first().waitFor({ state: "visible", timeout: 120_000 });
     } catch {
       await screenshot("download-link-not-found");
+      // Check if the export service itself reported a failure (e.g. WeasyPrint
+      // SIGSEGV) rather than still being in progress.
+      const exportFailed = await page
+        .locator("text=Export Failed")
+        .isVisible({ timeout: 1_000 })
+        .catch(() => false);
+      const detail = exportFailed
+        ? " The export service reported a failure — check Export Details on the page."
+        : "";
       throw new Error(
-        "Could not find the PDF filename link in the Export Details table within 120s. " +
+        `Could not find the PDF filename link in the Export Details table within 120s.${detail} ` +
           "Check download-link-not-found.png to identify the correct selector.",
       );
     }
