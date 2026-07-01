@@ -1,12 +1,11 @@
-// Entry point: npx tsx src/cli.ts --spec <path> [--headed] [--prove]
+// Entry point: npx tsx src/cli.ts --spec <path> [--headed]
 //
-// Pipeline (normal mode):
-//   loadConfig → loadSpec → authenticate → runPreflight → runBrowserExport
+// Pipeline:
+//   loadConfig → loadSpec → authenticate → runPreflight
+//   → buildPtrac (generate .ptrac fixture from spec)
+//   → runBrowserExport (full UI: create client, import, export, download)
 //   → parseTocFromPdf → verifyToc → writeRun → print summary
 //   → exit 0 (PASS) / exit 1 (FAIL)
-//
-// --prove is reserved for a future RED/GREEN discriminator proof that compares
-// the fix branch against main.  It is not yet implemented for the full UI flow.
 import { argv, exit } from "node:process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +13,7 @@ import { loadConfig } from "./config.ts";
 import { loadSpec } from "./spec/testSpec.ts";
 import { PlexTracApi } from "./api/client.ts";
 import { runPreflight } from "./preflight/preflight.ts";
+import { buildPtrac } from "./fixture/fixtureBuilder.ts";
 import { runBrowserExport } from "./browser/run.ts";
 import { parseTocFromPdf } from "./verify/pdfTocParser.ts";
 import { verifyToc } from "./verify/diff.ts";
@@ -22,13 +22,11 @@ import { writeRun, renderSummaryMarkdown } from "./report/reporter.ts";
 interface CliArgs {
   specPath: string;
   headed: boolean;
-  prove: boolean;
 }
 
 function parseArgs(args: readonly string[]): CliArgs {
   let specPath: string | undefined;
   let headed = false;
-  let prove = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -42,8 +40,6 @@ function parseArgs(args: readonly string[]): CliArgs {
       i++;
     } else if (arg === "--headed") {
       headed = true;
-    } else if (arg === "--prove") {
-      prove = true;
     } else if (arg !== undefined && arg.startsWith("--")) {
       console.error(`Unknown option: ${arg}`);
       exit(1);
@@ -51,15 +47,15 @@ function parseArgs(args: readonly string[]): CliArgs {
   }
 
   if (specPath === undefined) {
-    console.error("Usage: cli.ts --spec <path> [--headed] [--prove]");
+    console.error("Usage: cli.ts --spec <path> [--headed]");
     exit(1);
   }
 
-  return { specPath, headed, prove };
+  return { specPath, headed };
 }
 
 async function main(): Promise<void> {
-  const { specPath, headed, prove } = parseArgs(argv.slice(2));
+  const { specPath, headed } = parseArgs(argv.slice(2));
 
   if (headed) {
     process.env["PT_HEADLESS"] = "false";
@@ -73,11 +69,11 @@ async function main(): Promise<void> {
   const here = dirname(fileURLToPath(import.meta.url));
   const runDir = join(here, "..", ".runs", `${spec.ticketKey}-${runId}`);
 
-  // API client
+  // API client — used only for the read-only feature-flag preflight check.
   const api = new PlexTracApi(cfg);
   await api.authenticate();
 
-  // Preflight
+  // Preflight: check feature flags; block on CTF_MODE; warn on others.
   const preflight = await runPreflight(api);
   if (preflight.blockers.length > 0) {
     console.error("\nPreflight blockers:");
@@ -87,13 +83,22 @@ async function main(): Promise<void> {
     exit(1);
   }
 
-  // Browser export (seeds client + report + narrative, runs async PDF export)
-  const { clientId, reportId, pdfPath } = await runBrowserExport(
+  // Build the .ptrac fixture from the spec's reproContent.
+  // Writes to runner/.runs/{ticketKey}-{runId}/report.ptrac.
+  const { path: ptracPath } = buildPtrac(spec.reproContent, spec.ticketKey, runId);
+
+  // Locate the committed upload template fixture.
+  // runner/fixtures/deep-toc-export-template.j2 — uploaded via the UI export flow.
+  const templatePath = join(here, "..", "fixtures", "deep-toc-export-template.j2");
+
+  // Full UI browser flow: create client, import .ptrac, set PDF template,
+  // export with uploaded template, download the PDF.
+  const { pdfPath } = await runBrowserExport(
     cfg,
-    api,
     spec.ticketKey,
     runId,
-    spec.reproContent.narrativeHtml,
+    ptracPath,
+    templatePath,
   );
 
   // Extract ToC from the downloaded PDF (probe template, all levels visible).
@@ -111,18 +116,6 @@ async function main(): Promise<void> {
   console.log("Parsed ToC rows (from PDF x-coordinates):");
   for (const row of rows) {
     console.log(`  level ${row.level}: "${row.label}"`);
-  }
-
-  // --prove mode: RED/GREEN proof comparing fix branch vs main is not yet
-  // implemented for the full UI flow.  The simulation-based approach was
-  // rejected; a replacement has not been designed yet.
-  if (prove) {
-    console.error(
-      "--prove is not yet reimplemented for the full UI flow.\n" +
-        "The simulation-based approach was rejected.  " +
-        "A replacement RED/GREEN proof has not been built.",
-    );
-    exit(1);
   }
 
   exit(verify.pass ? 0 : 1);
