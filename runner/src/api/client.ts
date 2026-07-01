@@ -239,13 +239,21 @@ export class PlexTracApi {
     }
   }
 
+  // opts.temporaryTemplateName — when provided, the export service resolves the
+  // template from uploads/export_templates/temp/<name> instead of using templateId.
+  // templateId can be an empty string in that case (the server ignores it).
   async triggerExportPdf(
     clientId: string,
     reportId: string,
     templateId: string,
+    opts?: { temporaryTemplateName?: string },
   ): Promise<{ jobId: string }> {
-    const url = `${this.cfg.appUrl}/api/experimental/client/${clientId}/report/${reportId}/export/pdf`;
-    const response = await undiciFetch(url, {
+    const base = `${this.cfg.appUrl}/api/experimental/client/${clientId}/report/${reportId}/export/pdf`;
+    const exportUrl = new URL(base);
+    if (opts?.temporaryTemplateName !== undefined && opts.temporaryTemplateName.length > 0) {
+      exportUrl.searchParams.set("temporaryTemplateName", opts.temporaryTemplateName);
+    }
+    const response = await undiciFetch(exportUrl.toString(), {
       method: "POST",
       dispatcher: this.agent,
       headers: { ...this.authHeaders(), "Content-Type": "application/json" },

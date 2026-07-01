@@ -1,11 +1,15 @@
 // Entry point: npx tsx src/cli.ts --spec <path> [--headed] [--prove]
 //
-// Pipeline:
+// Pipeline (normal mode):
 //   loadConfig → loadSpec → authenticate → runPreflight → runBrowserExport
-//   → findLatestDebugHtml → parseTocRows → verifyToc → renderTocPng
-//   → writeRun → print summary → exit 0 (PASS) / exit 1 (FAIL)
+//   → parseTocFromPdf → verifyToc → writeRun → print summary
+//   → exit 0 (PASS) / exit 1 (FAIL)
+//
+// Pipeline (--prove mode):
+//   ... same as normal through verifyToc ...
+//   → findLatestDebugHtml → runProveMode (fix sim + main sim + git-switch pair)
+//   → print prove summary → exit 0 (discriminates) / exit 1 (does not discriminate)
 import { argv, exit } from "node:process";
-import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.ts";
@@ -13,9 +17,10 @@ import { loadSpec } from "./spec/testSpec.ts";
 import { PlexTracApi } from "./api/client.ts";
 import { runPreflight } from "./preflight/preflight.ts";
 import { runBrowserExport } from "./browser/run.ts";
-import { findLatestDebugHtml, parseTocRows } from "./verify/debugHtmlParser.ts";
+import { findLatestDebugHtml } from "./verify/debugHtmlParser.ts";
+import { parseTocFromPdf } from "./verify/pdfTocParser.ts";
 import { verifyToc } from "./verify/diff.ts";
-import { renderTocPng } from "./verify/pdfImage.ts";
+import { runProveMode } from "./verify/proveMode.ts";
 import { writeRun, renderSummaryMarkdown } from "./report/reporter.ts";
 
 interface CliArgs {
@@ -60,11 +65,6 @@ function parseArgs(args: readonly string[]): CliArgs {
 async function main(): Promise<void> {
   const { specPath, headed, prove } = parseArgs(argv.slice(2));
 
-  if (prove) {
-    console.error("Error: --prove is not yet implemented");
-    exit(1);
-  }
-
   if (headed) {
     process.env["PT_HEADLESS"] = "false";
   }
@@ -91,7 +91,7 @@ async function main(): Promise<void> {
     exit(1);
   }
 
-  // Browser export
+  // Browser export (seeds client + report + narrative, runs async PDF export)
   const { clientId, reportId, pdfPath } = await runBrowserExport(
     cfg,
     api,
@@ -100,29 +100,59 @@ async function main(): Promise<void> {
     spec.reproContent.narrativeHtml,
   );
 
-  // Find and parse debug HTML
-  const debugHtmlPath = findLatestDebugHtml(cfg.beUploadsDir, clientId, reportId);
-  const debugHtml = readFileSync(debugHtmlPath, "utf8");
-  const rows = parseTocRows(debugHtml);
+  // Extract ToC from the downloaded PDF (probe template, all levels visible).
+  const rows = await parseTocFromPdf(pdfPath);
 
-  // Verify heading levels
+  // Verify heading levels against expected assertions.
   const verify = verifyToc(spec, rows);
 
-  // Best-effort visual proof (no-op when poppler is absent)
-  const pngPath = renderTocPng(pdfPath, runDir);
-  if (pngPath !== null) {
-    console.log(`Visual proof: ${pngPath}`);
-  }
-
-  // Write run artifacts and print summary
+  // Write run artifacts and print summary.
   writeRun(runDir, { ticketKey: spec.ticketKey, verify });
   const summary = renderSummaryMarkdown({ ticketKey: spec.ticketKey, verify });
   console.log("\n" + summary);
 
-  // Report all parsed rows for transparency
-  console.log("Parsed heading rows:");
+  // Report all parsed rows for transparency.
+  console.log("Parsed ToC rows (from PDF x-coordinates):");
   for (const row of rows) {
     console.log(`  level ${row.level}: "${row.label}"`);
+  }
+
+  // --prove mode: additionally compare fix vs main via direct WeasyPrint simulation.
+  if (prove) {
+    console.log("\n--- Prove mode: comparing fix vs main via simulation ---");
+
+    // The debug HTML is written by the first-pass render during the export job.
+    const debugHtmlPath = findLatestDebugHtml(cfg.beUploadsDir, clientId, reportId);
+    console.log(`  debug HTML: ${debugHtmlPath}`);
+
+    const proveResult = await runProveMode(
+      spec,
+      debugHtmlPath,
+      cfg.exportRepoPath,
+      cfg.exportFixBranch,
+      runDir,
+    );
+
+    console.log("\nProve: fix branch simulation:");
+    for (const r of proveResult.fix.results) {
+      const mark = r.pass ? "PASS" : "FAIL";
+      console.log(`  [${mark}] "${r.label}" expected=${r.expectedLevel} actual=${r.actualLevel ?? "null"}`);
+    }
+
+    console.log("\nProve: main branch simulation:");
+    for (const r of proveResult.main.results) {
+      const mark = r.pass ? "PASS" : "FAIL";
+      console.log(`  [${mark}] "${r.label}" expected=${r.expectedLevel} actual=${r.actualLevel ?? "null"}`);
+    }
+
+    if (proveResult.discriminates) {
+      console.log("\nProve DISCRIMINATES: fix PASS, main FAIL — harness correctly detects the bug.");
+      exit(verify.pass ? 0 : 1);
+    } else {
+      console.log("\nProve DOES NOT DISCRIMINATE — both branches produce the same result.");
+      console.log("  This means the harness is not testing the right thing.");
+      exit(1);
+    }
   }
 
   exit(verify.pass ? 0 : 1);

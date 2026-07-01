@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+{#
+  io-2294-toc-probe.j2 — harness fixture template for IO-2294 regression tests.
+
+  Intentional differences from the default PDF template:
+  - No cover page: ToC lands on page 1, content on page 2+.
+    This lets pdfTocParser always read page 1 without guessing which page.
+  - Levels 0–3 are all VISIBLE (no display:none).
+    The default template hides level-2+; this template lets us observe whether
+    a skipped heading (e.g. h4 under h2, skipping h3) appears at the correct
+    depth (level-3) or incorrectly collapses to level-2.
+  - Levels 4–5 are hidden (the test does not exercise those).
+
+  Variable names follow the io-2173-h3-toc-test-template.j2 convention:
+    report.exec_summary.custom_fields — array of {label, text} narrative sections.
+#}
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <style type="text/css">
+    @page {
+      size: letter portrait;
+      margin: 1in;
+    }
+    @page :first { }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* --- Heading styles --- */
+    h1 { font-size: 18pt; font-weight: bold; margin-bottom: 12pt; }
+    h2 { font-size: 14pt; font-weight: bold; margin-bottom: 10pt; }
+    h3 { font-size: 12pt; font-weight: bold; margin-bottom: 8pt; }
+    h4 { font-size: 11pt; font-weight: bold; margin-bottom: 6pt; }
+    h5 { font-size: 10pt; font-weight: bold; margin-bottom: 6pt; }
+    h6 { font-size: 10pt; margin-bottom: 6pt; }
+
+    p { font-size: 10pt; margin-bottom: 6pt; line-height: 1.15; }
+
+    .page-break-before { break-before: always; }
+
+    /* --- Table of Contents --- */
+    .table-of-contents, .table-of-contents tr, .table-of-contents tr td {
+      border-width: 0;
+    }
+    .table-of-contents-header::before {
+      content: 'Table of Contents';
+      display: block;
+      font-size: 14pt;
+      font-weight: bold;
+      margin-bottom: 10pt;
+    }
+    .table-of-contents-footer::before { content: ''; }
+
+    .table-of-contents-page {
+      width: 10%;
+      text-align: right;
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+    }
+    .table-of-contents-line-item {
+      width: 90%;
+      font-family: Arial, sans-serif;
+      font-size: 10pt;
+    }
+    .table-of-contents-line-item a {
+      color: #000;
+      text-decoration: none;
+    }
+
+    /* Level indents: 0.25in per level (18pt in PDF coordinates).
+       All four levels are visible — this is the critical difference from the
+       default customer template, which hides level-2+. */
+    .table-of-contents-line-item.level-0 { text-indent: 0in;    font-weight: bold; }
+    .table-of-contents-line-item.level-1 { text-indent: 0.25in; }
+    .table-of-contents-line-item.level-2 { text-indent: 0.50in; }
+    .table-of-contents-line-item.level-3 { text-indent: 0.75in; }
+
+    .table-of-contents-line-item-row.level-0 { }
+    .table-of-contents-line-item-row.level-1 { }
+    .table-of-contents-line-item-row.level-2 { }
+    .table-of-contents-line-item-row.level-3 { }
+    .table-of-contents-line-item-row.level-4 { display: none; }
+    .table-of-contents-line-item-row.level-5 { display: none; }
+  </style>
+</head>
+<body>
+  {{- table_of_contents }}
+  <div class="page-break-before"></div>
+
+  {%- if report.exec_summary and report.exec_summary.custom_fields -%}
+    {%- for field in report.exec_summary.custom_fields -%}
+      <h1 id="{{ field.label|lower|replace(' ', '-')|replace('(', '')|replace(')', '') }}">{{ field.label }}</h1>
+      {{ field.text }}
+      <div class="page-break-before"></div>
+    {%- endfor -%}
+  {%- endif -%}
+</body>
+</html>

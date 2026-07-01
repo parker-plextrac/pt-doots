@@ -9,7 +9,7 @@
 // The async export API accepts an explicit templateID and bypasses this restriction.
 // See DEFAULT_PDF_TEMPLATE_ID below for the working template on the local stack.
 import { chromium } from "playwright";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, copyFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HarnessConfig } from "../config.ts";
@@ -46,6 +46,18 @@ export async function runBrowserExport(
 
   const screenshots: string[] = [];
   let screenshotIndex = 0;
+
+  // --- Step 0: Stage probe template -------------------------------------------
+  // Copy the fixture template to the BE temp-templates directory so the async
+  // export worker can resolve it via ?temporaryTemplateName=<probeTemplateName>.
+  const fixturesDir = join(here, "..", "..", "fixtures");
+  const fixtureTemplate = join(fixturesDir, "io-2294-toc-probe.j2");
+  const tempTemplatesDir = join(cfg.beUploadsDir, "export_templates", "temp");
+  const stagedTemplate = join(tempTemplatesDir, cfg.probeTemplateName);
+  if (!existsSync(tempTemplatesDir)) {
+    mkdirSync(tempTemplatesDir, { recursive: true });
+  }
+  copyFileSync(fixtureTemplate, stagedTemplate);
 
   // --- Step 1: API seed -------------------------------------------------------
 
@@ -84,9 +96,12 @@ export async function runBrowserExport(
     await screenshot("report-loaded");
 
     // --- Step 5: Trigger PDF export via API -----------------------------------
-    // The FE PDF button is disabled because the report has no PDF-compatible
-    // template assigned. The async export API accepts an explicit templateID.
-    const { jobId } = await api.triggerExportPdf(clientId, reportId, templateId);
+    // Uses the staged probe template (io-2294-toc-probe.j2) via the
+    // temporaryTemplateName query param.  The probe template shows ToC levels
+    // 0–3 so we can distinguish fix (h4→level-3) from main (h4→level-2).
+    const { jobId } = await api.triggerExportPdf(clientId, reportId, templateId, {
+      temporaryTemplateName: cfg.probeTemplateName,
+    });
 
     // Navigate browser to the job detail page so the async UX is captured in
     // the video / trace (matches what a customer would see after clicking export).
