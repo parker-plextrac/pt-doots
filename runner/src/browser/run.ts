@@ -160,6 +160,10 @@ export async function runBrowserExport(
     // reliable path.  Keep the filechooser attempt as a belt-and-suspenders
     // fallback.
     const templateChooserPromise = page.waitForEvent("filechooser", { timeout: 5_000 });
+    // Prevent an unhandled rejection if the "Upload template" click below takes
+    // longer than 5 s to resolve (e.g. when the template dropdown is slow to
+    // open).  Mirrors the guards on downloadPromise and templateUploadPromise.
+    templateChooserPromise.catch(() => undefined);
     await page.getByText("Upload template").click();
     try {
       const templateChooser = await templateChooserPromise;

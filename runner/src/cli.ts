@@ -1,11 +1,20 @@
-// Entry point: npx tsx src/cli.ts --spec <path> [--headed]
+// Entry point: npx tsx src/cli.ts --spec <path> [--headed] [--prove]
 //
-// Pipeline:
+// Default pipeline (--spec only):
 //   loadConfig → loadSpec → authenticate → runPreflight
 //   → buildPtrac (generate .ptrac fixture from spec)
 //   → runBrowserExport (full UI: create client, import, export, download)
 //   → parseTocFromPdf → verifyToc → writeRun → print summary
 //   → exit 0 (PASS) / exit 1 (FAIL)
+//
+// Prove pipeline (--spec + --prove):
+//   loadConfig → loadSpec → authenticate → runPreflight
+//   → runProve: pass 1 on fix branch (expect PASS) →
+//               git switch export repo to main →
+//               pass 2 on main (expect FAIL or crash) →
+//               git restore export repo (unconditional finally) →
+//               assert fix.pass && !main.pass
+//   → exit 0 (discriminates) / exit 1 (does not)
 import { argv, exit } from "node:process";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,15 +27,19 @@ import { runBrowserExport } from "./browser/run.ts";
 import { parseTocFromPdf } from "./verify/pdfTocParser.ts";
 import { verifyToc } from "./verify/diff.ts";
 import { writeRun, renderSummaryMarkdown } from "./report/reporter.ts";
+import { runProve } from "./prove/prove.ts";
+import type { ProveResult } from "./prove/prove.ts";
 
 interface CliArgs {
   specPath: string;
   headed: boolean;
+  prove: boolean;
 }
 
 function parseArgs(args: readonly string[]): CliArgs {
   let specPath: string | undefined;
   let headed = false;
+  let prove = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -40,6 +53,8 @@ function parseArgs(args: readonly string[]): CliArgs {
       i++;
     } else if (arg === "--headed") {
       headed = true;
+    } else if (arg === "--prove") {
+      prove = true;
     } else if (arg !== undefined && arg.startsWith("--")) {
       console.error(`Unknown option: ${arg}`);
       exit(1);
@@ -47,15 +62,28 @@ function parseArgs(args: readonly string[]): CliArgs {
   }
 
   if (specPath === undefined) {
-    console.error("Usage: cli.ts --spec <path> [--headed]");
+    console.error("Usage: cli.ts --spec <path> [--headed] [--prove]");
     exit(1);
   }
 
-  return { specPath, headed };
+  return { specPath, headed, prove };
+}
+
+function renderProveResult(result: ProveResult, ticketKey: string): void {
+  console.log(`\n${"─".repeat(60)}`);
+  console.log(`${ticketKey} --prove result`);
+  console.log("─".repeat(60));
+  console.log(`  fix side (${result.fix.branch}): ${result.fix.pass ? "PASS" : "FAIL"}`);
+  console.log(`  main side: ${result.main.pass ? "PASS" : result.main.crashMessage !== null ? "CRASHED" : "FAIL"}`);
+  if (result.main.crashMessage !== null) {
+    console.log(`  main crash: ${result.main.crashMessage}`);
+  }
+  console.log(`  discriminates: ${result.discriminates ? "YES — harness proved fix vs bug" : "NO — check results above"}`);
+  console.log("─".repeat(60));
 }
 
 async function main(): Promise<void> {
-  const { specPath, headed } = parseArgs(argv.slice(2));
+  const { specPath, headed, prove } = parseArgs(argv.slice(2));
 
   if (headed) {
     process.env["PT_HEADLESS"] = "false";
@@ -81,6 +109,15 @@ async function main(): Promise<void> {
       console.error(`  - ${b}`);
     }
     exit(1);
+  }
+
+  // --prove mode: two-pass discrimination run (fix branch vs main).
+  // Runs the full UI export flow twice, switches the export repo between
+  // branches, and asserts fix.pass && !main.pass.  Restore is unconditional.
+  if (prove) {
+    const proveResult = await runProve(cfg, spec);
+    renderProveResult(proveResult, spec.ticketKey);
+    exit(proveResult.discriminates ? 0 : 1);
   }
 
   // Build the .ptrac fixture from the spec's reproContent.
