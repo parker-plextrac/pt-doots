@@ -15,7 +15,7 @@ Three modes based on arguments:
 
 **GitHub user:** `parker-plextrac`
 
-**QA engineer:** `bwilson-pt` (Brandon Wilson — his PRs are prefixed with `QA-`)
+**Team:** loaded from a user overlay file (see Step 0b). Falls back to Brandon Wilson (`bwilson-pt`, QA) if no overlay is set.
 
 **Target repos:**
 
@@ -26,6 +26,7 @@ Three modes based on arguments:
 | product-services-export | `PlexTrac/product-services-export` |
 | product-services-mcp | `PlexTrac/product-services-mcp` |
 | agent-skills | `PlexTrac/agent-skills` |
+| zenith-inbound-service | `PlexTrac/zenith-inbound-service` |
 
 ---
 
@@ -47,6 +48,27 @@ If none resolve, tell the user:
 Then stop.
 
 Store the resolved path as `WORKSPACE`.
+
+---
+
+## Step 0b: Load Team Overlay
+
+The "Team" dashboard section is driven by a user overlay file, following the pt-doots overlay convention (see `OVERLAYS.md`). Each user customizes their own team without editing this skill.
+
+1. Glob for overlay files:
+   ```bash
+   ls ~/.claude/projects/*/memory/feedback_prs_team_*.md 2>/dev/null
+   ```
+2. For each match, parse the markdown table whose header row is `| github_login | display_name |`. Collect each data row as `{ login, display_name }`. Skip the header and the `|---|---|` separator.
+3. Concatenate all overlay rows into `TEAM` (last-wins on duplicate login).
+4. If no overlay file exists or no rows parse, fall back to:
+   ```
+   TEAM = [{ login: "bwilson-pt", display_name: "Brandon Wilson (QA)" }]
+   ```
+
+Derive `TEAM_LOGINS` as the set of login strings for filter lookups, and a `LOGIN_TO_NAME` map for display lookups.
+
+Users add or remove teammates by editing the overlay markdown directly — they don't touch this skill.
 
 ---
 
@@ -77,24 +99,32 @@ mcp__github__list_pull_requests(owner: "PlexTrac", repo: "{repo_name}", state: "
 From the results, split into four lists (apply in order, **deduplicate** — a PR appears in only the first list it qualifies for):
 - **Your PRs**: PRs where `user.login` is `parker-plextrac` (no age filter — show regardless of age)
 - **Requesting Your Review**: PRs where `requested_reviewers` includes `parker-plextrac` (no age filter)
-- **QA — Brandon Wilson**: PRs where `user.login` is `bwilson-pt`, **created within the last 40 days**
+- **Team**: PRs where `user.login` is in `TEAM_LOGINS` (loaded from the overlay in Step 0b), **created within the last 40 days**
 - **IO Tickets (All Open)**: PRs where the title or `head.ref` starts with `IO-`, **created within the last 40 days**
 
-The 40-day freshness filter on QA and IO sections keeps the dashboard focused on actively in-flight work. Older PRs are usually abandoned and just add noise.
+The 40-day freshness filter on Team and IO sections keeps the dashboard focused on actively in-flight work. Older PRs are usually abandoned and just add noise.
 
-For each PR in **Your PRs**, **QA — Brandon Wilson**, and **IO Tickets (All Open)**, also fetch CI status:
+For each PR in **Your PRs**, **Team**, and **IO Tickets (All Open)**, also fetch CI status:
 
 ```
 mcp__github__get_pull_request_status(owner: "PlexTrac", repo: "{repo_name}", sha: "{head.sha}")
 ```
 
-For each PR in **QA — Brandon Wilson** and **IO Tickets (All Open)**, also fetch review state to detect if Parker has reviewed:
+For each PR in **Team** and **IO Tickets (All Open)**, also fetch review state to detect if Parker has reviewed:
 
 ```bash
 /opt/homebrew/bin/gh api "repos/PlexTrac/{repo_name}/pulls/{pr_number}/reviews" --jq '[.[] | select(.user.login == "parker-plextrac") | .state] | last // "NONE"'
 ```
 
 This returns Parker's most recent review state (`APPROVED`, `COMMENTED`, `CHANGES_REQUESTED`) or `NONE` if he has not reviewed.
+
+For each PR in **Requesting Your Review**, also fetch whether anyone has already approved it — so an already-signed-off PR is obvious at a glance and you don't re-review it by mistake:
+
+```bash
+/opt/homebrew/bin/gh api "repos/PlexTrac/{repo_name}/pulls/{pr_number}/reviews" --jq '[.[] | select(.state == "APPROVED") | .user.login] | unique'
+```
+
+This returns the list of logins who have approved (empty if none). Map each via `LOGIN_TO_NAME` for display, falling back to `@{login}`.
 
 Launch all these calls in parallel.
 
@@ -128,8 +158,8 @@ If no authored PRs: "No open PRs authored by you."
 
 #### Requesting Your Review
 
-| # | Repo | PR | Author | Files | IO? |
-|---|------|----|--------|-------|-----|
+| # | Repo | PR | Author | Files | Approved? | IO? |
+|---|------|----|--------|-------|-----------|-----|
 
 Column definitions:
 - **#**: Row number (continues from Your PRs numbering)
@@ -137,25 +167,27 @@ Column definitions:
 - **PR**: `#{number} {title}`
 - **Author**: `@{user.login}`
 - **Files**: `changed_files` count
+- **Approved?**: `✓ {approver name(s)}` when one or more APPROVED reviews exist (display via `LOGIN_TO_NAME`, fall back to `@{login}`; join multiple with `, `), `—` otherwise. Surfaces PRs that already have sign-off so you don't queue them for review by mistake.
 - **IO?**: `YES` if IO-prefixed, `no` otherwise
 
 If no review-requested PRs: "No PRs requesting your review."
 
-#### QA — Brandon Wilson
+#### Team
 
-| # | Repo | PR | CI | Reviewed | Days | Draft? |
-|---|------|----|----|----------|------|--------|
+| # | Repo | PR | Author | CI | Reviewed | Days | Draft? |
+|---|------|----|--------|----|----------|------|--------|
 
 Column definitions:
 - **#**: Row number (continues numbering)
 - **Repo**: Short repo name
-- **PR**: `#{number} {title}` (typically `QA-` prefixed)
+- **PR**: `#{number} {title}`
+- **Author**: Display name from `LOGIN_TO_NAME[user.login]`; fall back to `@{user.login}` if the login isn't in the overlay (shouldn't happen since the section is filtered to overlay members)
 - **CI**: `PASS` / `FAIL` / `PENDING` / `—`
 - **Reviewed**: Parker's last review state — `APPROVED` / `COMMENTED` / `CHANGES_REQ` / `—` (not reviewed)
 - **Days**: Days since `created_at`
 - **Draft?**: `DRAFT` if `draft: true`, empty otherwise
 
-If none: "No open PRs from Brandon."
+If none: "No open PRs from your team."
 
 #### IO Tickets (All Open)
 
@@ -680,7 +712,7 @@ If "none": ask if they want a top-level comment only, approve, or skip entirely.
 
 ### Step 5b: Walk Through Findings One-at-a-Time
 
-**Do NOT batch all findings at once.** Present each finding individually and wait for the user's decision before moving to the next.
+**Default to one finding at a time**, each presented with its Ready-to-post comment already drafted (see below), waiting for the user's decision before moving to the next. If the user asks to see the whole set at once ("do them all", "roll the whole PR that way"), present every finding in a single pass — each still in the full format below with its own **Ready to post** block — so they can approve or cherry-pick in one reply. Either way, the finished comment is shown WITH the finding, never as a separate draft-after-approval step.
 
 **Use this exact format for every finding** (do not improvise — Parker has explicitly asked for consistency here):
 
@@ -699,10 +731,17 @@ If "none": ask if they want a top-level comment only, approve, or skip entirely.
 **my opinion:**
 {your recommendation: comment / skip / downgrade. This is YOUR judgment call as the orchestrator, NOT a quote from the agent. Parker can always override. Tie it to a concrete reason: "I'd skip — pre-existing code JQ didn't touch, off-scope." / "I'd flag as `should:` — customer-visible regression in report output." / "I'd downgrade to a nit — real but minor, low ROI on review attention." Where helpful, surface tradeoffs (e.g. "real LOW but flagging dilutes the must-fix list"). This section is mandatory for every finding — it's how Parker decides which battles to fight.}
 
-**Comment, skip, or tweak?**
+**Ready to post:**
+> {the paste-ready comment for this finding — ALREADY run through `pt-doots:voice-stylist`, with the chosen prefix (`must:`/`should:`/`nit:`/`opinion:`/`idea:`/`question:`/`praise:`) prepended (the stylist returns the body only). Quote-block it so Parker sees exactly what will post. For a `(top-level)` finding with no diff line, note it posts in the review body, not inline.}
+
+**Post, skip, or tweak?**
 ```
 
-Then wait for the user's response. If they say comment, draft the inline comment, then **MANDATORY: spawn `pt-doots:voice-stylist` and pipe the draft through it before showing it for approval**. Pass the agent the raw draft text only — no preamble, no "please rewrite this" framing. Take its output verbatim and show that to Parker. If skip, move to the next. If tweak, apply their change, run the new draft through `pt-doots:voice-stylist` again, and re-show.
+**Draft the comment and run it through `pt-doots:voice-stylist` BEFORE you present the finding**, then drop the stylist's output verbatim into the **Ready to post** block (prepend the chosen prefix — the stylist returns the body only). This is the layout Parker asked for: the finished comment sits under the finding so he can approve in one step instead of a present-then-draft round-trip. Spawning the stylist is still **MANDATORY** — pass it the raw draft only, no preamble, no "please rewrite this" framing.
+
+On the user's response: **post** → post it inline immediately (Step 8 mechanics; a `(top-level)` finding goes in the review body); **skip** → move to the next finding; **tweak** → apply their change, re-run `pt-doots:voice-stylist`, and re-show the Ready-to-post block. When presenting the whole set in one pass, they may reply with a subset ("do 1 and 2") — post exactly those.
+
+(Self-Review mode, Mode 3, is exempt from this entire step: it captures action items to a local notes file and never drafts a GitHub comment, so no voice-stylist and no Ready-to-post block — see Step S10.)
 
 **Why mandatory:** voice rewrite loops (Parker calls out drift, orchestrator re-reads memory files, redrafts) burn more tokens than one focused haiku call. The agent reads the canonical voice memories on every invocation, so it stays current as Parker's preferences evolve. Skipping the agent and "drafting in voice yourself" is a guaranteed regression — do not do it.
 
@@ -730,7 +769,7 @@ After walking through all findings, show the complete batch (blurb + all approve
 
 **This step MUST happen in the main context (not a sub-agent) to preserve voice consistency.**
 
-Based on the user's selection, assemble a single GitHub review. Every prose draft you generate in this step — the top-level blurb AND every inline comment — MUST go through `pt-doots:voice-stylist` before being shown to Parker for batch approval. The agent reads the canonical voice memories, normalizes prefixes, strips banned phrases, and returns paste-ready text. One call per draft, no batching.
+Based on the user's selection, assemble a single GitHub review. Inline comments already drafted and voice-styled during the Step 5b walk are reused **verbatim** — do NOT run them through the stylist again. Only NEW prose generated here (the top-level blurb, or any comment not yet drafted in 5b) MUST go through `pt-doots:voice-stylist` before being shown to Parker. The agent reads the canonical voice memories, normalizes prefixes, strips banned phrases, and returns paste-ready text. One call per draft, no batching.
 
 #### Top-level blurb
 

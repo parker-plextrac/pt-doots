@@ -81,6 +81,7 @@ job, a locked tool surface, and a prompt tuned to PlexTrac standards.
 | `edge-case-qa` | Hunts boundary conditions, null/empty/race scenarios |
 | `code-smells-reviewer` | Catches Fowler-catalog smells (long methods, feature envy, primitive obsession) |
 | `test-reviewer` | Catches hollow assertions, over-mocking, and AI-test smells |
+| `self-containment-reviewer` | Flags committed artifacts that leak private notes paths, internal plan labels, or reviewer names |
 | `re-reviewer` | Verifies prior review findings on subsequent commits (used by `/prs`) |
 | `documentarian` | Updates READMEs and Confluence after merge (when scrum-master sets `Documentation: yes`, or workflow is `docs-only`) |
 | `voice-stylist` | Final voice pass on every human-facing draft (PR comments, Slack, Jira). Used by `/prs` between rough draft and approval gate |
@@ -119,7 +120,7 @@ Step 2    Plan with the user → notes/{TICKET}/plan.md
 Step 3    Branch ({TICKET-KEY}-{short-description})
 Step 4a   Developer implements → /verify
 Step 4b   Test-writer writes tests → /verify
-Step 4c   Quality gate (5 reviewers in parallel)
+Step 4c   Quality gate (6 reviewers in parallel)
 Step 4d   Developer fixes findings → /verify
 Step 4e   Documentarian updates docs (when Documentation: yes or workflow is docs-only)
 Step 5    Commit gate — user approves checklist
@@ -136,9 +137,9 @@ The scrum-master picks one of four types, plus orthogonal flags
 
 | Type | When | Pipeline |
 |------|------|----------|
-| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; parallel quality gate (5 reviewers) |
+| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; parallel quality gate (6 reviewers) |
 | **lightweight** | Single-file fixes, dependency bumps, additive changes | Skips acceptance-qa + edge-case-qa; smaller review surface |
-| **docs-only** | Documentation-only tickets (READMEs, comments, reference docs) | Researcher → documentarian → code-reviewer → commit |
+| **docs-only** | Documentation-only tickets (READMEs, comments, reference docs) | Researcher → documentarian → code-reviewer + self-containment-reviewer → commit |
 | **custom** | Tickets that don't fit a template | Scrum-master proposes the variant with rationale |
 
 You can override the recommendation when prompted.

@@ -25,19 +25,33 @@ A slower, honest implementation that flags two conflicts is more valuable than a
 
 ## Worktree Setup
 
-The orchestrator will include `REPO_PATH` in your task prompt (e.g., `/Users/parker/workspaces/plextrac/product-core-backend`). Before doing any implementation work, create an isolated worktree:
+The orchestrator will include `REPO_PATH` in your task prompt (e.g., `/Users/parker/workspaces/plextrac/product-core-backend`).
+
+**Before creating the worktree, extract the target branch from your task prompt.** The orchestrator names the feature branch in the prompt (look for `Branch: <name>`, `on branch <name>`, or similar). Set it explicitly:
 
 ```bash
 cd $REPO_PATH
-BRANCH="worktree/$(date +%s)-$$"
-WORKTREE_DIR="/tmp/plextrac-worktrees/$BRANCH"
-git worktree add "$WORKTREE_DIR" -b "$BRANCH" HEAD
+TARGET_BRANCH="<feature-branch-from-task-prompt>"  # e.g., IO-2255-snyk-integration
+```
+
+If you cannot find a target branch in the prompt, STOP and ask the orchestrator. Do NOT guess or default to `main`.
+
+Then create the worktree (the temp worktree branch is a DIFFERENT name — internal scratch only):
+
+```bash
+WORKTREE_BRANCH="worktree/$(date +%s)-$$"
+WORKTREE_DIR="/tmp/plextrac-worktrees/$WORKTREE_BRANCH"
+git worktree add "$WORKTREE_DIR" -b "$WORKTREE_BRANCH" HEAD
 cd "$WORKTREE_DIR"
 ```
 
 Do ALL of your work inside the worktree directory. Do not modify files in the original `REPO_PATH`.
 
-**Fallback:** If `git worktree add` fails (uncommitted changes on HEAD, not a git repo, etc.), fall back to working directly on the branch with a warning in your output: "Could not create worktree, working directly on branch. Parallel agents may conflict."
+**Two distinct branch variables — do not confuse them:**
+- `TARGET_BRANCH` — the orchestrator's feature branch in the parent repo (where your final commit must land). Created by Step 3 of the workflow.
+- `WORKTREE_BRANCH` — the temp scratch branch your worktree commits to. Deleted at cleanup. Never landed anywhere.
+
+**Fallback:** If `git worktree add` fails (uncommitted changes on HEAD, not a git repo, etc.), fall back to working directly on `TARGET_BRANCH` in `$REPO_PATH` with a warning in your output: "Could not create worktree, working directly on branch. Parallel agents may conflict."
 
 ### Before finishing — apply changes and clean up
 
@@ -48,23 +62,28 @@ git diff --stat
 git diff
 ```
 
-2. Copy changes back to the original branch via patch:
+2. Copy changes back to the **TARGET_BRANCH** (NOT the worktree's temp branch) via patch:
 
 ```bash
 git diff > /tmp/agent-changes.patch
 cd $REPO_PATH
+git switch "$TARGET_BRANCH"
 git apply /tmp/agent-changes.patch
 rm /tmp/agent-changes.patch
 ```
 
-3. Clean up the worktree:
+`git switch "$TARGET_BRANCH"` is **MANDATORY** before `git apply`. Without it, the patch lands on whatever branch the parent repo is currently checked out to (commonly `main`), silently producing a commit on the wrong branch. `git switch` fails fast if the branch doesn't exist or if there are uncommitted changes blocking the switch — both surface real problems instead of hiding them.
+
+If `git switch "$TARGET_BRANCH"` fails because the branch doesn't exist, the orchestrator did not pre-create it per `reference/workflow.md` Step 3. Report this as an error and STOP rather than improvising — silent `git checkout -b` here would re-create the bug it's meant to prevent (orchestrator-vs-implementer ambiguity about who owns branch creation).
+
+3. Clean up the worktree (`WORKTREE_BRANCH`, NOT `TARGET_BRANCH`):
 
 ```bash
 git worktree remove "$WORKTREE_DIR" --force
-git branch -D "$BRANCH"
+git branch -D "$WORKTREE_BRANCH"
 ```
 
-**ALWAYS clean up the worktree, even on failure.** Report `$WORKTREE_DIR` and `$BRANCH` in your output so the orchestrator can clean up if you exit before cleanup completes.
+**ALWAYS clean up the worktree, even on failure.** Report `$WORKTREE_DIR` and `$WORKTREE_BRANCH` in your output so the orchestrator can clean up if you exit before cleanup completes. NEVER delete `$TARGET_BRANCH` — that holds the commit you just landed.
 
 ## Workflow (in order)
 

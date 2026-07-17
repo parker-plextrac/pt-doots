@@ -14,7 +14,7 @@ The orchestrator's job is to pre-load context so the sub-agent can start produci
 - **Researcher**: paste full ticket + Bug Description inline. Researcher still reads code (that's the job), but never re-fetches the ticket.
 - **Implementer**: paste relevant plan steps inline. Never `{see plan.md}` — paste the steps.
 - **Test-writer**: paste file list + 1–2 short pattern snippets inline. Never "find an existing test for pattern".
-- **All 5 quality-gate reviewers**: paste full diff + caller bodies. See workflow.md § Step 4c contract for the substitution recipe.
+- **All 6 quality-gate reviewers**: paste full diff + caller bodies. See workflow.md § Step 4c contract for the substitution recipe. (`self-containment-reviewer` mainly needs `{INLINED_DIFF}` — comments, CLAUDE.md, committed docs, and test/fixture strings — and rarely needs `{INLINED_FUNCTION_BODIES}`.)
 
 For multi-item / multi-wave swarms with parallel sub-agents, also follow the concurrency + worktree patterns in [swarm-coordination.md](swarm-coordination.md).
 
@@ -317,6 +317,43 @@ Return structured findings:
 
 Mark systemic issues as [GOVERNANCE].
 Return "EDGE CASES: clean" explicitly if no issues found.
+```
+
+---
+
+## Self-Containment Reviewer Prompt (pt-doots:self-containment-reviewer)
+
+The orchestrator MUST inline the full `git diff` of changed files directly into this prompt before spawning. This reviewer reads the literal text of changed comments, CLAUDE.md entries, committed docs, and test/fixture strings — so `{INLINED_DIFF}` is the load-bearing input. `{INLINED_FUNCTION_BODIES}` is usually unnecessary here (the leak is in the changed text itself, not in surrounding logic) — set it to `(none — leak review reads the diff text directly)` unless a changed comment refers to nearby code whose meaning the rewrite needs. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+
+```
+Review the changes for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch} for private-context leaks.
+
+All committed-facing text is provided below. Do NOT use the Read tool — your context is already complete. Do NOT read the author's `notes/` — those are local-only and out of scope.
+
+Full diff of changed files:
+{INLINED_DIFF}
+
+Supporting bodies (only if a changed comment refers to nearby code the rewrite needs):
+{INLINED_FUNCTION_BODIES}
+
+Scan every committed-FACING artifact in the diff — code comments, CLAUDE.md entries, committed Markdown/doc lines, test descriptions (describe/it/test), and fixture strings — for text that a brand-new engineer with ZERO access to the author's local notes and ZERO memory of this ticket's private history could not understand. Flag:
+- notes/ path or local-absolute-path references
+- internal plan/session labels used as shared vocabulary (C1/C2/C3, D1/D2, T1-T5, NB-1, "Option A/B", "Chunk/Wave/Pass N" pointing at a private plan)
+- private process/history references ("the redirect", "per the plan", "as we discussed", fix-cycle/quality-gate references)
+- person/reviewer names used as load-bearing justification (Parker, Jake, JQ, Syd)
+- dangling references with no in-file antecedent ("this approach", "the earlier issue")
+
+Do NOT flag legit domain/tech terms (AWS S3, TS generics like T/K/V, HTTP codes, version strings, enum members), Jira ticket keys (IO-2175), self-evident in-file structure, or prose quality/grammar. Ambiguous tokens → flag at LOW. Do NOT flag unchanged lines.
+
+Return structured findings. For each:
+- file:line
+- the EXACT offending text
+- severity: MUST-FIX (confirmed leak, blocking) or LOW (genuinely ambiguous)
+- why it leaks (what private context it assumes)
+- a ready-to-apply self-contained rewrite the implementer can paste in directly
+
+Mark systemic leakage as [GOVERNANCE].
+Return "SELF-CONTAINMENT: clean" explicitly if no leaks found.
 ```
 
 ---

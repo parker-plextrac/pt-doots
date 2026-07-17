@@ -86,7 +86,7 @@ Step 2:   Plan                (main — user interaction)
 Step 3:   Create Branch       (main)
 Step 4a:  Implement           (pt-doots:implementer by default; see "Implementation agent selection") → /verify
 Step 4b:  Write Tests         (pt-doots:test-writer) → /verify
-Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer + test-reviewer, parallel)
+Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer + test-reviewer + self-containment-reviewer, parallel)
 Step 4d:  Fix Findings        (same agent used in 4a, fix-cycle mode) → /verify
 Step 4e:  Documentation       (pt-doots:documentarian — when scrum-master sets Documentation: yes, or workflow is docs-only)
 Step 5:   Commit              (main — commit gate)
@@ -106,11 +106,12 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 | 4c | `pt-doots:edge-case-qa` | Read-only. Boundary conditions. Skipped on lightweight. |
 | 4c | `pt-doots:code-smells-reviewer` | Read-only. Design quality. |
 | 4c | `pt-doots:test-reviewer` | Read-only. Test quality. |
+| 4c | `pt-doots:self-containment-reviewer` | Read-only. Private-context leak detection in comments/docs/CLAUDE.md/test strings. Runs on standard, lightweight, AND docs-only. |
 | 4e | `pt-doots:documentarian` | When scrum-master sets `Documentation: yes`, or workflow is `docs-only`. |
 
 ### Step 4c — Inline-Diff Substitution Contract (MANDATORY)
 
-All five quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`) require their full review surface inlined in the spawn prompt. The agent prompts in `reference/agent-prompts.md` contain `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders. The orchestrator MUST populate them before spawning.
+All six quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`, `self-containment-reviewer`) require their full review surface inlined in the spawn prompt. The agent prompts in `reference/agent-prompts.md` contain `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders. The orchestrator MUST populate them before spawning. (`self-containment-reviewer` mainly needs `{INLINED_DIFF}` — the comments, CLAUDE.md entries, committed docs, and test/fixture strings — and rarely needs `{INLINED_FUNCTION_BODIES}`.)
 
 **Guardrail**: the orchestrator reads files / runs `git`, NOT the reviewer agents. Reviewer prompts explicitly tell the agent "do NOT use the Read tool" — passing them file lists or plan paths instead of inlined diffs is the regression that caused turn-budget exhaustion (see `.local/team-manager/learned-patterns.md` lines 65-77 and the 2026-05-07 audit notes).
 
@@ -163,9 +164,9 @@ The scrum-master returns one of these four types, plus orthogonal flags (`Docume
 
 | Type | When | Pipeline |
 |------|------|----------|
-| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; parallel quality gate (5 reviewers) |
-| **lightweight** | Single-file fixes, dependency bumps, additive changes | Skips acceptance-qa + edge-case-qa; smaller review surface |
-| **docs-only** | Documentation-only tickets (READMEs, comments, reference docs) | Researcher → documentarian → code-reviewer → commit |
+| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; parallel quality gate (6 reviewers) |
+| **lightweight** | Single-file fixes, dependency bumps, additive changes | Skips acceptance-qa + edge-case-qa; runs code-reviewer + code-smells-reviewer + test-reviewer + self-containment-reviewer on a smaller review surface |
+| **docs-only** | Documentation-only tickets (READMEs, comments, reference docs) | Researcher → documentarian → code-reviewer + self-containment-reviewer → commit |
 | **custom** | Tickets that don't fit a template | Scrum-master proposes the variant with rationale |
 
 User can override the scrum-master's recommendation.
@@ -209,7 +210,7 @@ Schema for both files is defined in [reference/metrics-format.md](../reference/m
 
 ### Orchestrator Contract
 
-**After every agent spawn completes** (researcher, implementer/developer, test-writer, code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, documentarian), record the spawn so the per-ticket entry can be assembled at workflow end. Capture: agent name, model tier, rough duration, summary of result (e.g., "{N} findings", "{N}/{N} criteria passed", "fix cycle {N}").
+**After every agent spawn completes** (researcher, implementer/developer, test-writer, code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer, documentarian), record the spawn so the per-ticket entry can be assembled at workflow end. Capture: agent name, model tier, rough duration, summary of result (e.g., "{N} findings", "{N}/{N} criteria passed", "fix cycle {N}").
 
 **After workflow completion** (commit succeeded, or workflow aborted):
 

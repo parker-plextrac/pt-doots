@@ -135,8 +135,10 @@ Stays in main because it requires user interaction.
 
 - Format: `{issue-key}-{short-kebab-description}` — see [branch-naming.md](branch-naming.md)
 - Branch from default (e.g. `main`). Confirm name if ambiguous.
+- **Create AND check out** in the same step: `cd {WORKSPACE}/{repo} && git switch -c {branch}`. The parent repo MUST be on the feature branch when Step 4a spawns the implementer, otherwise the implementer's patch-apply step lands the commit on whatever was previously checked out (commonly `main`). The `pt-doots:implementer` agent's `git switch "$BRANCH"` defensive check will fail-fast if this step is skipped, but the cleanest path is for the orchestrator to switch first and the implementer to verify.
+- If the branch already exists locally (e.g., fix-cycle resuming from a prior session): `git switch {branch}` (no `-c`). Confirm with the user before reusing a branch that has commits not in `origin/main`.
 
-**Save to progress.md**: `Branch created: {branch-name}`
+**Save to progress.md**: `Branch created: {branch-name}` (or `Branch resumed: {branch-name}` for an existing branch)
 
 ---
 
