@@ -105,7 +105,7 @@ Each wave is a discrete batch of work-units that ship together. Inside a wave:
 - **Per-item PR** with branch `swarm/wave-N/<ITEM-ID>-<slug>` and title citing the roadmap item ID.
 - **Per-wave GitHub tracking issue** listing all child PRs + wave-exit criteria. Auto-closes when all PRs merge.
 - **Per-item notes** at `notes/<project>/swarm/wave-N/<ITEM-ID>/{research,plan,progress}.md`.
-- **Telemetry** to `.local/scrum-master/workflow-history.md` and `.local/team-manager/metrics-summary.md` per spawn (see [metrics-format.md](metrics-format.md)).
+- **Telemetry** to `$STATE/.local/scrum-master/workflow-history.md` and `$STATE/.local/team-manager/metrics-summary.md` per spawn, where `$STATE` = `${HOME}/.claude/pt-doots` (see [metrics-format.md](metrics-format.md)).
 
 ---
 

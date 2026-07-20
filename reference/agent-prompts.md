@@ -147,7 +147,7 @@ Write the tests. When done, return:
 
 ## Code Reviewer Prompt (pt-doots:code-reviewer)
 
-The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `${HOME}/.claude/pt-doots/.local/team-manager/learned-patterns.md` lines 65-77).
 
 ```
 Review the changes for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
@@ -182,7 +182,7 @@ Return "REVIEW: clean" explicitly if no issues found.
 
 ## Acceptance QA Prompt (pt-doots:acceptance-qa)
 
-The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `${HOME}/.claude/pt-doots/.local/team-manager/learned-patterns.md` lines 65-77).
 
 ```
 You are verifying ticket {TICKET-KEY} meets its acceptance criteria.
@@ -213,7 +213,7 @@ Mark any missed requirements as [GOVERNANCE] if they suggest the plan needs revi
 
 ## Code Smells Reviewer Prompt (pt-doots:code-smells-reviewer)
 
-The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `${HOME}/.claude/pt-doots/.local/team-manager/learned-patterns.md` lines 65-77).
 
 ```
 Review the changes for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch} for code smells.
@@ -253,7 +253,7 @@ Return "SMELLS: clean" explicitly if no issues found.
 
 ## Test Reviewer Prompt (pt-doots:test-reviewer)
 
-The orchestrator MUST inline the full `git diff` of changed files (BOTH test files AND their corresponding production files — the reviewer needs to judge whether tests cover real behavior) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+The orchestrator MUST inline the full `git diff` of changed files (BOTH test files AND their corresponding production files — the reviewer needs to judge whether tests cover real behavior) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `${HOME}/.claude/pt-doots/.local/team-manager/learned-patterns.md` lines 65-77).
 
 ```
 Review the test files changed for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
@@ -290,7 +290,7 @@ Return "TESTS: clean" explicitly if no issues found.
 
 ## Edge Case QA Prompt (pt-doots:edge-case-qa)
 
-The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+The orchestrator MUST inline the full `git diff` of changed files (and full bodies of any partially-shown changed functions) directly into this prompt before spawning. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `${HOME}/.claude/pt-doots/.local/team-manager/learned-patterns.md` lines 65-77).
 
 ```
 You are looking for failure modes in ticket {TICKET-KEY} changes.
@@ -323,7 +323,7 @@ Return "EDGE CASES: clean" explicitly if no issues found.
 
 ## Self-Containment Reviewer Prompt (pt-doots:self-containment-reviewer)
 
-The orchestrator MUST inline the full `git diff` of changed files directly into this prompt before spawning. This reviewer reads the literal text of changed comments, CLAUDE.md entries, committed docs, and test/fixture strings — so `{INLINED_DIFF}` is the load-bearing input. `{INLINED_FUNCTION_BODIES}` is usually unnecessary here (the leak is in the changed text itself, not in surrounding logic) — set it to `(none — leak review reads the diff text directly)` unless a changed comment refers to nearby code whose meaning the rewrite needs. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `.local/team-manager/learned-patterns.md` lines 65-77).
+The orchestrator MUST inline the full `git diff` of changed files directly into this prompt before spawning. This reviewer reads the literal text of changed comments, CLAUDE.md entries, committed docs, and test/fixture strings — so `{INLINED_DIFF}` is the load-bearing input. `{INLINED_FUNCTION_BODIES}` is usually unnecessary here (the leak is in the changed text itself, not in surrounding logic) — set it to `(none — leak review reads the diff text directly)` unless a changed comment refers to nearby code whose meaning the rewrite needs. Do NOT pass file lists and expect the agent to Read them — that regression caused turn-budget exhaustion in past sessions (see `${HOME}/.claude/pt-doots/.local/team-manager/learned-patterns.md` lines 65-77).
 
 ```
 Review the changes for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch} for private-context leaks.

@@ -1,6 +1,8 @@
 # Metrics and Workflow History Formats
 
-## Agent Metrics — `.local/team-manager/metrics-summary.md`
+Both files live under the home-anchored state dir `$STATE` = `${HOME}/.claude/pt-doots` (see [`commands/pt-doots.md` § Telemetry](../commands/pt-doots.md#telemetry) for why it is not inside the plugin tree). Paths below are relative to `$STATE`.
+
+## Agent Metrics — `$STATE/.local/team-manager/metrics-summary.md`
 
 ```markdown
 ### {date} — Ticket {TICKET-KEY}
@@ -19,7 +21,7 @@
 - Total verify cycles: {count}
 ```
 
-## Workflow History — `.local/scrum-master/workflow-history.md`
+## Workflow History — `$STATE/.local/scrum-master/workflow-history.md`
 
 ```markdown
 ### {date} — {TICKET-KEY} ({workflow type})

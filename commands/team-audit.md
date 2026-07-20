@@ -11,7 +11,10 @@ description: >
 
 Full roster audit. Run end-of-day, end-of-sprint, or whenever you want a thorough review of agent health, performance trends, and workflow effectiveness. This is the deep review — distinct from the lightweight roster check that runs at the start of every `/pt-doots` session.
 
-**Plugin root**: `{WORKSPACE}/agent-skills/plugins/plextrac` — store as `{PLUGIN}`.
+**Two locations this command uses** (resolve both up front):
+
+- **`{PLUGIN}`** — the pt-doots plugin directory, holding the plugin's own CODE (`agents/`, `commands/`, `reference/`); this is what agent edits get committed to. Resolve in order: use `$CLAUDE_PLUGIN_ROOT` if it is set and contains `commands/team-audit.md`; otherwise fall back to `{WORKSPACE}/pt-doots` (with `{WORKSPACE}` = the workspace root that holds the PlexTrac product repos).
+- **`$STATE`** — `${HOME}/.claude/pt-doots`, the home-anchored telemetry/state directory. Metrics, workflow history, and learned patterns live under `$STATE/.local/`. It is anchored to `$HOME` so it is always resolvable and survives plugin reinstalls, it lives OUTSIDE the plugin tree, and it is never committed. See `commands/pt-doots.md` § Telemetry for the full rationale.
 
 ---
 
@@ -25,8 +28,8 @@ Full roster audit. Run end-of-day, end-of-sprint, or whenever you want a thoroug
 
 2. **Check `.local/` for metrics data (warning, not blocker):**
    ```bash
-   test -f "{PLUGIN}/.local/team-manager/metrics-summary.md" && echo "HAS_METRICS" || echo "NO_METRICS"
-   test -f "{PLUGIN}/.local/scrum-master/workflow-history.md" && echo "HAS_HISTORY" || echo "NO_HISTORY"
+   test -f "$STATE/.local/team-manager/metrics-summary.md" && echo "HAS_METRICS" || echo "NO_METRICS"
+   test -f "$STATE/.local/scrum-master/workflow-history.md" && echo "HAS_HISTORY" || echo "NO_HISTORY"
    ```
    If either file is missing: print a warning and proceed with a qualitative-only audit:
    > "Metrics files not found — audit will be qualitative-only (agent definitions and review logs, no run-count or fix-cycle data). To get full audit data, ensure pt-doots telemetry is wired (see `commands/pt-doots.md` § Telemetry)."
@@ -35,7 +38,7 @@ Full roster audit. Run end-of-day, end-of-sprint, or whenever you want a thoroug
 
 3. **Initialize directories** (in case they exist but are incomplete):
    ```bash
-   mkdir -p "{PLUGIN}/.local/team-manager" "{PLUGIN}/.local/scrum-master"
+   mkdir -p "$STATE/.local/team-manager" "$STATE/.local/scrum-master"
    ```
 
 ---
@@ -48,9 +51,9 @@ Read all available data from the filesystem:
 
 1. **Agent definitions** — all `.md` files in `{PLUGIN}/agents/`
 2. **Performance logs** — all `.md` files in `{PLUGIN}/agents/reviews/`
-3. **Metrics summary** — `{PLUGIN}/.local/team-manager/metrics-summary.md`
-4. **Workflow history** — `{PLUGIN}/.local/scrum-master/workflow-history.md`
-5. **Learned patterns** — `{PLUGIN}/.local/team-manager/learned-patterns.md` (may not exist yet — that's fine)
+3. **Metrics summary** — `$STATE/.local/team-manager/metrics-summary.md`
+4. **Workflow history** — `$STATE/.local/scrum-master/workflow-history.md`
+5. **Learned patterns** — `$STATE/.local/team-manager/learned-patterns.md` (may not exist yet — that's fine)
 
 Read ALL of these files. The Team Manager needs the full picture to make informed recommendations.
 
@@ -70,13 +73,13 @@ Here is ALL the data you need to analyze:
 {paste contents of every agents/reviews/*.md file}
 
 ## Metrics Summary
-{paste contents of .local/team-manager/metrics-summary.md}
+{paste contents of $STATE/.local/team-manager/metrics-summary.md}
 
 ## Workflow History
-{paste contents of .local/scrum-master/workflow-history.md}
+{paste contents of $STATE/.local/scrum-master/workflow-history.md}
 
 ## Learned Patterns
-{paste contents of .local/team-manager/learned-patterns.md, or "No patterns file yet — this is the first audit."}
+{paste contents of $STATE/.local/team-manager/learned-patterns.md, or "No patterns file yet — this is the first audit."}
 
 Your task: Full roster audit. Analyze all data and return a structured report with these sections:
 
@@ -198,17 +201,17 @@ After all changes are executed (or if no changes were needed), spawn Team Manage
 Review all metrics and update learned patterns.
 
 Current metrics:
-{paste contents of .local/team-manager/metrics-summary.md}
+{paste contents of $STATE/.local/team-manager/metrics-summary.md}
 
 Current workflow history:
-{paste contents of .local/scrum-master/workflow-history.md}
+{paste contents of $STATE/.local/scrum-master/workflow-history.md}
 
 Current learned patterns:
-{paste contents of .local/team-manager/learned-patterns.md, or "No patterns file yet."}
+{paste contents of $STATE/.local/team-manager/learned-patterns.md, or "No patterns file yet."}
 
 Your task:
 1. Analyze all metrics for recurring patterns
-2. Update {PLUGIN}/.local/team-manager/learned-patterns.md with any new or modified patterns
+2. Update $STATE/.local/team-manager/learned-patterns.md with any new or modified patterns
 3. Each pattern should include:
    - Category: workflow | agent-performance | codebase
    - Confidence: low (1 observation) | medium (2 observations) | high (3+ observations)
@@ -244,8 +247,8 @@ Agent definitions were modified. Commit when ready:
 No changes — roster is healthy.
 
 {If patterns were updated:}
-Learned patterns updated in .local/team-manager/learned-patterns.md
-(runtime state — not committed to git)
+Learned patterns updated in $STATE/.local/team-manager/learned-patterns.md
+(runtime state in ${HOME}/.claude/pt-doots — not committed to git)
 ```
 
 If agent definitions were modified, suggest committing:
@@ -257,8 +260,8 @@ If agent definitions were modified, suggest committing:
 
 - **Agent definitions**: `{PLUGIN}/agents/` — one `.md` file per agent
 - **Agent reviews**: `{PLUGIN}/agents/reviews/` — performance logs per agent
-- **Metrics**: `{PLUGIN}/.local/team-manager/metrics-summary.md` — per-run data
-- **Workflow history**: `{PLUGIN}/.local/scrum-master/workflow-history.md`
-- **Learned patterns**: `{PLUGIN}/.local/team-manager/learned-patterns.md`
+- **Metrics**: `$STATE/.local/team-manager/metrics-summary.md` — per-run data
+- **Workflow history**: `$STATE/.local/scrum-master/workflow-history.md`
+- **Learned patterns**: `$STATE/.local/team-manager/learned-patterns.md`
 - **Bootstrap**: `/bootstrap-team` — one-time agent roster setup
 - **Workflow**: `/pt-doots` — the orchestrator that generates the metrics this audit reviews
