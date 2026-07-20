@@ -113,7 +113,7 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 
 All six quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`, `self-containment-reviewer`) require their full review surface inlined in the spawn prompt. The agent prompts in `reference/agent-prompts.md` contain `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders. The orchestrator MUST populate them before spawning. (`self-containment-reviewer` mainly needs `{INLINED_DIFF}` — the comments, CLAUDE.md entries, committed docs, and test/fixture strings — and rarely needs `{INLINED_FUNCTION_BODIES}`.)
 
-**Guardrail**: the orchestrator reads files / runs `git`, NOT the reviewer agents. Reviewer prompts explicitly tell the agent "do NOT use the Read tool" — passing them file lists or plan paths instead of inlined diffs is the regression that caused turn-budget exhaustion (see `.local/team-manager/learned-patterns.md` lines 65-77 and the 2026-05-07 audit notes).
+**Guardrail**: the orchestrator reads files / runs `git`, NOT the reviewer agents. Reviewer prompts explicitly tell the agent "do NOT use the Read tool" — passing them file lists or plan paths instead of inlined diffs is the regression that caused turn-budget exhaustion (see `$STATE/.local/team-manager/learned-patterns.md` lines 65-77 and the 2026-05-07 audit notes, where `$STATE` is the telemetry state dir defined in § Telemetry).
 
 **Per-spawn substitution steps**:
 
@@ -199,12 +199,28 @@ Show checklist to user before committing. Never push. Offer `/create-pr`.
 
 ## Telemetry
 
-The orchestrator records run-level data so future `/team-audit` invocations have run-count, duration, and fix-cycle history to analyze. These files are append-only runtime state under `.local/` (already git-ignored).
+The orchestrator records run-level data so future `/team-audit` invocations have run-count, duration, and fix-cycle history to analyze. These are append-only runtime state.
+
+### Where telemetry lives (`$STATE`)
+
+Telemetry lives in a fixed, home-anchored **state directory**:
+
+```
+$STATE = ${HOME}/.claude/pt-doots
+```
+
+Telemetry files sit under `$STATE/.local/`. This location is deliberately anchored to `$HOME`, NOT to the plugin directory, for three reasons:
+
+1. **Always resolvable.** `$HOME` is set in every shell, so the orchestrator writes telemetry with zero path-guessing. (Earlier versions wrote to `{PLUGIN}/.local/`, but the orchestrator has no reliable way to resolve the plugin's own absolute path from Bash: `CLAUDE_PLUGIN_ROOT` is NOT set in the command's shell, and the plugin may run from a live checkout, a cached copy, or a marketplace dir. So `{PLUGIN}` was never substituted and telemetry silently failed to record. Anchoring to `$HOME` removes that whole failure mode.)
+2. **Survives plugin churn.** Reinstalls, cache refreshes, and version bumps wipe or relocate the plugin tree; `$STATE` is untouched, so run history accumulates across updates.
+3. **Portable for any user.** No assumption about where the plugin is installed, so anyone running this plugin gets working telemetry out of the box.
+
+The directory self-initializes on first write (see Bash Setup below), so a fresh install needs no manual setup.
 
 ### Files
 
-- **Per-agent metrics**: `{PLUGIN}/.local/team-manager/metrics-summary.md` — one entry per ticket summarizing every agent spawn for that ticket.
-- **Workflow history**: `{PLUGIN}/.local/scrum-master/workflow-history.md` — one entry per ticket summarizing the overall workflow outcome.
+- **Per-agent metrics**: `$STATE/.local/team-manager/metrics-summary.md` — one entry per ticket summarizing every agent spawn for that ticket.
+- **Workflow history**: `$STATE/.local/scrum-master/workflow-history.md` — one entry per ticket summarizing the overall workflow outcome.
 
 Schema for both files is defined in [reference/metrics-format.md](../reference/metrics-format.md). Always follow that schema — do not invent fields.
 
@@ -214,22 +230,23 @@ Schema for both files is defined in [reference/metrics-format.md](../reference/m
 
 **After workflow completion** (commit succeeded, or workflow aborted):
 
-1. Append one entry to `.local/team-manager/metrics-summary.md` per the schema in [reference/metrics-format.md](../reference/metrics-format.md). Aggregate the per-spawn data captured above.
-2. Append one entry to `.local/scrum-master/workflow-history.md` per the schema there.
+1. Append one entry to `$STATE/.local/team-manager/metrics-summary.md` per the schema in [reference/metrics-format.md](../reference/metrics-format.md). Aggregate the per-spawn data captured above.
+2. Append one entry to `$STATE/.local/scrum-master/workflow-history.md` per the schema there.
 
 ### Bash Setup (run before first append)
 
 ```bash
-mkdir -p "{PLUGIN}/.local/team-manager" "{PLUGIN}/.local/scrum-master"
-test -f "{PLUGIN}/.local/team-manager/metrics-summary.md" || \
+STATE="${HOME}/.claude/pt-doots"
+mkdir -p "$STATE/.local/team-manager" "$STATE/.local/scrum-master"
+test -f "$STATE/.local/team-manager/metrics-summary.md" || \
   printf '# Team Manager — Metrics Summary\n\nAppend-only. Schema: reference/metrics-format.md\n\n' \
-    > "{PLUGIN}/.local/team-manager/metrics-summary.md"
-test -f "{PLUGIN}/.local/scrum-master/workflow-history.md" || \
+    > "$STATE/.local/team-manager/metrics-summary.md"
+test -f "$STATE/.local/scrum-master/workflow-history.md" || \
   printf '# Scrum Master — Workflow History\n\nAppend-only. Schema: reference/metrics-format.md\n\n' \
-    > "{PLUGIN}/.local/scrum-master/workflow-history.md"
+    > "$STATE/.local/scrum-master/workflow-history.md"
 ```
 
-If either parent directory is missing, create it. If the file is missing, write the header block before appending the first entry.
+`$HOME` is always set, so this runs verbatim with no placeholder substitution. It creates the state tree and header files on first run, so a fresh install is self-initializing.
 
 ### What NOT to Do
 

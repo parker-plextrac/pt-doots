@@ -297,7 +297,7 @@ Ask: **"Ready to create a PR? I can use `/create-pr` to push and open a PR with 
 
 ## Telemetry
 
-Run-level metrics (per-agent and per-workflow) are recorded under `{PLUGIN}/.local/` after every spawn and at workflow completion. The contract — when to write, what to write, and how to initialize the files — lives in [`commands/pt-doots.md` § Telemetry](../commands/pt-doots.md#telemetry). The schema for both files lives in [metrics-format.md](metrics-format.md). Do not duplicate the contract here; `pt-doots.md` is the source of truth.
+Run-level metrics (per-agent and per-workflow) are recorded under `$STATE/.local/` (where `$STATE` = `${HOME}/.claude/pt-doots`, the home-anchored state dir) after every spawn and at workflow completion. The contract — when to write, what to write, and how to initialize the files — lives in [`commands/pt-doots.md` § Telemetry](../commands/pt-doots.md#telemetry). The schema for both files lives in [metrics-format.md](metrics-format.md). Do not duplicate the contract here; `pt-doots.md` is the source of truth.
 
 ---
 

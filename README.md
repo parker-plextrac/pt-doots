@@ -110,6 +110,25 @@ Every change to an agent definition (model tier, prompt, tools, maxTurns, role) 
 
 Silent drift (changes without log entries) makes audits blind to regressions. The team-manager enforces this discipline at every `/team-audit` run; unexplained drift is flagged as a finding.
 
+## Telemetry & state
+
+`/pt-doots` records run-level metrics (which agents ran, durations, fix cycles, workflow outcome) so `/team-audit` has real history to analyze. This data lives in a fixed, home-anchored **state directory**, deliberately outside the plugin tree:
+
+```
+~/.claude/pt-doots/.local/
+├── team-manager/metrics-summary.md    # one entry per ticket, per-agent
+├── team-manager/learned-patterns.md   # patterns the team-manager accumulates
+└── scrum-master/workflow-history.md   # one entry per ticket, overall outcome
+```
+
+Why `~/.claude/pt-doots` and not inside the plugin:
+
+- **Always resolvable.** It is anchored to `$HOME`, so the orchestrator writes it with zero path-guessing. The plugin's own install path is *not* reliably knowable from a command's shell (`CLAUDE_PLUGIN_ROOT` is not set there, and the plugin may run from a live checkout, a cache copy, or a marketplace dir), which previously caused telemetry to silently fail to record.
+- **Survives updates.** Plugin reinstalls, cache refreshes, and version bumps never touch it, so run history accumulates across upgrades.
+- **Portable.** Any engineer using the plugin gets working telemetry with no path configuration.
+
+It self-initializes on the first `/pt-doots` run (the command creates the tree and header files if missing), so a fresh install needs no manual setup. Nothing here is committed to git; it is per-user runtime state. The write/read contract is defined in [`commands/pt-doots.md` § Telemetry](./commands/pt-doots.md); the file schemas are in [`reference/metrics-format.md`](./reference/metrics-format.md).
+
 ## Workflow
 
 ```
