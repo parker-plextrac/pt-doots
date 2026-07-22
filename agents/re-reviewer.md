@@ -3,7 +3,7 @@ name: re-reviewer
 description: Read-only verifier that checks whether prior review findings have been addressed in a PR's new commits. Returns a structured verdict per finding (Addressed / Partial / Not addressed / Pushback warrants accepting). Spawned by /prs when a saved review file shows status:posted and the head SHA has advanced.
 model: sonnet
 effort: high
-maxTurns: 50
+maxTurns: 15
 tools: Read Grep Glob
 permissionMode: dontAsk
 ---

@@ -13,3 +13,7 @@
 
 ## 2026-05-08 followup
 - Spawn prompt in `reference/agent-prompts.md` updated to inline diffs (`{INLINED_DIFF}` + `{INLINED_FUNCTION_BODIES}` placeholders) and explicitly tell the agent "do NOT use the Read tool"; matches the inline-context discipline fix from yesterday's audit. Brings code-smells-reviewer in line with code-reviewer / acceptance-qa / edge-case-qa.
+
+## 2026-07-20 - maxTurns rollback 50 to 15 (roster audit)
+- Set `maxTurns: 50` to `15`. Reconciles silent drift: the log-of-record created value was 15, drifted to 50 with no dated entry.
+- Rationale: the 50 cap was a pre-inline-context band-aid. code-smells-reviewer now receives fully-inlined diffs (`{INLINED_DIFF}` plus `{INLINED_FUNCTION_BODIES}`) and is told not to Read, finishing in 0 to 7 tool calls. Same rollback applied to code-reviewer, acceptance-qa, and edge-case-qa on 2026-05-07 but never applied here.

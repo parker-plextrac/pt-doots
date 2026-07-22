@@ -1,6 +1,6 @@
 ---
 name: developer
-description: Looser, opt-in alternative to `implementer`. Default for lightweight workflows or when `PT_DOOTS_DEV_MODE=loose`. Use when speed matters more than strict plan-fidelity. Otherwise prefer `implementer`. Implements plan steps, follows CLAUDE.md standards, creates nested CLAUDE.md files where missing, and writes production-quality code in PlexTrac repos. Spawned in Step 4a (implement) and Step 4d (fix QA findings).
+description: RETIRED 2026-07-20: Looser, opt-in alternative to `implementer`. Default for lightweight workflows or when `PT_DOOTS_DEV_MODE=loose`. Use when speed matters more than strict plan-fidelity. Otherwise prefer `implementer`. Implements plan steps, follows CLAUDE.md standards, creates nested CLAUDE.md files where missing, and writes production-quality code in PlexTrac repos. Spawned in Step 4a (implement) and Step 4d (fix QA findings).
 model: sonnet
 effort: high
 maxTurns: 200

@@ -45,7 +45,7 @@ Your job:
 
 ---
 
-## Developer Prompt — Implementation (pt-doots:developer)
+## Implementer Prompt - Implementation (pt-doots:implementer)
 
 ```
 You are implementing ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
@@ -68,7 +68,7 @@ Implement the changes described in the plan. When done, return:
 
 ---
 
-## Developer Prompt — QA Fixes (pt-doots:developer)
+## Implementer Prompt - QA Fixes (pt-doots:implementer)
 
 ```
 You are fixing QA findings for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
@@ -92,7 +92,7 @@ Fix each finding. Return:
 You are writing tests for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
 
 Files changed:
-{list from Developer agent}
+{list from Implementer agent}
 
 Plan:
 {paste test-relevant plan steps}
@@ -133,7 +133,7 @@ Standards:
 - Read and follow CLAUDE.md testing rules for {repo}
 - Co-locate test files with source (.test.ts suffix for TS, test_*.py for Python)
 - Cover: happy path, edge cases, error paths
-- Tests SHOULD FAIL initially — they will pass after the developer implements
+- Tests SHOULD FAIL initially; they will pass after the implementer implements
 - Use existing test patterns in the codebase as reference
 
 Write the tests. When done, return:

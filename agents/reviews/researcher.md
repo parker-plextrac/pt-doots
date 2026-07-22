@@ -18,3 +18,7 @@
 - Why: Documentarian was cold-walking changed files in Step 4e and missing existing Confluence/READMEs that needed updates. Researcher already explores the codebase deeply — it costs almost nothing to capture the doc surface as it goes, and it gives Documentarian a verified candidate list to work from.
 - Risk: turn budget. Confluence search is slow. Researcher already has a 200-turn budget so the marginal cost is acceptable, but watch for runaway searches in the next audit. If turn usage spikes on tickets with broad doc surface, tighten the search scope.
 - Open monitoring: does Documentarian actually use the candidate list, or does it re-walk on its own? Track in next audit.
+
+## 2026-07-20 - Reconciled definition vs. body, removed Write (roster audit)
+- Removed `Write` from the tools line (now `Read Grep Glob` plus Confluence MCP). The body already states "You have no Write tool" and the design has the orchestrator save research.md; the 2026-04-06 creation had Write explicitly disallowed. Write was added later with no log entry, so this removes the contradiction.
+- Reconciled the turn budget: frontmatter had drifted to `maxTurns: 200` (created value 25) while the body still said "You have 20 turns." Set both frontmatter and body to `50`, a real budget for genuine 4-repo exploration (researcher runs of 4 to 14 min in metrics) without the drifted 200.

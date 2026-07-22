@@ -39,7 +39,7 @@ Each entry in `notes/{TICKET-KEY}/progress.md` follows this structure.
 
 ### Step 4a: Implementation
 - Status: complete
-- Agent: developer ({model})
+- Agent: implementer ({model})
 - Files changed: {list with one-line descriptions}
 - Verification: pass (or: fail → fixed in {N} cycles)
 - Governance: {none | list of [GOVERNANCE] items found}
@@ -60,7 +60,7 @@ Each entry in `notes/{TICKET-KEY}/progress.md` follows this structure.
 
 ### Step 4d: Fix QA Findings
 - Status: complete
-- Agent: developer ({model})
+- Agent: implementer ({model})
 - Fixed: {N}, Deferred: {N}
 - Verification: pass
 

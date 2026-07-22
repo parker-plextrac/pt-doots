@@ -10,3 +10,7 @@
 - maxTurns: 15
 - Intended use: Spawned by `/prs` when a saved review file shows `status: posted` and the PR's head SHA has advanced since the review was posted. NOT used in the standard `/pt-doots` workflow — re-review is a PR-dashboard concern, not a per-ticket concern.
 - Status: File backfilled retroactively.
+
+## 2026-07-20 - maxTurns rollback 50 to 15 (roster audit)
+- Set `maxTurns: 50` to `15`, restoring the created value. The 15 to 50 drift was never logged.
+- Rationale: re-reviewer works from an orchestrator-provided delta-diff file plus worktree path (context is pre-sliced), so the original 15-turn budget is sufficient. It never fired in the 6-session logged window (it is a /prs-only agent), so the inflated 50 was carrying unvalidated. Restoring to 15 matches the design and caps runaway cost.
