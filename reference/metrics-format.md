@@ -9,7 +9,7 @@ Both files live under the home-anchored state dir `$STATE` = `${HOME}/.claude/pt
 - Workflow: {type} (scrum-master recommendation)
 - Execution mode: {standard | tdd}
 - researcher ({model}): {duration estimate}, {summary}
-- developer ({model}): {duration estimate}, {verify cycles} verify cycles
+- implementer ({model}): {duration estimate}, {verify cycles} verify cycles
 - test-writer ({model}): {duration estimate}, {summary}
 - code-reviewer ({model}): {duration estimate}, {N} findings
 - acceptance-qa ({model}): {duration estimate}, {N}/{N} criteria passed
@@ -20,6 +20,8 @@ Both files live under the home-anchored state dir `$STATE` = `${HOME}/.claude/pt
 - Governance issues: {count and summary, or "none"}
 - Total verify cycles: {count}
 ```
+
+**`{model}` = the agent's pinned frontmatter `model:` tier** (haiku for scrum-master, acceptance-qa, documentarian; sonnet for researcher, implementer, test-writer, and the reviewers; opus for team-manager). Frontmatter pins ARE honored at spawn (verified 2026-07-20), so record each agent's pinned tier, NOT the orchestrator's session model. Writing the session model is what produced the discarded "(opus)" annotations a later audit had to throw out.
 
 ## Workflow History — `$STATE/.local/scrum-master/workflow-history.md`
 

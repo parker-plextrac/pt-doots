@@ -155,9 +155,9 @@ Implement → Verify → Test → Verify → Review → Fix → Verify → Commi
            (max 3x)            (max 3x)          (max 3x)
 ```
 
-### 4a. Implementation (`pt-doots:developer`)
+### 4a. Implementation (`pt-doots:implementer`)
 
-- Spawn with the **Developer Prompt (Implementation)** from [agent-prompts.md](agent-prompts.md)
+- Spawn with the **Implementer Prompt (Implementation)** from [agent-prompts.md](agent-prompts.md)
 - One agent per logical chunk, or one for the whole plan if small
 - Returns: files changed + descriptions + any [GOVERNANCE] items
 - If it has questions → orchestrator asks the user → spawns new agent with answers
@@ -202,11 +202,11 @@ Consolidate all findings from all reviewers before proceeding.
 
 **Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail or skipped}. Edge Case QA: {N or skipped}. Code Smells: {N}. Test Review: {N or skipped}.`
 
-### 4d. Fix Findings (`pt-doots:developer`, fix-cycle mode)
+### 4d. Fix Findings (`pt-doots:implementer`, fix-cycle mode)
 
 Only if quality gate has actionable findings.
 
-- Spawn with the **Developer Prompt (QA Fixes)** from [agent-prompts.md](agent-prompts.md)
+- Spawn with the **Implementer Prompt (QA Fixes)** from [agent-prompts.md](agent-prompts.md)
 - Pass consolidated findings from all reviewers
 - Returns: fixes applied + any deferred
 - **Run `/verify`. Fix failures (max 3 cycles).**

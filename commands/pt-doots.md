@@ -20,7 +20,7 @@ These are absolute constraints. No exceptions, no "just this once", no "it's fas
 - **NEVER** use `Edit`, `Write`, or `Bash` to create or modify source code or test files.
 - **NEVER** use `Grep` or `Glob` to search codebases for implementation details.
 - **NEVER** run tests, linters, or typecheckers yourself. That is what `/verify` and agents are for.
-- **NEVER** write a "quick test" or "quick fix" — delegate to `pt-doots:developer` or `pt-doots:test-writer`.
+- **NEVER** write a "quick test" or "quick fix"; delegate to `pt-doots:implementer` or `pt-doots:test-writer`.
 
 ### What You CAN Read/Write
 - `notes/{TICKET-KEY}/*` — research.md, plan.md, progress.md (your workspace)
@@ -84,7 +84,7 @@ Step 0.5: Route Workflow      (pt-doots:scrum-master → workflow recommendation
 Step 1:   Research            (pt-doots:researcher)
 Step 2:   Plan                (main — user interaction)
 Step 3:   Create Branch       (main)
-Step 4a:  Implement           (pt-doots:implementer by default; see "Implementation agent selection") → /verify
+Step 4a:  Implement           (pt-doots:implementer) → /verify
 Step 4b:  Write Tests         (pt-doots:test-writer) → /verify
 Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer + test-reviewer + self-containment-reviewer, parallel)
 Step 4d:  Fix Findings        (same agent used in 4a, fix-cycle mode) → /verify
@@ -99,7 +99,7 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 |------|------------------------|-------|
 | 0.5 | `pt-doots:scrum-master` | haiku, 1 turn. Returns workflow type + agent plan. |
 | 1 | `pt-doots:researcher` | Writes research.md, returns summary. |
-| 4a, 4d | `pt-doots:implementer` (default) or `pt-doots:developer` (opt-in) | Worktree isolation. 4d = fix-cycle mode. See "Implementation agent selection" below. |
+| 4a, 4d | `pt-doots:implementer` | Worktree isolation. 4d = fix-cycle mode. |
 | 4b | `pt-doots:test-writer` | Worktree isolation. |
 | 4c | `pt-doots:code-reviewer` | Read-only. PlexTrac standards. |
 | 4c | `pt-doots:acceptance-qa` | Read-only. Acceptance criteria. Skipped on lightweight. |
@@ -145,18 +145,11 @@ All six quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`
 
 ### Implementation Agent Selection (Steps 4a / 4d)
 
-The orchestrator picks between `implementer` (strict, plan-fidelity) and `developer` (loose, opt-in) using this exact precedence:
+`developer` is **retired** (2026-07-20; unused across every logged session, and `implementer` is now the sole implementation agent). Spawn `pt-doots:implementer` for Steps 4a and 4d in **every** workflow: `standard`, `lightweight`, `docs-only`, and `custom`. The former routing branches (`PT_DOOTS_DEV_MODE=loose` and `lightweight` to `developer`) are removed; both now resolve to `implementer`, so no branch spawns the retired agent.
 
-1. **If env var `PT_DOOTS_DEV_MODE=loose` is set** → spawn `pt-doots:developer`. Check via `Bash` (e.g., `echo "${PT_DOOTS_DEV_MODE:-}"`). Any non-empty value other than `loose` is ignored — only the literal `loose` triggers the override.
-2. **Else if scrum-master's workflow type = `lightweight`** → spawn `pt-doots:developer`. Lightweight tickets (single-file fixes, dependency bumps) don't need the strict surface lock.
-3. **Else** → spawn `pt-doots:implementer` (default). This covers `standard`, `docs-only`, and `custom` workflows.
+The same `implementer` spawn must be used in 4a and 4d (fix-cycle mode).
 
-Whichever agent is selected in 4a, **the same agent must be used in 4d** for fix-cycle mode — do not mix.
-
-Override semantics:
-- The env var is the engineer-level escape hatch (set in shell rc to default to `developer` for an entire session).
-- The lightweight rule is the workflow-level escape hatch (driven by scrum-master classification).
-- User can also override per-ticket by saying so explicitly during planning.
+Users who want a looser flow can still say so during planning; the orchestrator relaxes plan-fidelity expectations within `implementer` rather than switching agents.
 
 ### Workflow Types (from scrum-master)
 
@@ -226,7 +219,9 @@ Schema for both files is defined in [reference/metrics-format.md](../reference/m
 
 ### Orchestrator Contract
 
-**After every agent spawn completes** (researcher, implementer/developer, test-writer, code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer, documentarian), record the spawn so the per-ticket entry can be assembled at workflow end. Capture: agent name, model tier, rough duration, summary of result (e.g., "{N} findings", "{N}/{N} criteria passed", "fix cycle {N}").
+**After every agent spawn completes** (researcher, implementer, test-writer, code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer, documentarian), record the spawn so the per-ticket entry can be assembled at workflow end. Capture: agent name, model tier, rough duration, summary of result (e.g., "{N} findings", "{N}/{N} criteria passed", "fix cycle {N}").
+
+**Model tier = the agent's pinned frontmatter `model:` value, NOT the orchestrator's own session model.** Frontmatter model pins ARE honored at spawn (verified 2026-07-20 by transcript probe: a haiku-pinned agent runs `claude-haiku-4-5` even when the orchestrator session is opus). Recording the session model instead produced false "(opus)" annotations that a later audit had to discard. If unsure of an agent's real tier, grep `"model"` in its `subagents/agent-*.jsonl` transcript rather than assuming.
 
 **After workflow completion** (commit succeeded, or workflow aborted):
 

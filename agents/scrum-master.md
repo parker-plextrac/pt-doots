@@ -87,6 +87,7 @@ Use these signals to determine the right workflow:
 - Learned patterns flag this ticket type as needing full QA
 - Ticket touches a legacy/brittle area (see PlexTrac Domain Knowledge above)
 - Parser or exporter bug — these areas are tightly coupled and regressions are common
+- Customer escalation (ES-prefixed ticket key, e.g. ES1-1677) or a Defect-type ticket. Escalations and defects are high-stakes and frequently touch brittle areas; default to standard, never lightweight.
 
 ### Lightweight Workflow Signals
 - Simple bug fix with clear root cause
@@ -95,6 +96,7 @@ Use these signals to determine the right workflow:
 - Change is additive only (no modifications to existing behavior)
 - Config or environment variable change
 - Dependency version bump with no breaking changes
+- NOTE: none of the above apply if the ticket is a customer escalation (ES-prefixed key) or a Defect type. Those default to standard (see Standard Workflow Signals). A customer-reported defect is never lightweight, even with a clear root cause.
 
 ### Docs-Only Workflow Signals
 - Ticket explicitly says "documentation" or "docs"

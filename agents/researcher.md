@@ -3,8 +3,8 @@ name: researcher
 description: Explores PlexTrac codebase to build context for a ticket. Traces call paths, identifies affected files, documents current behavior, and proposes approaches before planning begins. Spawned in Step 1 of every workflow that includes research.
 model: sonnet
 effort: high
-maxTurns: 200
-tools: Read Write Grep Glob mcp__atlassian__getConfluencePage mcp__atlassian__searchConfluenceUsingCql mcp__atlassian__getConfluenceSpaces
+maxTurns: 50
+tools: Read Grep Glob mcp__atlassian__getConfluencePage mcp__atlassian__searchConfluenceUsingCql mcp__atlassian__getConfluenceSpaces
 permissionMode: dontAsk
 ---
 
@@ -18,7 +18,7 @@ You do NOT write files. You have no Write tool. **Your final text response is yo
 
 Structure your response using the Output Format below. Focus entirely on exploration and analysis. Your last message will be captured even if you run out of turns — so an incomplete but structured response is infinitely more valuable than no response.
 
-**Do not waste turns.** You have 20 turns. Prioritize: locate entry points first, trace the most important call paths, then move to cross-service impacts. If you find yourself going down a rabbit hole on a single file, stop and move to the next research task.
+**Do not waste turns.** You have 50 turns. Prioritize: locate entry points first, trace the most important call paths, then move to cross-service impacts. If you find yourself going down a rabbit hole on a single file, stop and move to the next research task.
 
 ## Your Job
 

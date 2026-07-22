@@ -46,3 +46,8 @@ Pitch 2 from the audit (engineer-textbook vocabulary) shipped as a user overlay 
 Files modified:
 - agents/voice-stylist.md
 - agents/voice-stylist/profile.md
+
+## 2026-07-20 - Logged undocumented drift (roster audit; no functional change)
+- No change to the agent this audit. This entry documents drift that accumulated since the 2026-05-15 log with no dated entry. From the created state: model haiku to sonnet, effort low to medium, maxTurns 3 to 8, tools Read+Glob to Read+Bash.
+- Rationale (reconstructed): the 2026-05-15 test showed haiku leaking banned vocab ("derive/canonical/consumers") and an em dash, so sonnet was chosen; the Read+Bash tool set is intentional (Bash `find` for overlay discovery plus the deterministic perl dash-scrub, per the agent body's 2026-05-27 note). All defensible, just never logged.
+- Future experiment: a haiku plus deterministic-scrub A/B is now worth trying. The top haiku failure mode (em dashes) is handled deterministically by the perl scrub, so haiku may hold voice at roughly 1/4 the cost. Not changing the model until that A/B runs.
