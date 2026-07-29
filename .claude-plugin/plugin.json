@@ -1,6 +1,6 @@
 {
   "name": "pt-doots",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Parker's PlexTrac toolkit — orchestrated Jira ticket workflow, agent teams, PR dashboard, integration scaffolding.",
   "author": {
     "name": "Parker",
