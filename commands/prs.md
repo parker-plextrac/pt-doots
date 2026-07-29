@@ -621,6 +621,31 @@ These use general-purpose agents since no pt-doots equivalent exists.
 
 After all agents return, collect all findings. Deduplicate findings that refer to the same file:line from different agents (keep the higher severity). Sort by severity: HIGH → MED → LOW → NICE.
 
+### Step 3.5: Repro-verify findings (conditional)
+
+Static reviewers reason from an inlined diff. They cannot run the code, so they both miss bugs that only surface at runtime and over-flag plausible-but-wrong concerns. When the changed code is cheap to exercise, spawn `pt-doots:repro-verifier` to prove or refute the correctness findings by actually running them. This is the execution-grounded upgrade to the manual Step 5a sanity check.
+
+**When to run it:**
+- **Auto** when the PR touches repro-friendly code: the Python services (`product-services-export`, `product-services-mcp`), `zenith-inbound-service`, or pure/isolatable logic (parsers, validators, mappers, date/uuid helpers, integration-worker parser code).
+- **On request** for any PR. If the user says "verify it" or "run the bug hunter," run it regardless of repo.
+- **Skip** for frontend-only, style, or config-only diffs, or when no correctness/edge/security finding at MED or above was raised (nothing to verify). Note "repro-verify: skipped (nothing runnable to verify)" and move on.
+
+**What to pass it** (seed it with the findings, do NOT make it re-hunt from scratch):
+- `WORKTREE_DIR` (the isolated worktree from Step 2b; the PR code is already there).
+- The consolidated correctness / edge-case / security findings from Step 3 at MED severity and above, each with file:line and the concern. Skip pure style / naming / smell / test-quality findings; those are not runtime-falsifiable.
+- Its scratch workspace, which is its ONLY writable path: `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it).
+
+Spawn `subagent_type: "pt-doots:repro-verifier"`. The agent definition carries the full contract, the run-the-repo's-own-gates step, and the report format. Its safety rails forbid touching any shared or production service.
+
+**How its verdicts change the findings:**
+- **CONFIRMED**: mark the finding proven. It floats to the top and is exempt from the Step 5a demotion pass (execution already settled it). Attach the repro command so the inline comment can cite runnable evidence.
+- **PROVEN-SAFE**: drop the finding from the presented set. Record it in the Step 5a sanity-check log as "dropped: repro showed correct behavior (`<cmd>`)" so the pruning stays visible.
+- **INCONCLUSIVE**: leave the finding exactly as the static reviewer raised it; it still goes through the normal Step 5a check.
+- **Incidental proven bug**: add it as a new CONFIRMED finding.
+- **Gate failure** (the PR fails the repo's own `just check` / typecheck / tests at this commit): surface as its own HIGH finding. A red gate is a merge blocker regardless of the rest.
+
+If the repro-verifier could not run (environment setup failed, or the diff was not runnable), note "repro-verify: skipped ({reason})" in the review header and proceed with the static findings unchanged. Never block the review on it.
+
 ### Step 4: Save Review State
 
 Create directory if needed:
@@ -666,6 +691,8 @@ The `head_sha` field is used on resume to detect new commits since the review.
 #### 5a: Orchestrator pre-promotion check (HIGH and MED findings only)
 
 Reviewer agents work from inlined diffs and tend to over-flag plausible-sounding concerns without verification (per `feedback_reviewer_agent_overflagging.md`). Each agent is now responsible for its own "Verify Before Flag" pass, but the orchestrator still does a final sanity check before showing HIGH/MED findings to the user.
+
+**If Step 3.5 (repro-verify) ran, its verdicts take precedence here.** A CONFIRMED finding is proven by execution: present it as-is and do NOT demote it. A PROVEN-SAFE finding was already dropped in Step 3.5. Only run the manual check below on INCONCLUSIVE findings and on findings from a review where the repro-verifier did not run.
 
 For each HIGH or MED finding, run this quick check:
 
