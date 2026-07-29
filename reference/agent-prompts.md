@@ -195,13 +195,18 @@ Ticket content:
 Plan summary:
 {1-3 sentence summary of what the plan delivers}
 
+Done-condition (the single completion condition derived at plan time; evaluate THIS explicitly):
+{paste the "Done when:" block from plan.md}
+
 Full diff of changed files:
 {INLINED_DIFF}
 
 Full bodies of changed functions (where the diff above is partial / context-truncated):
 {INLINED_FUNCTION_BODIES}
 
-Review the implementation against EACH acceptance criterion. For each:
+First render an explicit DONE-CONDITION verdict: MET / NOT MET / PARTIAL, with one line of evidence per bullet of the Done-condition. This is the headline result the orchestrator gates on at the Commit Gate.
+
+Then review the implementation against EACH acceptance criterion. For each:
 - Criterion text
 - Pass / Fail / Partial
 - Evidence (file:line or explanation)
