@@ -477,6 +477,8 @@ If any answer is "no," fix the prompt before spawning. A 20KB prompt that runs i
 
 Agents CAN read additional files from the worktree for surrounding context (CLAUDE.md, imports, types, peer plugin patterns) — but they should never need to read a CHANGED file to learn what changed.
 
+**Reviewers are READ-ONLY; execution-grounding is Step 3.5's job (worktree-safety, mandatory):** every reviewer prompt MUST tell the agent it is read-only. Do NOT modify any file, and do NOT run the test suite, the type checker, mutation tests, or any command that writes to the worktree. All reviewers share the ONE Step 2b worktree, so a single agent that mutates it (a mutation test, or a strip-and-rerun typecheck experiment) corrupts what every other reviewer reads. That collision is real: it has silently fed reviewers the wrong (reverted) version of a changed file mid-review. When a finding would be stronger with execution proof (e.g. "this line looks untested", "this could raise"), the reviewer FLAGS it and appends `(needs repro-verifier)` instead of running it; Step 3.5's repro-verifier owns all execution, in its own isolated worktree. Even a reviewer whose tool grant happens to include Bash must not use it to run or mutate the reviewed code.
+
 For PRs with very large diffs (>200KB of patch content total), split files across agents by domain instead of duplicating the entire diff to all agents. Note which agent got which files. Still inline the relevant subset for each agent — don't fall back to "go look in the worktree."
 
 Launch **5-7 parallel sub-agents** via the Agent tool (6th is conditional on test files, 7th+ are conditional on artifact types — see below). Each agent returns **structured findings ONLY** — no posting, no GitHub interaction.
@@ -629,9 +631,10 @@ Static reviewers reason from an inlined diff. They cannot run the code, so they 
 - **Auto** when the PR touches repro-friendly code: the Python services (`product-services-export`, `product-services-mcp`), `zenith-inbound-service`, or pure/isolatable logic (parsers, validators, mappers, date/uuid helpers, integration-worker parser code).
 - **On request** for any PR. If the user says "verify it" or "run the bug hunter," run it regardless of repo.
 - **Skip** for frontend-only, style, or config-only diffs, or when no correctness/edge/security finding at MED or above was raised (nothing to verify). Note "repro-verify: skipped (nothing runnable to verify)" and move on.
+- **Not skippable as "redundant."** If runnable code AND a MED-or-above correctness/edge finding both exist, Step 3.5 MUST run, even when the reviewers appear to have already grounded their findings. Reviewer self-grounding does NOT substitute: reviewers are read-only and cannot run code, and the repro-verifier's distinct value is REFUTING plausible-but-wrong findings before they post, not just confirming the true ones. The orchestrator does not get to decide it is unnecessary; the only valid skips are the three listed above (nothing runnable / no MED+ finding / genuinely cannot run).
 
 **What to pass it** (seed it with the findings, do NOT make it re-hunt from scratch):
-- `WORKTREE_DIR` (the isolated worktree from Step 2b; the PR code is already there).
+- A DEDICATED repro worktree, separate from the Step 2b review worktree; never the shared one. The repro-verifier mutates code to run experiments, and doing that in the reviewers' shared worktree is the exact collision Step 3 forbids. Create a throwaway detached worktree at the PR head before spawning (e.g. `git -C {WORKSPACE}/{repo} worktree add --detach {WORKSPACE}/.worktrees/{repo}-{head_ref}-repro {head_sha}`), pass THAT path, and `git worktree remove --force` it in Step 9. A dedicated repro worktree is required even if the reviewers have already finished and their worktree is idle: the isolation is what lets the repro-verifier mutate freely and be re-run without disturbing the saved review.
 - The consolidated correctness / edge-case / security findings from Step 3 at MED severity and above, each with file:line and the concern. Skip pure style / naming / smell / test-quality findings; those are not runtime-falsifiable.
 - Its scratch workspace, which is its ONLY writable path: `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it).
 
@@ -961,6 +964,8 @@ rm /tmp/pr-review.json /tmp/pr-comment-*.json
 
 ```bash
 git -C {WORKSPACE}/{repo} worktree remove "$WORKTREE_DIR" --force
+# Also remove the Step 3.5 repro worktree if one was created (safe no-op if it wasn't):
+git -C {WORKSPACE}/{repo} worktree remove "{WORKSPACE}/.worktrees/{repo}-{head_ref}-repro" --force 2>/dev/null || true
 ```
 
 If `worktree remove` fails (e.g. uncommitted notes inside the worktree the user wants to keep), tell the user and leave it in place — they can run `git worktree remove` themselves later. Don't `rm -rf` the directory; that orphans git metadata.
