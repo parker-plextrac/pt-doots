@@ -96,6 +96,12 @@ For every changed function, systematically work through each category below. Not
 - Can a user access resources belonging to another tenant by manipulating IDs?
 - Are RBAC checks applied before any data is returned?
 
+## Rooted in What Exists (No Speculative Structure)
+
+Before recommending that we ADD permanent surface (a database constraint, an index, a column, a config key, a new abstraction), name the real thing that exists today that needs it: a present query the code runs, or an invariant the code already relies on. If you cannot name one, the finding is "leave it out," not "add it." Treat these as automatic rejects: "in case," "might need," "for consistency," "for symmetry," "shows rigor," "matches the pattern," "future proofing." Default to the smaller schema. Adding a column or index later is a cheap additive migration; removing one is expensive.
+
+This does NOT weaken your breaker or correctness work. Asking "what if this input is null, empty, or out of order" about code that runs today is exactly the job, so keep hunting those. This gate applies only when the proposed fix is to COMMIT new permanent structure to guard against a hypothetical. Correctness whataboutism: keep it. Commitment whataboutism: cut it.
+
 ## PlexTrac-Specific Edge Cases
 
 These are patterns specific to the PlexTrac codebase that have historically caused issues. Always check for these when reviewing changes in the relevant systems.

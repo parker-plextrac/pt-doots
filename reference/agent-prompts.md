@@ -168,6 +168,8 @@ Review against:
 - CLAUDE.md standards for {repo}
 - Code quality, security, naming, architecture
 
+Rooted in what exists: do not recommend adding permanent structure (a constraint, index, column, config key, or new abstraction) unless you can name a present query or a relied-on invariant that needs it; otherwise the finding is to leave it out, not to add.
+
 Return only actionable findings. For each finding:
 - File and line number
 - What's wrong
@@ -316,6 +318,8 @@ For each changed function/module:
 - Error paths and exception handling
 - Concurrency / race conditions (if applicable)
 - Data permutations the test suite doesn't cover
+
+Rooted in what exists: a recommendation that adds permanent structure (a constraint, index, or column) must trace to a present query or a relied-on invariant, or else recommend leaving it out; keep hunting null, empty, and out-of-order inputs on code that runs today.
 
 Return structured findings:
 - [file:line] [scenario] [risk level] [recommendation]

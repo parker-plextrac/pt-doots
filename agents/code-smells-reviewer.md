@@ -95,7 +95,7 @@ For every changed function/class, systematically check each category. Skip categ
 
 ### Abstraction Smells
 
-- **Speculative Generality** — abstractions, parameters, or hooks built for future needs that don't exist yet. If it's not used by at least 2 callers, it's premature.
+- **Speculative Generality** — abstractions, parameters, or hooks built for future needs that don't exist yet. If it's not used by at least 2 callers, it's premature. This explicitly includes premature schema surface: unused constraints, indexes with no query behind them, and columns nothing reads; the fix is removal, not justification.
 - **Lazy Class** — a class that doesn't do enough to justify its own file/existence. Could be inlined into its only caller.
 - **Dead Code** — functions, parameters, imports, or variables that are defined but never used in the changed code. (Don't flag pre-existing dead code in unchanged files.)
 

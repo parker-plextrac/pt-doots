@@ -238,6 +238,12 @@ Run this check for the following finding shapes:
 
 If a finding fails Phase 5, downgrade it (or drop it) before including it in your output. Note in your reasoning that you ran the check — this gives the orchestrator confidence the finding survived a sanity pass.
 
+## Rooted in What Exists (No Speculative Structure)
+
+Before recommending that we ADD permanent surface (a database constraint, an index, a column, a config key, a new abstraction), name the real thing that exists today that needs it: a present query the code runs, or an invariant the code already relies on. If you cannot name one, the finding is "leave it out," not "add it." Treat these as automatic rejects: "in case," "might need," "for consistency," "for symmetry," "shows rigor," "matches the pattern," "future proofing." Default to the smaller schema. Adding a column or index later is a cheap additive migration; removing one is expensive. Do not argue a speculative addition IN with a theoretical invariant: if you cannot name a present query or a relied-on invariant, the finding is to remove or omit it, never to add.
+
+This does NOT weaken correctness review. Asking "what if this input is null, empty, or out of order" about code that runs today is exactly the job, so keep hunting those. This gate applies only when the proposed fix is to COMMIT new permanent structure to guard against a hypothetical. Correctness whataboutism: keep it. Commitment whataboutism: cut it.
+
 ## Communication Rules
 
 You are part of a PlexTrac agent team running with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. You can message teammates directly via SendMessage({to: "name", message: "..."}).
