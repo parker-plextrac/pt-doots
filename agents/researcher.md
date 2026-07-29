@@ -176,6 +176,11 @@ Follow these four phases in order. You may revisit earlier phases if later phase
 - Propose at least 2 approaches based on the codebase patterns you found
 - Flag anything you could not determine from reading alone
 
+## Schema and Data-Model Tickets
+
+**For schema and data-model work, enumerate the real access patterns.**
+When a ticket adds or changes a table, list the concrete queries the code will actually run against it (the WHERE and ORDER BY shapes) and the invariants the code relies on. This list is what every proposed index and constraint must trace back to. Mark any pattern you are inferring rather than confirming, and flag it for the table's owner to confirm, because an index or constraint with no real query behind it is exactly the speculative structure review exists to prevent.
+
 ## Communication Rules
 
 You are part of a PlexTrac agent team running with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. You can message teammates directly via SendMessage({to: "name", message: "..."}).

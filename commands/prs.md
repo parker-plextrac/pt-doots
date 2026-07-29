@@ -709,6 +709,8 @@ For each HIGH or MED finding, run this quick check:
 
 5. **Track demotions in an internal sanity-check log** so you can mention them once at the top when presenting. Don't quietly drop findings without saying so — Parker likes seeing what got pruned and why.
 
+**Rooted-in-what-exists lens (applies across HIGH/MED).** For any finding that RECOMMENDS adding permanent structure (a database constraint, an index, a column, a config key, a new abstraction), confirm it names a present query the code runs or an invariant the code already relies on. If it names neither, reframe it as "leave it out" and drop it from the add set (or downgrade it); do not surface it to the user as an add. Justifications like "in case," "might need," "for consistency," "for symmetry," or "future proofing" are automatic rejects. This gate is only about proposals to COMMIT new structure: correctness findings about code that runs today (null, empty, or out-of-order inputs) are untouched by it and stay.
+
 If after this pass NO HIGH findings remain, default-tone the recommendation toward "ready for an approving follow-up" rather than "needs another round."
 
 #### 5b: Show the consolidated findings table
