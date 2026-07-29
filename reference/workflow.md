@@ -37,6 +37,7 @@ Run at the start of every session:
    **Last session**: {date from progress.md}
    **Completed**: {list completed steps}
    **Next**: {what comes next}
+   **Done when**: {done-condition echoed from progress.md; the anchor for the rest of the run}
    **Uncommitted changes**: {yes/no}
    ```
 5. Save session start to progress.md
@@ -123,11 +124,21 @@ Stays in main because it requires user interaction.
 2. Each plan step should be **self-contained enough for a sub-agent**:
    - Exact file path(s)
    - What to change (code snippets or clear description)
-   - "Done when" condition
-3. User confirms or adjusts
-4. Write approved plan to `plan.md`
+   - "Done when" condition (per step)
+3. **Derive the ticket-level Done-condition.** This is distinct from the per-step "Done when" above. It is ONE short, explicit statement of what makes the WHOLE ticket done, read straight off the ticket's acceptance criteria (or, for defects with an empty description, off the Bug Description / customfield_10227 expected-behavior). Keep it lightweight: a short bulleted "Done when:" block, not a spec. This is the single condition acceptance-qa evaluates at Step 4c and the Commit Gate checks.
+4. User confirms the plan AND the Done-condition, or adjusts
+5. Write the approved plan and the "Done when:" block to `plan.md`. Echo the same "Done when:" block into `progress.md` (Step 2 entry) so a post-/clear resume re-anchors on it. `plan.md` is canonical; the `progress.md` copy is a pointer.
 
-**Save to progress.md**: `Plan approved. {N} steps. Approach: {1 sentence}`
+**Done-condition format** (top of `plan.md`, echoed to `progress.md`):
+
+    ## Done when:
+    - {criterion 1: observable and testable}
+    - {criterion 2}
+    - Verification green (lint + typecheck + tests)
+
+**Scale-down for lightweight and docs-only:** collapse the Done-condition to ONE line. For example "Done when: dependency bumped to X.Y and verify green", or "Done when: README section Y documents the new flag and code-reviewer is clean". Do not manufacture a multi-bullet block when the ticket has a single observable outcome. Note that acceptance-qa does not run on these two workflows, so their Done-condition is evaluated by code-reviewer plus the Commit Gate rather than by acceptance-qa.
+
+**Save to progress.md**: `Plan approved. {N} steps. Approach: {1 sentence}. Done when: {1-line restatement or bulleted block}`
 
 ---
 
@@ -154,6 +165,8 @@ Implement → Verify → Test → Verify → Review → Fix → Verify → Commi
             └─ fix ─┘           └─ fix ─┘        └─ fix ─┘
            (max 3x)            (max 3x)          (max 3x)
 ```
+
+**Soft cross-loop budget.** The max-3 cap above is per failure. Also watch the running total across 4a/4b/4d. If total fix-cycles across those three steps exceeds roughly 8, STOP and reassess with the user even if no single failure hit the max-3 cap. A ticket that needs that many fix cycles usually has a plan or scope problem, not a code problem. Track the current total on the `**Run tally**` line in `progress.md`. Live token and turn metering is intentionally left to the harness (for example `/goal`) and is not estimated here.
 
 ### 4a. Implementation (`pt-doots:implementer`)
 
@@ -198,7 +211,7 @@ Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
 
 **Custom workflow** — follow the reviewer set the scrum-master included in its WORKFLOW PLAN steps.
 
-Consolidate all findings from all reviewers before proceeding.
+Consolidate all findings from all reviewers before proceeding. FIRST clear the completion barrier: every dispatched reviewer must have returned a REAL result, not a truncated or empty completion notification. Retrieve any thin result via SendMessage (see [swarm-coordination.md](swarm-coordination.md) "Completion barrier") before consolidating. Do NOT consolidate a partial set.
 
 **Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail or skipped}. Edge Case QA: {N or skipped}. Code Smells: {N}. Test Review: {N or skipped}.`
 
@@ -236,10 +249,11 @@ The agent does not skip a higher-priority level just because work exists at a lo
 ## Step 5: Commit (main context)
 
 ### Commit Gate — ALL must be true:
-- [ ] Quality gate ran (4c)
+- [ ] Quality gate ran (4c), and all reviewers returned a REAL result (no truncated or empty completion notifications; any thin ones retrieved via SendMessage before consolidating)
 - [ ] Findings fixed or deferred (4d)
 - [ ] Verification passed after most recent code change
 - [ ] All plan steps implemented
+- [ ] Done-condition met (the "Done when:" block from plan.md; verified by acceptance-qa on standard, or by code-reviewer plus the orchestrator on lightweight/docs-only where acceptance-qa is skipped)
 - [ ] No outstanding [GOVERNANCE] items unaddressed
 
 Show checklist to user before committing:
@@ -249,6 +263,7 @@ Show checklist to user before committing:
 - [x] Quality gate: ran, {N} total findings → {N} fixed, {N} deferred
 - [x] Verification: lint ✓, typecheck ✓, tests ✓
 - [x] Plan steps: {N}/{N} complete
+- [x] Done-condition: MET ({1-line restatement})
 - [x] Governance: clear
 
 Ready to commit: `{TICKET-KEY}: {short description}`

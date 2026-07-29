@@ -122,6 +122,29 @@ The Step 4c contract in [workflow.md](workflow.md) makes inline-diff substitutio
 
 ---
 
+## Completion barrier: never done-check while delegated work is outstanding
+
+The single hardest rule of any fan-out. The orchestrator does NOT consolidate Step 4c findings, evaluate the Commit Gate, or declare the workflow done while ANY spawned agent or background shell is still running, OR while any completed agent's result came back truncated or empty.
+
+This mirrors the headline bug that Claude Code's `/goal` command had to fix: an evaluator that fired while delegated subagents were still running judged "done" on partial state. pt-doots fans out six background reviewers at Step 4c, so this is exactly the shape that bug lives in.
+
+**A completion notification is not the same as a result.** A spawned reviewer's completion notification sometimes carries only a preview line as its result, or no result field at all (just usage stats). That agent is finished, but its real report is NOT in your context. Counting it done here drops findings silently.
+
+**The barrier, concretely:**
+
+1. **Wait for every spawn.** Before consolidating 4c or checking the Commit Gate, confirm every reviewer you dispatched has returned and every background shell has exited. A pending agent blocks the done-check. It does not get skipped.
+2. **Confirm each result is real.** For each completed reviewer, verify its notification carries an actual structured report (findings, or an explicit clean line such as "REVIEW: clean" / "EDGE CASES: clean"), not a mid-thought preamble or a bare usage-stats block.
+3. **On a truncated or empty result, retrieve it.** SendMessage the agent by id or name and ask it to restate its FINAL report compactly (one line per finding, no preamble). A finished agent resumes from its own transcript cheaply and restates into your context. Do NOT shell-read its output JSONL transcript, because the harness warns that overflows context. Count the reviewer done only once a real report is in hand.
+4. **Only then consolidate.** With all six real reports collected, consolidate findings and proceed to the gate.
+
+This is intermittent, not universal. On a typical fan-out most reviewers deliver their full report inline and need no follow-up, so check each notification first and SendMessage only the ones that came back thin. (Observed 2026-07-22, PR #191 / IO-2357 review swarm: acceptance-qa's first notification was a preamble line and edge-case-qa's had no result field. One targeted SendMessage each returned clean full reports. See user memory `reference_background_reviewer_notification_truncated_sendmessage`.)
+
+**If the fan-out used pure sub-agents with no SendMessage available:** re-spawn the thin reviewer with the same already-inlined diff. It is deterministic and cheap, and it is the correct fallback rather than proceeding on a partial set.
+
+This supersedes the softer "nudge if a task appears stuck" note under Limitations below. A thin completion notification is not a stuck task. It is a delivered-but-unretrieved result, and the fix is SendMessage-to-restate (or re-spawn), not a nudge-and-wait.
+
+---
+
 ## Limitations to be aware of
 
 From Anthropic ([source](https://code.claude.com/docs/en/agent-teams#limitations)):

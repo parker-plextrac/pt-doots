@@ -59,7 +59,7 @@ Detect intent from the user's message:
 ## Status Check Mode
 
 1. Read `notes/{TICKET-KEY}/progress.md` (if missing, say "No notes found for {KEY}")
-2. Display last session summary, completed steps, what remains
+2. Display last session summary, completed steps, what remains, and the Done-condition (the anchor)
 3. Done — do NOT start the workflow
 
 ---
@@ -171,11 +171,14 @@ After every code change → run `/verify`. Max 3 fix cycles per failure. If stil
 ### Commit Gate
 
 ALL must be true before committing:
-- [ ] Quality gate ran (4c)
+- [ ] Quality gate ran (4c), and all reviewers returned a REAL result (no truncated or empty completion notifications; thin ones retrieved via SendMessage)
 - [ ] Findings fixed or explicitly deferred (4d)
 - [ ] Verification passed after most recent change
 - [ ] All plan steps implemented
+- [ ] Done-condition met (the "Done when:" block from plan.md)
 - [ ] No outstanding [GOVERNANCE] items unaddressed
+
+**Barrier (hard rule):** Do NOT evaluate this gate while any spawned agent or background shell is still running, or while any reviewer's result came back truncated or empty. Retrieve thin results via SendMessage first, then consolidate. Mechanics: [swarm-coordination.md](../reference/swarm-coordination.md) "Completion barrier".
 
 Show checklist to user before committing. Never push. Offer `/create-pr`.
 
