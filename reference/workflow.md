@@ -22,6 +22,44 @@ Each ticket: `{WORKSPACE}/notes/{TICKET-KEY}/` with `research.md`, `plan.md`, `p
 
 ---
 
+## Language Detection & Conventions-Overlay Injection
+
+The implementer, test-writer, and the language-sensitive reviewers (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) are language-neutral skeletons. Their language-specific rules come from a **conventions overlay** the orchestrator loads by detecting the changed code's language and names in each spawn prompt. This section is the **single source of truth** for that detection and injection — `commands/prs.md` (Step 3, Step S6) and `reference/agent-prompts.md` both reference it. Do not re-specify the rule anywhere else.
+
+**When:** compute `LANG` once the changed-file list is known — in the ticket flow that is after Step 4a (the implementer reports its changed files), just before the Step 4c quality gate; in `/prs` it is after `get_pull_request_files`.
+
+### Detect `LANG`
+
+From the changed-file list (skip test fixtures and binaries):
+
+1. **By extension:** any `.ts` / `.tsx` / `.js` / `.jsx` ⇒ TypeScript; any `.py` ⇒ Python.
+2. **Repo-marker confirm / tiebreak:** `product-core-backend`, `product-core-frontend` ⇒ TypeScript; `product-services-export`, `product-services-mcp`, `zenith-inbound-service` ⇒ Python.
+3. **Mixed** (both a TypeScript/JS extension **and** `.py` are present) ⇒ `LANG = mixed`.
+
+### Overlay path(s) per `LANG`
+
+| `LANG` | Overlay path(s) to inject |
+|--------|---------------------------|
+| TypeScript | `/Users/parker/workspaces/plextrac/pt-doots/reference/typescript-conventions.md` |
+| Python | `/Users/parker/workspaces/plextrac/pt-doots/reference/python-conventions.md` |
+| mixed | **both** of the above |
+
+### Injection block (add to each writer / language-sensitive-reviewer spawn prompt)
+
+Fill `{CONVENTIONS_OVERLAY}` with the path(s) resolved above, then add this block to the prompt:
+
+    Conventions overlay: {CONVENTIONS_OVERLAY}
+    Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
+For `LANG = mixed`, list **both** paths on the `Conventions overlay:` line and append: "Each file follows its own language's overlay — apply the TypeScript rules to `.ts`/`.js` files and the Python rules to `.py` files."
+
+**Gets the block:** implementer, test-writer, code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa.
+**Takes no block** (language-neutral — reasons about ticket criteria, leaks, or runtime behavior, not language conventions): acceptance-qa, self-containment-reviewer, repro-verifier, researcher, documentarian.
+
+**Adding a language later** = add its `<lang>-conventions.md` overlay file and one row to the table above. Zero agent or spawn-template edits.
+
+---
+
 ## Step 0: Load Context (main context)
 
 Run at the start of every session:
@@ -210,6 +248,8 @@ Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
 - `pt-doots:code-reviewer` — verifies the doc changes for accuracy and consistency
 
 **Custom workflow** — follow the reviewer set the scrum-master included in its WORKFLOW PLAN steps.
+
+**Conventions overlay (all variants):** before spawning, detect `LANG` from the implementer's changed-file list and inject the matching conventions-overlay path into each language-sensitive reviewer's prompt (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) — see the **Language Detection & Conventions-Overlay Injection** section. The language-neutral acceptance-qa takes no overlay.
 
 Consolidate all findings from all reviewers before proceeding. FIRST clear the completion barrier: every dispatched reviewer must have returned a REAL result, not a truncated or empty completion notification. Retrieve any thin result via SendMessage (see [swarm-coordination.md](swarm-coordination.md) "Completion barrier") before consolidating. Do NOT consolidate a partial set.
 

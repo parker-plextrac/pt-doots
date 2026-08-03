@@ -20,6 +20,19 @@ For multi-item / multi-wave swarms with parallel sub-agents, also follow the con
 
 ---
 
+## Conventions-Overlay Contract — applies to the writer & language-sensitive-reviewer prompts
+
+The implementer, test-writer, and the language-sensitive reviewers (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) are language-neutral. The orchestrator detects the changed code's language and injects the matching conventions overlay into their prompts. **The detection rule and overlay paths are defined once in [workflow.md](workflow.md) § Language Detection & Conventions-Overlay Injection — do not restate them here.**
+
+Each such template below carries this block; the orchestrator fills `{CONVENTIONS_OVERLAY}` with the path(s) it resolved for the repo's `LANG` (both paths when `LANG = mixed`):
+
+    Conventions overlay: {CONVENTIONS_OVERLAY}
+    Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
+The language-neutral prompts — researcher, acceptance-qa, self-containment-reviewer, documentarian — carry **no** overlay block.
+
+---
+
 ## Researcher Prompt (pt-doots:researcher)
 
 ```
@@ -53,10 +66,10 @@ You are implementing ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch
 Plan:
 {paste relevant plan steps from plan.md}
 
-Standards:
-- Read and follow CLAUDE.md rules for {repo}
-- TypeScript: no `as any`, no `as unknown as T`, use Pick for narrowing
-- Python: type hints, f-strings, SOLID principles
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
+Also:
 - Follow existing patterns in the codebase
 - Create nested CLAUDE.md files at module level where missing
 
@@ -78,6 +91,9 @@ Findings to fix:
 
 {If any findings were deferred by user, note them: "DEFERRED (do not fix): {list}"}
 
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
 Fix each finding. Return:
 - List of fixes applied with file:line references
 - Any findings you chose not to fix and why
@@ -97,11 +113,11 @@ Files changed:
 Plan:
 {paste test-relevant plan steps}
 
-Standards:
-- Read and follow CLAUDE.md testing rules for {repo}
-- Co-locate test files with source (.test.ts suffix for TS, test_*.py for Python)
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it (test framework, file naming / co-location, and per-layer testing conventions come from the overlay). The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
+Also:
 - Cover: happy path, edge cases, error paths
-- For backend: test service layer; controller tests optional
 - Use existing test patterns in the codebase as reference
 
 Write the tests. When done, return:
@@ -129,9 +145,10 @@ Acceptance criteria:
 Test fixtures:
 {list any sample files, mock data, etc.}
 
-Standards:
-- Read and follow CLAUDE.md testing rules for {repo}
-- Co-locate test files with source (.test.ts suffix for TS, test_*.py for Python)
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it (test framework, file naming / co-location, and per-layer testing conventions come from the overlay). The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
+Also:
 - Cover: happy path, edge cases, error paths
 - Tests SHOULD FAIL initially; they will pass after the implementer implements
 - Use existing test patterns in the codebase as reference
@@ -163,9 +180,12 @@ Full diff of changed files:
 Full bodies of changed functions (where the diff above is partial / context-truncated):
 {INLINED_FUNCTION_BODIES}
 
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
 Review against:
 - The plan's acceptance criteria (above)
-- CLAUDE.md standards for {repo}
+- The conventions overlay above, plus the repo's committed CLAUDE.md
 - Code quality, security, naming, architecture
 
 Rooted in what exists: do not recommend adding permanent structure (a constraint, index, column, config key, or new abstraction) unless you can name a present query or a relied-on invariant that needs it; otherwise the finding is to leave it out, not to add.
@@ -236,13 +256,16 @@ Full diff of changed files:
 Full bodies of changed functions (where the diff above is partial / context-truncated):
 {INLINED_FUNCTION_BODIES}
 
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
 Look for design smells in the changed code:
-- Structural: long methods, large classes, god objects
+- Size & decomposition: apply the loaded conventions overlay — some repos set caps (long method, large class, god object), others (e.g. zenith-inbound) explicitly reject them; do not assume caps
 - Coupling: feature envy, inappropriate intimacy, message chains
 - Data: data clumps, primitive obsession
 - Complexity: complex conditionals, flag arguments, shotgun surgery
 - Duplication: copy-paste code, parallel structures
-- Abstraction: speculative generality, lazy classes, dead code
+- Abstraction: speculative generality, dead code
 
 Do NOT flag smells in test files or unchanged code.
 
@@ -275,6 +298,9 @@ Full diff of changed files (test + production):
 
 Full bodies of changed functions (where the diff above is partial / context-truncated):
 {INLINED_FUNCTION_BODIES}
+
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it (test-framework misuse patterns and the mock-behavior / build-data lens come from the overlay). The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
 
 Review test quality:
 - Are assertions testing real behavior or just verifying mocks?
@@ -312,6 +338,9 @@ Full diff of changed files:
 
 Full bodies of changed functions (where the diff above is partial / context-truncated):
 {INLINED_FUNCTION_BODIES}
+
+Conventions overlay: {CONVENTIONS_OVERLAY}
+Read and apply it (language-specific edge-case patterns come from the overlay). The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
 
 For each changed function/module:
 - Boundary conditions (empty arrays, null, max values)

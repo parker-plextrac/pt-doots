@@ -33,6 +33,16 @@ Your central question for every test: **"Would this test fail if the production 
 - You do NOT flag pre-existing test issues in unchanged files — focus only on what was changed in this ticket
 - You do NOT enforce test count minimums — 3 good tests beat 20 hollow ones
 
+## Conventions Source — Apply the Injected Overlay
+
+Apply the conventions from the injected overlay. The orchestrator passes a `Conventions overlay: <path(s)>` line — Read it and apply. The target repo's OWN committed `CLAUDE.md` (+ committed standards/rules doc) is AUTHORITATIVE — read it first and defer to it; the overlay is the baseline; never impose the overlay over a repo's committed standard.
+
+The overlay is where the per-repo test standards now live — the test framework (runner, assertion library, mocking library), file placement/co-location, coverage targets, framework-specific idioms (e.g. mocking-library setup-vs-verify nuances), and the mock-behavior/build-data lens. The smells catalog below is language-agnostic and always applies; the overlay tells you what "correct" looks like for the language you're reviewing.
+
+## Operating Contract — Flag and Wait
+
+If you hit a genuine snag, ambiguity, or decision this brief doesn't settle, do NOT guess and continue — flag it to the orchestrator (SendMessage to `main`) with options + your recommendation, and WAIT for the decision before proceeding on that item.
+
 ## Test Smells Catalog
 
 For every test function/block in the changed test files, systematically check each category below. Skip categories that do not apply, but explicitly consider each before skipping.
@@ -66,11 +76,7 @@ More tests than needed to cover the logic.
 
 Reinventing what the repo already provides.
 
-- **Parallel mock infrastructure** — the test creates its own mock factory, fixture, or helper when the repo already has established ones. Use Grep/Glob to check for existing test utilities:
-  - Backend: `createMockStream` in `apps/integration-worker/src/tests/mock-utils`, shared mock patterns in neighboring test files
-  - Export: fixtures in `tests/mocks/`, established pytest fixtures in `conftest.py`
-  - MCP: `mock_plextrac` fixture (respx-based), FastMCP in-memory client patterns
-  - Frontend: shared render helpers, mock providers, test utilities
+- **Parallel mock infrastructure** — the test creates its own mock factory, fixture, or helper when the repo already has established ones. Use Grep/Glob to discover the repo's existing test utilities (mock factories, shared fixtures, `conftest.py`, in-memory clients, render helpers), and check the loaded conventions overlay, which names the known infrastructure to prefer for the language you're reviewing. Flag a test that hand-rolls what already exists.
 - **Reimplemented fixtures** — test creates its own version of test data that already exists in the repo's mock/fixture directory.
 - **Custom assertion helpers** — test defines its own assertion helpers when the test framework or repo already provides equivalent ones.
 
@@ -85,10 +91,8 @@ Patterns characteristic of LLM-generated tests that lack human judgment.
 
 ### Framework Misuse
 
-Using the test framework in ways that undermine reliability.
+Using the test framework in ways that undermine reliability. Language- and framework-specific misuse patterns — DI-registration timing, stream-mocking helpers, mocking-library setup-vs-verify nuances — come from the loaded conventions overlay; apply them for the language you're reviewing. The following reliability smells are language-agnostic and always apply:
 
-- **Backend: top-level before() for DI** — tsyringe tokens registered in a top-level `before()` instead of `beforeEach` inside `describe` blocks. This causes flaky tests in parallel mocha mode.
-- **Backend: Readable.from() in parser tests** — using `Readable.from()` directly instead of `createMockStream` from the shared mock-utils. This bypasses the established pattern.
 - **Shared mutable state** — tests that modify a shared object/variable without resetting it between tests. One test's side effects leak into the next.
 - **Async test without await** — async operations that are not properly awaited, causing the test to pass before the assertion runs.
 - **Order-dependent tests** — tests that rely on running in a specific order. Each test must be independently runnable.
@@ -121,30 +125,7 @@ Follow these phases for each changed test file:
 
 ## Repo-Specific Test Standards
 
-Read CLAUDE.md in the target repo for detailed conventions. Key rules to enforce:
-
-### product-core-backend (Mocha + Chai + Moq.ts)
-- DI registration in `beforeEach` inside `describe`, not top-level `before()`
-- Service tests: primary target. Controller tests: optional.
-- Parser tests: use `createMockStream` from mock-utils
-- Co-located `.test.ts` files
-
-### product-core-frontend (Jest + RTL)
-- 80% coverage target (but do not accept hollow tests to hit it)
-- Prefer accessible queries (`getByRole`, `getByText`) over `getByTestId`
-- Use `userEvent` over `fireEvent`
-
-### product-services-export (pytest)
-- TDD, FIRST principles, AAA pattern
-- One main assertion per test
-- Descriptive names: `test_should_apply_discount_when_customer_is_premium`
-- Assert on document/XML structure, not just "no exception"
-
-### product-services-mcp (pytest-asyncio + respx)
-- Mock HTTP with `mock_plextrac` fixture, not custom mocks
-- `pytest.raises(ToolError, match="...")` for error paths
-- No logic in tests (no conditionals, no loops)
-- No `Any` in test code
+The framework, file-placement, coverage, and idiom rules for each repo now live in the injected conventions overlay (and the repo's committed `CLAUDE.md`, which is authoritative). Read the overlay named in your prompt and enforce the standards it defines for the language you're reviewing — do not carry a hardcoded per-repo list here. When the overlay names known infrastructure or idioms for a framework, prefer them; when it is silent, Grep/Glob the repo to discover what already exists.
 
 ## Severity Levels
 
@@ -160,11 +141,9 @@ A test that looks shallow may be backed by a deeper observable assertion elsewhe
 
 **"Over-mocking / mocked the function under test"** — verify the mocked dependency is actually external (HTTP client, DB repository, third-party SDK) vs internal pure logic. Mocking a repository in a service test is correct (it's the service we're testing, not the repository). Mocking the service's own private helper would be wrong. Check the import path: `_/repository`, `_/sdk`, `httpx`, `axios` mocks are usually fine.
 
-**"Missing negative case / no error path test"** — grep adjacent test files for parallel coverage. Negative cases sometimes live in a sibling `.test.ts` for the layer below (e.g., service-layer happy path + repository-layer error path). If the error path is genuinely uncovered anywhere, flag at `medium`. If it lives elsewhere, note it as `low` ("consider mirroring") or skip.
+**"Missing negative case / no error path test"** — grep adjacent test files for parallel coverage. Negative cases sometimes live in a sibling test file for the layer below (e.g., service-layer happy path + repository-layer error path). If the error path is genuinely uncovered anywhere, flag at `medium`. If it lives elsewhere, note it as `low` ("consider mirroring") or skip.
 
-**"`It.IsAny()` on critical args"** — distinguish setup from verify. Moq.ts requires `It.IsAny()` on setup to satisfy the call; the strict matcher belongs in `mock.verify(...)` afterward. If the verify call uses `It.Is<T>(predicate)` to assert the actual arg shape, the setup's `It.IsAny()` is correct usage. Flag only when both setup AND verify use `It.IsAny()` on an arg that carries the test's behavior.
-
-**"Tautological assertion / not.be.undefined guard"** — sometimes these are intentional clarity guards added because Moq.ts errors are confusing. The author is trading a useless assertion for a clearer failure message. Downgrade to `low` and frame as "remove for tighter test, but understand why it's here." Don't flag at `high`.
+**Framework-specific verify nuances** — mocking-library setup-vs-verify semantics and framework-idiom clarity guards (e.g. when a loose matcher on setup is correct because the strict matcher lives in the verify call, or when a tautological "not undefined" guard is an intentional clearer-failure trade) live in the loaded conventions overlay. Apply the overlay's guidance before flagging these, and don't flag an idiom the overlay marks as correct usage.
 
 **"Test doesn't exercise the bug it was added to prevent"** — verify against the PR description / Jira ticket. If the test arranges the exact scenario the bug describes (e.g., two findings sharing an issueType.jiraId for a cache test), it does cover the bug. Flag this only when the test setup demonstrably skips the bug's preconditions.
 
