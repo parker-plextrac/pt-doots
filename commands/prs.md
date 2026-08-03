@@ -76,10 +76,17 @@ Users add or remove teammates by editing the overlay markdown directly — they 
 
 Examine `$ARGUMENTS` (the text after `/prs`):
 
+**Review-mode detection (Direct Review only — runs before the table match).** Check whether `$ARGUMENTS` is a PR URL followed by an optional trailing `loose` token (e.g. `https://github.com/PlexTrac/product-core-backend/pull/8532 loose`):
+- Trailing `loose` present → set `REVIEW_MODE = loose`, then **strip the `loose` token** so the remaining URL parses normally (`owner`/`repo`/`pr_number` still extract cleanly).
+- Otherwise → `REVIEW_MODE = rigorous`.
+
+`REVIEW_MODE` defaults to `rigorous` for **every** path (dashboard, self-review, and a plain review URL). It only changes behavior in **Direct Review** (Mode 2): a `loose` run trims the agent set (Step 3 "Loose profile") and the output (Step 5 "Loose output"). Every other mode ignores it.
+
 | Input | Mode |
 |-------|------|
 | *(empty)* | **Dashboard** |
-| URL matching `https://github.com/PlexTrac/*/pull/*` | **Direct Review** — extract `owner`, `repo`, and `pr_number` from the URL |
+| URL matching `https://github.com/PlexTrac/*/pull/*` (alone) | **Direct Review — rigorous** (unchanged default) — extract `owner`, `repo`, and `pr_number` from the URL |
+| URL + trailing `loose` (e.g. `…/pull/8532 loose`) | **Direct Review — loose profile** (`REVIEW_MODE=loose`) — strip `loose`, then extract `owner`/`repo`/`pr_number` from the URL |
 | `self` (alone) | **Self-Review** — auto-detect ticket from current branches |
 | `self <TICKET-KEY>` (e.g. `self IO-2168`) | **Self-Review** — review your inflight work for that ticket across all repos |
 | Anything else | Show usage: `/prs` for dashboard, `/prs <github-pr-url>` to review a specific PR, `/prs self [TICKET-KEY]` to review your own inflight code |
@@ -456,6 +463,14 @@ This gives the orchestrator (and user) context on what's already been discussed.
 
 **Do NOT invoke the `code-review:code-review` skill.** The review pipeline is built directly here for full control over output format and posting.
 
+> **Loose profile (`REVIEW_MODE=loose`) — trimmed agent set.** When the run was invoked as `/prs <url> loose`, replace the rigorous 5–7 agent fan-out below with a minimal set. The mode-independent parts of this step still apply: run the same **pre-flight checks** and the same mandatory **diff-inlining context strategy**.
+> - Spawn **only Agent 2 — Acceptance QA** (`pt-doots:acceptance-qa`), exactly as defined below. Do **not** spawn Agent 1 (edge-case-qa), Agent 3 (researcher), Agent 4 (code-reviewer), Agent 5 (code-smells-reviewer), Agent 6 (test-reviewer), or any Agent 7+ dynamic specialist.
+> - **Force the Step 3.5 repro-verifier ON** — override its normal "skip when nothing runnable / no MED+ finding" conditions; in loose mode it always runs, because build → run the repo's own gates → exercise the feature is the whole point. After acceptance-qa returns, spawn `pt-doots:repro-verifier` (Step 3.5 mechanics) seeded with **acceptance-qa's `NOT MET` / `PARTIAL` done-condition items** (instead of a static-reviewer finding list), plus its standing instruction to run the repo's own gates (`just check` / typecheck / tests) and exercise the feature described in the PR/ticket. Scratch dir: `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it). This bullet **is** the loose-mode form of Step 3.5 — do not also run Step 3.5's conditional version.
+> - **Skip the rigorous consolidation** at the end of this step (dedupe / severity-sort) — loose mode produces no multi-agent severity findings to merge. Step 5's **Loose output** reads acceptance-qa's per-criterion result and the repro-verifier's verdicts directly.
+> - Continue: Step 4 (save state; record `review_mode: loose`) → Step 5 **Loose output** variant → Step 9 cleanup.
+>
+> Everything below is the **rigorous** default (`REVIEW_MODE=rigorous`) and runs unchanged when no `loose` keyword was given.
+
 **IMPORTANT — Pre-flight checks before spawning agents:**
 1. Confirm `WORKTREE_DIR` exists and is a valid git worktree: `git -C "$WORKTREE_DIR" rev-parse --is-inside-work-tree` returns `true`
 2. Confirm the worktree HEAD points at the PR branch tip: `git -C "$WORKTREE_DIR" rev-parse HEAD` matches the PR's `head.sha` from Call 1
@@ -479,6 +494,13 @@ Agents CAN read additional files from the worktree for surrounding context (CLAU
 
 For PRs with very large diffs (>200KB of patch content total), split files across agents by domain instead of duplicating the entire diff to all agents. Note which agent got which files. Still inline the relevant subset for each agent — don't fall back to "go look in the worktree."
 
+**Conventions overlay — detect `LANG`, then inject.** Compute `LANG` from the changed-file list (Call 2) using the detection rule in `reference/workflow.md` § Language Detection & Conventions-Overlay Injection, and resolve the overlay path(s) for that `LANG`. Add this block to the **writer / language-sensitive-reviewer** prompts only — Agent 1 (edge-case-qa), Agent 4 (code-reviewer), Agent 5 (code-smells-reviewer), and Agent 6 (test-reviewer):
+
+    Conventions overlay: {overlay path(s) for LANG — both paths if mixed}
+    Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
+Do NOT add it to Agent 2 (acceptance-qa), Agent 3 (researcher), or the Agent 7+ artifact-type specialists — those are language-neutral. (Loose mode spawns only acceptance-qa + repro-verifier, so it never injects an overlay.)
+
 Launch **5-7 parallel sub-agents** via the Agent tool (6th is conditional on test files, 7th+ are conditional on artifact types — see below). Each agent returns **structured findings ONLY** — no posting, no GitHub interaction.
 
 **Use pt-doots agents wherever possible** — they have domain expertise, CLAUDE.md awareness, and structured output formats that general-purpose agents don't match.
@@ -497,6 +519,9 @@ The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPAC
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
+
+Conventions overlay: {overlay path(s) for LANG — both paths if mixed; see the "detect LANG, then inject" note above}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
 
 Examine every changed function for boundary conditions, null/undefined/empty handling, error paths, race conditions, async edge cases, and data permutations. Return your EDGE CASE QA report.
 ```
@@ -551,7 +576,10 @@ The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPAC
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
 
-Review every changed file against the workspace CLAUDE.md at {WORKSPACE}/CLAUDE.md and any repo-specific or directory-level CLAUDE.md files. Only flag violations of explicitly stated rules. Return your structured findings report.
+Conventions overlay: {overlay path(s) for LANG — both paths if mixed; see the "detect LANG, then inject" note above}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
+Review every changed file against the conventions overlay above, the workspace CLAUDE.md at {WORKSPACE}/CLAUDE.md, and any repo-specific or directory-level CLAUDE.md files. Only flag violations of explicitly stated rules. Return your structured findings report.
 ```
 
 ---
@@ -570,6 +598,9 @@ The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPAC
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — skip binary files and test fixtures}
+
+Conventions overlay: {overlay path(s) for LANG — both paths if mixed; see the "detect LANG, then inject" note above}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
 
 Review these changed files using your full smell catalog. Skip test files. Return your CODE SMELLS REPORT.
 ```
@@ -594,6 +625,9 @@ The repo is checked out at {WORKTREE_DIR} (an isolated git worktree of {WORKSPAC
 
 Changed files and their diffs:
 {paste file list and FULL diff/patch content from Call 2 — include ALL files, not just test files, so the reviewer can read production code alongside tests}
+
+Conventions overlay: {overlay path(s) for LANG — both paths if mixed; see the "detect LANG, then inject" note above}
+Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
 
 Review only the test files in this changeset using your full test smells catalog. Return your TEST REVIEW report.
 ```
@@ -665,6 +699,7 @@ author: {pr_author}
 ticket: {ticket_key or "none"}
 head_sha: {head_sha}
 status: findings_ready
+review_mode: {loose or rigorous — the REVIEW_MODE resolved in Parse ARGUMENTS}
 date: {ISO 8601 timestamp}
 selected_findings: []
 ---
@@ -687,6 +722,23 @@ selected_findings: []
 The `head_sha` field is used on resume to detect new commits since the review.
 
 ### Step 5: Present Findings
+
+> **Loose output (`REVIEW_MODE=loose`).** Skip 5a (pre-promotion machinery) and the 5b one-at-a-time `what / why / suggestions / opinion` walk entirely. Present a compact verdict instead:
+>
+> ```
+> ## Loose review: #{pr_number} {ticket_key} — {pr_title}
+> Works: YES / NO — {one line, from acceptance-qa's done-condition result + the repro-verifier's gate/exercise result}
+>
+> ### must: blockers ({n})   (omit this section if n = 0)
+> | # | file:line | blocker (evidence) |
+> |---|-----------|--------------------|
+> ```
+>
+> - `Works: YES` only when acceptance-qa met every done-condition **and** the repro-verifier's gate passed with no confirmed bug. Any `NOT MET` / `FAIL` criterion, any `CONFIRMED` bug, or a `Gate failure` ⇒ `Works: NO`.
+> - Populate the `must:` table **only** from: acceptance-qa `NOT MET` done-conditions / `FAIL` criteria, and repro-verifier `CONFIRMED` bugs or a `Gate failure` (cite the repro command / failing gate as evidence). **Drop everything else** — no `should:` / `nit:` / `opinion:` / `idea:` / `praise:`, no smells, no standards, no positive observations, no other severities.
+> - Default outcome is just the verdict — nothing is posted. Posting stays opt-in exactly as in rigorous mode: if Parker wants a `must:` blocker posted or an approval left, reuse **Steps 6–8 verbatim** (the voice-stylist still runs on any comment that gets posted; an approval still uses body `🎺 💀 🤖`). Then run Step 9 (worktree cleanup) as always.
+>
+> The rigorous 5a / 5b flow below runs unchanged when `REVIEW_MODE=rigorous`.
 
 #### 5a: Orchestrator pre-promotion check (HIGH and MED findings only)
 
@@ -1093,6 +1145,7 @@ Use the same agent prompt templates Mode 2 uses (see Step 3 of Mode 2), with the
 - `Jira context` → the shared Jira fetch from S3.
 - `{WORKTREE_DIR}` → the arm's worktree path.
 - Inline the diff content from S5 just like Mode 2 — full patches, not file lists.
+- **Conventions overlay** → compute `LANG` **per arm** from that arm's changed files (S5) using the detection rule in `reference/workflow.md` § Language Detection & Conventions-Overlay Injection, and inject the resolved overlay block into that arm's writer / language-sensitive-reviewer prompts (edge-case-qa, code-reviewer, code-smells-reviewer, test-reviewer) exactly as Mode 2 Step 3 does. acceptance-qa and researcher get no overlay. Each arm is its own repo, so different arms can resolve to different overlays.
 
 Agents return structured findings the same way. No agent needs to know about other arms.
 
