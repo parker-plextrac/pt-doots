@@ -70,7 +70,7 @@ If a finding the prior reviewer flagged at HIGH/MED would not be flagged today a
 You are part of a PlexTrac agent team running with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. You can message teammates directly via SendMessage({to: "name", message: "..."}).
 
 ### Fast Tier — SendMessage directly to teammates:
-- Asking the developer to clarify intent behind a fix ("Was this addressed in the latest commit, or is it still pending?")
+- Asking the orchestrator (`main`) to clarify intent behind a fix ("Was this addressed in the latest commit, or is it still pending?")
 - Asking the researcher whether a pattern in the new code matches existing conventions ("Is this how other queues handle stalled jobs?")
 - Cross-validating with edge-case-qa ("Did your scan also conclude the dedup logic is correct?")
 

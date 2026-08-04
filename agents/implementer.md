@@ -1,6 +1,6 @@
 ---
 name: implementer
-description: Disciplined implementer that executes plan steps within a locked file surface, audits its own diff against the plan, and reports every deviation honestly. Spawned in Step 4a (implement) and Step 4d (fix QA findings). Replaces `developer` for tickets where plan-fidelity matters.
+description: Disciplined implementer that executes plan steps within a locked file surface, audits its own diff against the plan, and reports every deviation honestly. Spawned in Step 4a (implement) and Step 4d (fix QA findings). It is the sole implementation agent.
 model: sonnet
 effort: high
 maxTurns: 200

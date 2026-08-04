@@ -1,5 +1,7 @@
 # Overlays
 
+> **Two different things share the word "overlay."** This doc covers **preference overlays**: personal voice and agent tweaks that live in user memory. Those are separate from **conventions overlays** (`reference/typescript-conventions.md` / `reference/python-conventions.md`), the language rule-sets the orchestrator injects into agents at spawn time (see the README and `reference/workflow.md`). This doc is only about the user-memory preference kind.
+
 pt-doots agents are tuned via **overlay files** in user memory, not by editing the plugin tree. This keeps personal preferences upgrade-safe — `git pull` on the plugin never clobbers your tweaks.
 
 ## Where overlays live

@@ -13,15 +13,17 @@ One-time setup command that spawns the Team Manager to create each agent in the 
 
 ## Pre-flight
 
+Resolve `{PLUGIN}` first: it is `$CLAUDE_PLUGIN_ROOT` when set, otherwise the pt-doots checkout (e.g. `{WORKSPACE}/pt-doots`). All paths below are relative to it.
+
 1. Verify the Team Manager agent exists:
    ```bash
-   test -f plugins/plextrac/agents/team-manager.md && echo "OK" || echo "MISSING"
+   test -f {PLUGIN}/agents/team-manager.md && echo "OK" || echo "MISSING"
    ```
    If missing, tell the user: "Team Manager agent not found. The plugin may not be installed correctly."
 
 2. Check if roster already exists (more than just team-manager.md in agents/):
    ```bash
-   ls plugins/plextrac/agents/*.md | grep -v team-manager | head -1
+   ls {PLUGIN}/agents/*.md | grep -v team-manager | head -1
    ```
    If agents exist, ask: "Agent roster already exists. Re-bootstrap will recreate all agents. Continue? (yes/no)"
 
@@ -67,11 +69,11 @@ The Team Manager creates agents one at a time. For each agent:
 
 4. **Wait for user approval.** If modified, pass modifications to Team Manager.
 
-5. **Spawn Team Manager** (foreground, `name: "team-manager"`) with task: "Create the {agent-name} agent with these specifications: {approved pitch + any modifications}. Write the agent file to `agents/{agent-name}.md` and the review log to `agents/reviews/{agent-name}.md`."
+5. **Spawn Team Manager** (foreground, `name: "team-manager"`) with task: "Create the {agent-name} agent with these specifications: {approved pitch + any modifications}. Write the agent file to `{PLUGIN}/agents/{agent-name}.md` and the review log to `{PLUGIN}/reference/agent-logs/{agent-name}.md`."
 
 6. **Team Manager creates the files and returns confirmation.**
 
-7. **Repeat for all 8 agents:** scrum-master, researcher, developer, test-writer, code-reviewer, acceptance-qa, edge-case-qa, documentarian.
+7. **Repeat for all 14 agents:** scrum-master, researcher, implementer, test-writer, code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer, re-reviewer, repro-verifier, documentarian, voice-stylist.
 
 ## Self-Evaluation
 
@@ -88,14 +90,20 @@ After bootstrap:
    ✓ team-manager (opus)
    ✓ scrum-master ({model})
    ✓ researcher ({model})
-   ✓ developer ({model})
+   ✓ implementer ({model})
    ✓ test-writer ({model})
    ✓ code-reviewer ({model})
    ✓ acceptance-qa ({model})
    ✓ edge-case-qa ({model})
+   ✓ code-smells-reviewer ({model})
+   ✓ test-reviewer ({model})
+   ✓ self-containment-reviewer ({model})
+   ✓ re-reviewer ({model})
+   ✓ repro-verifier ({model})
    ✓ documentarian ({model})
+   ✓ voice-stylist ({model})
 
-   Review the agents in plugins/plextrac/agents/ and commit when ready.
+   Review the agents in {PLUGIN}/agents/ and commit when ready.
    ```
 
 2. Suggest committing: "Ready to commit the full roster? (yes/no)"

@@ -49,9 +49,9 @@ Install agent-skills first, run `/setup`, then come back here.
 | `/prs` | PR dashboard for all open PlexTrac PRs |
 | `/prs <PR-url>` | Structured review of a single PR using the team |
 | `/prs self [TICKET-KEY]` | Run the full review swarm against your own inflight code; saves findings to `notes/{TICKET}/`. Auto-detects the ticket from your current branches if you omit the key. Handles multi-repo tickets (FE + BE) as parallel arms. |
+| `/prs <PR-url> loose` | Lighter review: surfaces only must-level blockers |
 | `/bootstrap-team` | One-time setup — spawns the team-manager to create every agent locally |
 | `/team-audit` | Roster health check + agent performance review |
-| `/new-integration` | Scaffold a new EM integration across BE + FE repos |
 | `/voice-profile` | Customize your personal voice overlay for the `voice-stylist` agent |
 
 ### Talking to `/pt-doots`
@@ -73,37 +73,40 @@ job, a locked tool surface, and a prompt tuned to PlexTrac standards.
 |-------|------|
 | `scrum-master` | Picks the right workflow (standard / lightweight / docs-only / custom) per ticket |
 | `researcher` | Traces the codebase + Confluence, writes `notes/{TICKET}/research.md` |
-| `developer` | Implements plan steps; writes production code following the repo's CLAUDE.md |
-| `implementer` | Plan-fidelity variant of developer — audits its own diff against the plan |
+| `implementer` | The implementation agent: implements plan steps within a locked file surface, audits its own diff against the plan |
 | `test-writer` | Writes co-located tests in the repo's framework (mocha, jest, pytest) |
 | `code-reviewer` | Reviews changed files against per-repo CLAUDE.md standards |
 | `acceptance-qa` | Verifies acceptance criteria with code evidence |
 | `edge-case-qa` | Hunts boundary conditions, null/empty/race scenarios |
 | `code-smells-reviewer` | Catches Fowler-catalog smells (long methods, feature envy, primitive obsession) |
 | `test-reviewer` | Catches hollow assertions, over-mocking, and AI-test smells |
+| `repro-verifier` | Proves or refutes review findings by writing and running repro scripts (used by `/prs`) |
 | `self-containment-reviewer` | Flags committed artifacts that leak private notes paths, internal plan labels, or reviewer names |
 | `re-reviewer` | Verifies prior review findings on subsequent commits (used by `/prs`) |
 | `documentarian` | Updates READMEs and Confluence after merge (when scrum-master sets `Documentation: yes`, or workflow is `docs-only`) |
 | `voice-stylist` | Final voice pass on every human-facing draft (PR comments, Slack, Jira). Used by `/prs` between rough draft and approval gate |
 | `team-manager` | Creates and tunes the team itself; used by `/bootstrap-team` and `/team-audit` |
 
-## Developer modes
+## Implementation
 
-Pt-doots ships two implementation agents:
+`implementer` is the sole implementation agent (strict, plan-fidelity). It locks the file surface from the plan, audits its own diff against forbidden patterns, and reports every plan deviation. It runs in both Step 4a (implement) and Step 4d (fix findings). Engineers who want a looser flow can say so during planning; the orchestrator relaxes plan-fidelity within `implementer` rather than switching agents.
 
-- **`implementer`** (default, strict). Locks the file surface from the plan, audits its own diff against forbidden patterns, and reports every plan deviation. Slower, higher signal.
-- **`developer`** (opt-in, loose). Faster, less ceremony, more latitude. Default for `lightweight` workflows.
+Default sequencing is **test-first (TDD)**: the test-writer writes failing tests against the planned interface, then the implementer makes them pass. `TDD: no` (docs-only, dependency bumps, pure config) is the exception that runs implement-first.
 
-The orchestrator picks based on:
-1. Env var `PT_DOOTS_DEV_MODE=loose` → `developer`
-2. Scrum-master classifies workflow as `lightweight` → `developer`
-3. Otherwise → `implementer`
+## Conventions overlays
 
-Other engineers who want the looser flow as their default can `export PT_DOOTS_DEV_MODE=loose` in their shell rc.
+The base agents are language-neutral. Language-specific rules live in two overlays the orchestrator injects into each writer and language-sensitive reviewer at spawn time:
+
+- `reference/typescript-conventions.md`: TypeScript rules (including size caps).
+- `reference/python-conventions.md`: Python rules (hops-not-lines, no size caps; framework specifics for Pydantic, structlog, orjson triggered by imports).
+
+The orchestrator detects the changed code's language (by repo and file extension) and injects the matching overlay path; a mixed-language PR loads both, applied per file. The rule and paths are defined once in `reference/workflow.md` (Language Detection section), and the target repo's own committed CLAUDE.md always wins over the overlay.
+
+These **conventions overlays** are distinct from the **preference overlays** in [OVERLAYS.md](./OVERLAYS.md) (personal voice and agent tweaks in user memory). Same word, two mechanisms.
 
 ## Review Log Discipline
 
-Every change to an agent definition (model tier, prompt, tools, maxTurns, role) MUST append a dated entry to `agents/reviews/{agent}.md` with:
+Every change to an agent definition (model tier, prompt, tools, maxTurns, role) MUST append a dated entry to `reference/agent-logs/{agent}.md` with:
 - **Date** of the change
 - **What changed** (current → proposed value)
 - **Why** — linked ticket, observation, or learned pattern
@@ -133,16 +136,16 @@ It self-initializes on the first `/pt-doots` run (the command creates the tree a
 
 ```
 Step 0    Load context + git state
-Step 0.5  Scrum-master picks workflow type
+Step 0.5  Scrum-master picks workflow type (+ Documentation / TDD flags, both default yes)
 Step 1    Researcher → notes/{TICKET}/research.md
 Step 2    Plan with the user → notes/{TICKET}/plan.md
 Step 3    Branch ({TICKET-KEY}-{short-description})
-Step 4a   Developer implements → /verify
-Step 4b   Test-writer writes tests → /verify
+Step 4b   Test-writer writes failing tests (TDD default, runs first) → /verify
+Step 4a   Implementer implements to green → /verify
 Step 4c   Quality gate (6 reviewers in parallel)
-Step 4d   Developer fixes findings → /verify
+Step 4d   Implementer fixes findings → /verify
 Step 4e   Documentarian updates docs (when Documentation: yes or workflow is docs-only)
-Step 5    Commit gate — user approves checklist
+Step 5    Commit gate: user approves checklist
 Step 6    Handoff → /create-pr
 ```
 

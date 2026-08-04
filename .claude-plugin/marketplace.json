@@ -6,7 +6,7 @@
     {
       "name": "pt-doots",
       "source": ".",
-      "description": "Orchestrated Jira ticket workflow with 9-agent team architecture",
+      "description": "Orchestrated Jira ticket workflow with a multi-agent team",
       "version": "1.0.0"
     }
   ]

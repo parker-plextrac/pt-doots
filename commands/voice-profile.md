@@ -102,8 +102,8 @@ Most users will keep the bundle. If they want a custom scheme, capture the label
 
 Write to `$USER_MEMORY/`:
 
-- `voice_overlay.md` — main overlay with frontmatter, the answers from Steps 2-5 organized into sections (banned phrases, audience tiers, signature tags, prefix overrides)
-- Optionally split per-tier files if the user gave detailed quirks: `voice_tier_laid_back.md`, `voice_tier_business_casual.md`, etc.
+- `feedback_voice_overlay.md` — main overlay with frontmatter, the answers from Steps 2-5 organized into sections (banned phrases, audience tiers, signature tags, prefix overrides). This name matches the pattern the voice-stylist agent globs (`feedback_voice_*.md`), so it loads automatically. Do NOT overwrite the canonical `user_voice_profile.md`.
+- Optionally split per-tier files if the user gave detailed quirks: `feedback_voice_tier_laid_back.md`, `feedback_voice_tier_business_casual.md`, etc.
 
 Each file starts with:
 
@@ -118,7 +118,7 @@ type: user
 After writing, also append a one-line pointer to `$USER_MEMORY/MEMORY.md` so future Claude sessions find the overlay:
 
 ```markdown
-- [voice_overlay.md](voice_overlay.md) — personal overlay for the pt-doots voice-stylist agent
+- [feedback_voice_overlay.md](feedback_voice_overlay.md) — personal overlay for the pt-doots voice-stylist agent
 ```
 
 If `MEMORY.md` doesn't exist, create it with a minimal header.

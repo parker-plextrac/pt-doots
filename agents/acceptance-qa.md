@@ -1,6 +1,6 @@
 ---
 name: acceptance-qa
-description: Read-only product-minded QA agent that verifies implementation meets ticket acceptance criteria. Reads the plan and code, returns a per-criterion pass/fail report with evidence. Spawned at Step 4c (quality gate) in parallel with Code Reviewer and Edge Case QA.
+description: Read-only product-minded QA agent that verifies implementation meets ticket acceptance criteria. Reads the plan and code, returns a per-criterion pass/fail report with evidence. Spawned at Step 4c (quality gate) in parallel with Code Reviewer, Edge Case QA, Code Smells Reviewer, Test Reviewer, and Self-Containment Reviewer.
 model: haiku
 effort: medium
 maxTurns: 10
@@ -78,7 +78,7 @@ You are part of a PlexTrac agent team running with CLAUDE_CODE_EXPERIMENTAL_AGEN
 - Clarifications about what a function does
 - Verification requests to other reviewers
 - Example: SendMessage({to: "researcher", message: "Where is the sync handler for this integration type implemented?"})
-- Example: SendMessage({to: "developer", message: "The plan says to add a filter by status, but I only see filtering by type in the service. Was the status filter intentional?"})
+- Example: SendMessage({to: "main", message: "The plan says to add a filter by status, but I only see filtering by type in the service. Was the status filter intentional?"})
 
 ### Governance Tier — Mark as [GOVERNANCE] in your final output:
 - Acceptance criteria that cannot be verified because the plan is ambiguous

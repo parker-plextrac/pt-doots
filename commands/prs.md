@@ -2,7 +2,8 @@
 name: prs
 description: >
   PR dashboard and review workflow for PlexTrac repos.
-  Triggers: "/prs" (dashboard), "/prs <github-pr-url>" (direct review).
+  Triggers: "/prs" (dashboard), "/prs <github-pr-url>" (direct review),
+  "/prs self [TICKET-KEY]" (review your own inflight code), "/prs <url> loose" (lighter must-only review).
 argument-hint: "[pr-url]"
 ---
 
@@ -313,6 +314,13 @@ This flow runs when a prior review is `posted` and the user wants a delta-focuse
 #### 1b.2: Spawn re-review agents in parallel
 
 Launch THREE parallel agents:
+
+**Conventions overlay (detect `LANG`, then inject).** Compute `LANG` from the delta's changed files (the top-level dirs / delta patch from 1b.1) using the detection rule in the Language Detection & Conventions-Overlay Injection section of `reference/workflow.md`, and resolve the overlay path(s). Inject this block into all three re-review agents (re-reviewer, edge-case-qa, test-reviewer):
+
+    Conventions overlay: {overlay path(s) for LANG — both paths if mixed}
+    Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
+
+The re-reviewer needs it too: judging whether a prior convention-based finding was actually resolved requires the convention, not just the finding text. Without this block, a Python re-review silently reverts to TypeScript-biased defaults.
 
 **Agent 1 — Re-reviewer (verifier)** (`subagent_type: "pt-doots:re-reviewer"`)
 

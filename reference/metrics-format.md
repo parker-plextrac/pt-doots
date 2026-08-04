@@ -14,6 +14,9 @@ Both files live under the home-anchored state dir `$STATE` = `${HOME}/.claude/pt
 - code-reviewer ({model}): {duration estimate}, {N} findings
 - acceptance-qa ({model}): {duration estimate}, {N}/{N} criteria passed
 - edge-case-qa ({model}): {duration estimate}, {N} findings
+- code-smells-reviewer ({model}): {duration estimate}, {N} findings
+- test-reviewer ({model}): {duration estimate}, {N} findings
+- self-containment-reviewer ({model}): {duration estimate}, {N} findings
 - documentarian ({model}): {duration estimate}, {summary}
 - Agents skipped: {list and why, from workflow plan}
 - Quality gate: {summary of parallel agent results}
@@ -31,7 +34,7 @@ Both files live under the home-anchored state dir `$STATE` = `${HOME}/.claude/pt
 - Execution mode: {standard | tdd}
 - Agents run: {list}
 - Agents skipped: {list and reason}
-- QA findings: code-reviewer {N}, acceptance-qa {N}, edge-case-qa {N}
+- QA findings: code-reviewer {N}, acceptance-qa {N}, edge-case-qa {N}, code-smells-reviewer {N}, test-reviewer {N}, self-containment-reviewer {N}
 - Fix cycles: {N}
 - Outcome: {committed successfully | aborted | etc.}
 - Flags: {any notable observations for future workflow decisions}

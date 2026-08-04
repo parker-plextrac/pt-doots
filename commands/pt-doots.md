@@ -84,14 +84,17 @@ Step 0.5: Route Workflow      (pt-doots:scrum-master → workflow recommendation
 Step 1:   Research            (pt-doots:researcher)
 Step 2:   Plan                (main — user interaction)
 Step 3:   Create Branch       (main)
-Step 4a:  Implement           (pt-doots:implementer) → /verify
-Step 4b:  Write Tests         (pt-doots:test-writer) → /verify
+Step 4a:  Implement           (pt-doots:implementer) → /verify   [TDD default: runs AFTER 4b, to green]
+Step 4b:  Write Tests         (pt-doots:test-writer) → /verify   [TDD default: runs FIRST, failing tests]
 Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer + test-reviewer + self-containment-reviewer, parallel)
+Step 4c.5: Repro-Verify       (pt-doots:repro-verifier, conditional: only if 4c has correctness/edge-case findings) → verdicts feed 4d
 Step 4d:  Fix Findings        (same agent used in 4a, fix-cycle mode) → /verify
 Step 4e:  Documentation       (pt-doots:documentarian — when scrum-master sets Documentation: yes, or workflow is docs-only)
 Step 5:   Commit              (main — commit gate)
 Step 6:   Handoff             (main — summary, offer /create-pr)
 ```
+
+**Sequencing default: test-first (TDD).** Write the failing tests (Step 4b, TDD mode) before implementing (Step 4a); the implementer makes them green. Only `TDD: no` (docs-only, dependency bumps, pure config, no meaningful logic to test) runs implement-first with tests backfilled. Do not silently default to code-first. Full contract: Step 4 of [reference/workflow.md](../reference/workflow.md).
 
 ### Agent Mapping
 
@@ -107,7 +110,26 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 | 4c | `pt-doots:code-smells-reviewer` | Read-only. Design quality. |
 | 4c | `pt-doots:test-reviewer` | Read-only. Test quality. |
 | 4c | `pt-doots:self-containment-reviewer` | Read-only. Private-context leak detection in comments/docs/CLAUDE.md/test strings. Runs on standard, lightweight, AND docs-only. |
+| 4c.5 | `pt-doots:repro-verifier` | Read-only + scratch dir. Conditional (standard only, when 4c has correctness/edge-case findings). Verdicts: Confirmed / Proven-safe / Inconclusive; feed 4d. |
 | 4e | `pt-doots:documentarian` | When scrum-master sets `Documentation: yes`, or workflow is `docs-only`. |
+
+### Planning (Step 2): Interactive; the Orchestrator Does Not Decide Solo
+
+Planning is a conversation, not a finished plan you present for a yes/no. Surface every substantive judgment call to the user **as you hit it**, with the real options and a recommendation, and wait for their decision before folding it into the plan. This is the flag-and-wait contract the sub-agents follow, pointed at the orchestrator itself.
+
+Surface, never silently resolve: approach forks the research left open; scope calls (do-now vs defer-and-track vs cut); anything irreversible or costly (schema/migration shape, a new dependency, a public-contract change); ambiguous acceptance criteria. Do NOT hand over a plan with these decided your way and mention them only when pressed. If you catch yourself about to just pick one, STOP and surface it. Routine mechanics (file names, obvious test cases, which existing helper to reuse) need no checkpoint.
+
+Once the plan and Done-condition are locked, execution goes quiet: only a genuine flag (a sub-agent flag, a failed gate, the commit gate) interrupts the user again. Full contract: Step 2 of [reference/workflow.md](../reference/workflow.md).
+
+### Conventions Overlay Injection (MANDATORY)
+
+The implementer (4a), test-writer (4b), and the language-sensitive quality-gate reviewers (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) are **language-neutral**. Their language rules come from a **conventions overlay** the orchestrator injects into each spawn prompt. Skip it and those agents fall back to TypeScript-biased defaults (the exact failure that over-flags Python code).
+
+- **Detect `LANG` and pick the overlay path(s)** using the single source of truth: the Language Detection & Conventions-Overlay Injection section of [reference/workflow.md](../reference/workflow.md). In the ticket flow the target repo is known at Step 3, so resolve `LANG` **before the Step 4a implementer spawn**; do not wait until the quality gate.
+- **Fill `{CONVENTIONS_OVERLAY}`** in every writer and language-sensitive-reviewer template in `reference/agent-prompts.md` with the resolved path(s). Never spawn one of those agents with the token unfilled.
+- **No overlay** (these are language-neutral): scrum-master, researcher, acceptance-qa, self-containment-reviewer, documentarian.
+
+This is the writer/reviewer analog of the Inline-Diff Contract below: both are spawn-time context the orchestrator MUST inject, and both fail silently if skipped.
 
 ### Step 4c — Inline-Diff Substitution Contract (MANDATORY)
 
@@ -222,7 +244,7 @@ Schema for both files is defined in [reference/metrics-format.md](../reference/m
 
 ### Orchestrator Contract
 
-**After every agent spawn completes** (researcher, implementer, test-writer, code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer, documentarian), record the spawn so the per-ticket entry can be assembled at workflow end. Capture: agent name, model tier, rough duration, summary of result (e.g., "{N} findings", "{N}/{N} criteria passed", "fix cycle {N}").
+**After every agent spawn completes** (researcher, implementer, test-writer, code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer, repro-verifier, documentarian), record the spawn so the per-ticket entry can be assembled at workflow end. Capture: agent name, model tier, rough duration, summary of result (e.g., "{N} findings", "{N}/{N} criteria passed", "fix cycle {N}").
 
 **Model tier = the agent's pinned frontmatter `model:` value, NOT the orchestrator's own session model.** Frontmatter model pins ARE honored at spawn (verified 2026-07-20 by transcript probe: a haiku-pinned agent runs `claude-haiku-4-5` even when the orchestrator session is opus). Recording the session model instead produced false "(opus)" annotations that a later audit had to discard. If unsure of an agent's real tier, grep `"model"` in its `subagents/agent-*.jsonl` transcript rather than assuming.
 

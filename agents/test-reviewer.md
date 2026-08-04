@@ -1,6 +1,6 @@
 ---
 name: test-reviewer
-description: Read-only reviewer that examines test code quality. Catches hollow assertions, over-mocking, bloated permutation tests, ignored existing test infrastructure, and AI-generated test smells. Spawned at Step 4c (quality gate) in parallel with Code Reviewer, Acceptance QA, Edge Case QA, and Code Smells Reviewer.
+description: Read-only reviewer that examines test code quality. Catches hollow assertions, over-mocking, bloated permutation tests, ignored existing test infrastructure, and AI-generated test smells. Spawned at Step 4c (quality gate) in parallel with Code Reviewer, Acceptance QA, Edge Case QA, Code Smells Reviewer, and Self-Containment Reviewer.
 model: sonnet
 effort: high
 maxTurns: 15
@@ -154,7 +154,7 @@ If a finding fails this check, downgrade or drop. Note in your reasoning that yo
 You are part of a PlexTrac agent team running with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. You can message teammates directly via SendMessage({to: "name", message: "..."}).
 
 ### Fast Tier — SendMessage directly to teammates:
-- Asking the developer about intent behind a test pattern ("Is this assertion intentionally loose, or should it verify the computed value?")
+- Asking the orchestrator (`main`) about intent behind a test pattern ("Is this assertion intentionally loose, or should it verify the computed value?")
 - Asking the test writer about infrastructure choices ("Why did you create a custom mock helper instead of using the existing mock_plextrac fixture?")
 - Cross-validating with the Code Reviewer ("You flagged the DI pattern in production — I'm seeing the same anti-pattern in the test setup")
 - Example: SendMessage({to: "test-writer", message: "The test at line 42 asserts the mock's return value — did you intend to verify the transformation logic instead?"})

@@ -50,7 +50,7 @@ Full roster audit. Run end-of-day, end-of-sprint, or whenever you want a thoroug
 Read all available data from the filesystem:
 
 1. **Agent definitions** — all `.md` files in `{PLUGIN}/agents/`
-2. **Performance logs** — all `.md` files in `{PLUGIN}/agents/reviews/`
+2. **Performance logs** — all `.md` files in `{PLUGIN}/reference/agent-logs/`
 3. **Metrics summary** — `$STATE/.local/team-manager/metrics-summary.md`
 4. **Workflow history** — `$STATE/.local/scrum-master/workflow-history.md`
 5. **Learned patterns** — `$STATE/.local/team-manager/learned-patterns.md` (may not exist yet — that's fine)
@@ -70,7 +70,7 @@ Here is ALL the data you need to analyze:
 {paste contents of every agents/*.md file}
 
 ## Performance Logs
-{paste contents of every agents/reviews/*.md file}
+{paste contents of every reference/agent-logs/*.md file}
 
 ## Metrics Summary
 {paste contents of $STATE/.local/team-manager/metrics-summary.md}
@@ -124,15 +124,21 @@ Print the Team Manager's full report to the user. The report should look like:
 ## Team Audit — {date}
 
 ### Agent Health
+- Scrum Master (haiku): {N} runs, {status}
 - Researcher (sonnet): {N} runs, {status}
-- Developer (sonnet): {N} runs, {status}
+- Implementer (sonnet): {N} runs, {status}
 - Test Writer (sonnet): {N} runs, {status}
 - Code Reviewer (sonnet): {N} runs, {status}
 - Acceptance QA (haiku): {N} runs, {status}
 - Edge Case QA (sonnet): {N} runs, {status}
+- Code Smells Reviewer (sonnet): {N} runs, {status}
+- Test Reviewer (sonnet): {N} runs, {status}
+- Self-Containment Reviewer (sonnet): {N} runs, {status}
+- Re-Reviewer (sonnet): {N} runs, {status}
+- Repro Verifier (sonnet): {N} runs, {status}
 - Documentarian (haiku): {N} runs, {status}
+- Voice Stylist (sonnet): {N} runs, {status}
 - Team Manager (opus): {N} runs, {status}
-- Scrum Master (haiku): {N} runs, {status}
 
 ### Proposed Changes
 {numbered list of pitches, or "None — roster is healthy."}
@@ -179,7 +185,7 @@ Execute this approved change to the agent roster:
 
 Instructions:
 - If creating a new agent: write the agent file to {PLUGIN}/agents/{agent-name}.md
-  and the review log to {PLUGIN}/agents/reviews/{agent-name}.md
+  and the review log to {PLUGIN}/reference/agent-logs/{agent-name}.md
 - If modifying an existing agent: update the agent file and append an entry
   to the review log explaining what changed and why
 - If bumping a model: update the frontmatter and append to review log
@@ -189,7 +195,7 @@ Instructions:
 Return:
 AGENT UPDATED: {agent-name}
 - File: agents/{agent-name}.md
-- Review log: agents/reviews/{agent-name}.md
+- Review log: reference/agent-logs/{agent-name}.md
 - Change: {summary of what was done}
 ```
 
@@ -241,7 +247,7 @@ Print a summary of the audit:
 {summary from Step 6 — new, modified, retired}
 
 Agent definitions were modified. Commit when ready:
-  git add {PLUGIN}/agents/ {PLUGIN}/agents/reviews/
+  git add {PLUGIN}/agents/ {PLUGIN}/reference/agent-logs/
 
 {If no changes were made:}
 No changes — roster is healthy.
@@ -259,7 +265,7 @@ If agent definitions were modified, suggest committing:
 ## References
 
 - **Agent definitions**: `{PLUGIN}/agents/` — one `.md` file per agent
-- **Agent reviews**: `{PLUGIN}/agents/reviews/` — performance logs per agent
+- **Agent reviews**: `{PLUGIN}/reference/agent-logs/` — performance logs per agent
 - **Metrics**: `$STATE/.local/team-manager/metrics-summary.md` — per-run data
 - **Workflow history**: `$STATE/.local/scrum-master/workflow-history.md`
 - **Learned patterns**: `$STATE/.local/team-manager/learned-patterns.md`
