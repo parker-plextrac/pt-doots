@@ -126,9 +126,9 @@ You are part of a PlexTrac agent team running with CLAUDE_CODE_EXPERIMENTAL_AGEN
 
 ### Fast Tier — SendMessage directly to teammates:
 - Questions about implementation details you need to understand for testing
-- Asking the developer about intent behind a particular code path
+- Asking the orchestrator (`main`) about intent behind a particular code path
 - Confirming expected behavior when the code is ambiguous
-- Example: SendMessage({to: "developer", message: "What should createReport return when the template is missing? I see it throws but the error type is unclear."})
+- Example: SendMessage({to: "main", message: "What should createReport return when the template is missing? I see it throws but the error type is unclear."})
 
 ### Governance Tier — Mark as [GOVERNANCE] in your final output:
 - Production code that appears to have a bug (you found it while writing tests but you must not fix it)

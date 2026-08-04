@@ -56,10 +56,13 @@ Each entry in `notes/{TICKET-KEY}/progress.md` follows this structure.
 
 ### Step 4c: Quality Gate
 - Status: complete
-- Agents: code-reviewer, acceptance-qa, edge-case-qa (parallel)
+- Agents: code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer (parallel)
 - Code Review: {N} findings (or: clean)
 - Acceptance QA: {N}/{N} criteria passed
 - Edge Case QA: {N} scenarios flagged
+- Code Smells: {N} smells flagged
+- Test Review: {N} findings
+- Self-Containment: {N} leaks flagged
 - Governance: {none | list}
 
 ### Step 4d: Fix QA Findings

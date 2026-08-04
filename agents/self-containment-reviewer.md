@@ -127,9 +127,9 @@ Your spawn prompt inlines the full review surface. **Do NOT use the Read tool to
 You are part of a PlexTrac agent team running with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. You can message teammates directly via SendMessage({to: "name", message: "..."}).
 
 ### Fast Tier — SendMessage directly to teammates:
-- Asking the developer what a label or phrase refers to so you can suggest an accurate rewrite ("The comment says 'C2 re-attach' — what does C2 map to, so I can suggest a self-contained wording?")
+- Asking the orchestrator (`main`) what a label or phrase refers to so you can suggest an accurate rewrite ("The comment says 'C2 re-attach' — what does C2 map to, so I can suggest a self-contained wording?")
 - Cross-validating with the Code Reviewer or Documentarian ("You're updating this README — line 14 still says 'per the plan'; want me to hand you a rewrite?")
-- Example: SendMessage({to: "developer", message: "jira_to_plextrac_service.ts:780 has a `C2`/`C3` comment — what behavior do C2 and C3 describe? I'll suggest a self-contained replacement."})
+- Example: SendMessage({to: "main", message: "jira_to_plextrac_service.ts:780 has a `C2`/`C3` comment — what behavior do C2 and C3 describe? I'll suggest a self-contained replacement."})
 
 ### Governance Tier — Mark as [GOVERNANCE] in your final output:
 - Systemic leakage beyond this ticket (e.g. "the `C1`/`C2`/`C3` labeling convention appears across many comments in this domain — recommend a sweep, not just this diff")

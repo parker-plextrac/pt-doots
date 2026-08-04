@@ -29,7 +29,7 @@ Each such template below carries this block; the orchestrator fills `{CONVENTION
     Conventions overlay: {CONVENTIONS_OVERLAY}
     Read and apply it. The target repo's own committed CLAUDE.md is authoritative over the overlay — read it first and defer to it; the overlay is the baseline.
 
-The language-neutral prompts — researcher, acceptance-qa, self-containment-reviewer, documentarian — carry **no** overlay block.
+The language-neutral prompts — researcher, acceptance-qa, self-containment-reviewer, repro-verifier, documentarian — carry **no** overlay block.
 
 ---
 
@@ -392,6 +392,28 @@ Return structured findings. For each:
 
 Mark systemic leakage as [GOVERNANCE].
 Return "SELF-CONTAINMENT: clean" explicitly if no leaks found.
+```
+
+---
+
+## Repro-Verifier Prompt (pt-doots:repro-verifier)
+
+Language-neutral: no conventions overlay. The orchestrator inlines the correctness / edge-case findings to verify (from the Step 4c gate) and names a scratch dir. The agent is read-only toward application code; the scratch dir is its only writable space.
+
+```
+You are verifying quality-gate findings for ticket {TICKET-KEY} in {WORKSPACE}/{repo} on branch {branch}.
+
+Prove or refute each finding below by writing and running a reproduction, and ground yourself by running the repo's own gates (build / typecheck / tests). Do NOT edit application code. Your only writable space is the scratch dir: {SCRATCH_DIR}.
+
+Findings to verify (correctness and edge-case, from the Step 4c gate):
+{INLINED_FINDINGS}
+
+For each finding, return a verdict:
+- Confirmed: you reproduced the failure. Include the repro steps or script and the observed output.
+- Proven-safe: you attempted a faithful repro and the code behaves correctly. Explain why the finding is a false positive.
+- Inconclusive: you could not build a decisive repro. State what blocked you.
+
+Return a REPRO-VERIFIER REPORT: one entry per finding with its verdict and evidence. Do not write fixes.
 ```
 
 ---

@@ -91,7 +91,7 @@ Each wave is a discrete batch of work-units that ship together. Inside a wave:
 2. **Implement (parallel)**: spawn `pt-doots:implementer` per item, each in its own worktree (`isolation: worktree`). Single message, multiple tool calls. Cap at 3–5 concurrent.
 3. **Test (parallel)**: spawn `pt-doots:test-writer` per item for coverage gaps.
 4. **Per-item `/verify`**: orchestrator runs verification in each branch.
-5. **Quality gate (parallel)**: 5-reviewer gate per item (or batched across small items). Inline-diff + caller-body substitution per [agent-prompts.md § Step 4c contract](agent-prompts.md).
+5. **Quality gate (parallel)**: 6-reviewer gate per item (or batched across small items). Inline-diff + caller-body substitution per [agent-prompts.md § Step 4c contract](agent-prompts.md).
 6. **Fix-cycle**: implementer addresses findings in same branch.
 7. **Merge sequence**: merge each branch's PR in dependency order; re-verify after each merge.
 8. **Wave-exit checklist** before starting wave N+1: all PRs merged, CI green, tracking issue closed.
@@ -111,7 +111,7 @@ Each wave is a discrete batch of work-units that ship together. Inside a wave:
 
 ## Inline-context contract — applies to ALL agent spawns
 
-The Step 4c contract in [workflow.md](workflow.md) makes inline-diff substitution mandatory for the 5 quality-gate reviewers. **Extend the same discipline to every sub-agent spawn**:
+The Step 4c contract in [workflow.md](workflow.md) makes inline-diff substitution mandatory for the 6 quality-gate reviewers. **Extend the same discipline to every sub-agent spawn**:
 
 - **Researcher**: paste ticket details inline; researcher will still need to read code (that's the job), but spawn prompt should never say "go fetch the ticket".
 - **Implementer**: paste relevant plan steps inline; do not say "read plan.md to figure out what to do".

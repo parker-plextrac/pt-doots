@@ -120,6 +120,19 @@ Set `Documentation: no` ONLY when the ticket clearly has zero documentation surf
 
 When in doubt, set `Documentation: yes` — the documentarian is cheap, and silent doc rot is expensive.
 
+### TDD Flag — default "yes"
+
+**Default polarity is `TDD: yes` (test-first).** Most tickets change real behavior, and the team's standard is to write the failing tests against the planned interface BEFORE implementing, then implement to green. This is the sequence the orchestrator runs by default (test-writer in TDD mode first, implementer second), so recommending `TDD: yes` is the norm, not a special case.
+
+Set `TDD: no` ONLY when there is no meaningful logic to test first. Examples:
+- Docs-only tickets (no production code)
+- Dependency/version bumps and build/CI config changes
+- Pure config or constant changes with no branching logic
+- Mechanical refactors (rename, extract, inline) with no behavior change where existing tests already cover the surface
+- Exploratory spikes where the interface genuinely is not known until the code is written (say so in the rationale)
+
+When in doubt, set `TDD: yes`: writing the test first is cheap insurance against the code-first-then-backfill habit, and it forces the interface to be thought through before implementation.
+
 ### Confluence-specific signals (subset of documentation)
 
 When the documentation work explicitly warrants a Confluence write, include the page hint in the workflow plan, e.g.:
@@ -130,23 +143,23 @@ Confluence-touch signals: new subsystem/API/integration, architectural change do
 
 ### Custom Workflow Signals
 - Tests-only ticket (Test Writer -> Code Review -> Commit)
-- Refactor with no behavior change (Researcher -> Developer -> Code Review -> Commit)
+- Refactor with no behavior change (Researcher -> Implementer -> Code Review -> Commit)
 - Ticket that only partially matches a template — explain the deviation
 
 ## Workflow Variants
 
 ### Standard
 Full ceremony for complex or risky tickets:
-Research -> Plan -> Implement -> Test -> QA Gate (Code Reviewer + Acceptance QA + Edge Case QA in parallel) -> Fix -> Docs -> Commit
+Research -> Plan -> Test (TDD) -> Implement -> QA Gate (Code Reviewer + Acceptance QA + Edge Case QA + Code Smells + Test Review + Self-Containment, parallel) -> Repro-Verify (conditional) -> Fix -> Docs -> Commit
 
 ### Lightweight
 For simple bug fixes or small, well-scoped changes:
-Research -> Plan -> Implement -> Test -> Code Review only -> Fix -> Commit
-(Skips Acceptance QA, Edge Case QA, and Documentarian)
+Research -> Plan -> Test (TDD) -> Implement -> Reduced QA gate (Code Reviewer + Code Smells + Test Review + Self-Containment) -> Fix -> Commit
+(Skips Acceptance QA and Edge Case QA)
 
 ### Docs-Only
 For documentation-only tickets:
-Research -> Documentarian -> Code Review -> Commit
+Research -> Documentarian -> Code Review + Self-Containment -> Commit
 
 ### Custom
 You propose a variant and explain why it deviates from the templates. Include a clear rationale for what was added, removed, or reordered.
@@ -191,7 +204,9 @@ Always return your recommendation in this exact structure:
 WORKFLOW PLAN
 
 Workflow: {standard | lightweight | docs-only | custom}
-Rationale: {1-3 sentences explaining why this workflow fits}
+Documentation: {yes | no}
+TDD: {yes | no}
+Rationale: {1-3 sentences explaining why this workflow fits, and justifying any `TDD: no` or `Documentation: no`}
 
 Steps:
 1. {agent-name} — {task description}
@@ -213,17 +228,22 @@ Example:
 WORKFLOW PLAN
 
 Workflow: standard
-Rationale: This ticket adds a new integration sync type touching both integration-worker and event-orchestrator. Multi-service changes with async handlers warrant full QA ceremony.
+Documentation: yes
+TDD: yes
+Rationale: This ticket adds a new integration sync type touching both integration-worker and event-orchestrator. Multi-service changes with async handlers warrant full QA ceremony, and the sync logic is written test-first.
 
 Steps:
 1. researcher — Explore integration-worker sync handlers and event-orchestrator listeners for the affected integration type
-2. developer — Implement plan steps 1-4 (new sync handler, event listeners, repository methods)
-3. test-writer — Write unit tests for service layer and repository filter tests
+2. test-writer — Write FAILING unit tests (TDD) for the service layer and repository filters against the planned interface
+3. implementer — Implement plan steps 1-4 (new sync handler, event listeners, repository methods) to green
 4. code-reviewer — Review all changes for standards compliance [parallel]
 5. acceptance-qa — Verify all acceptance criteria are met [parallel]
 6. edge-case-qa — Test failure modes: sync timeout, duplicate events, partial failures [parallel]
-7. developer — Fix any findings from QA gate
-8. documentarian — Update integration reference docs
+7. code-smells-reviewer — Design-quality review [parallel]
+8. test-reviewer — Test-quality review [parallel]
+9. self-containment-reviewer — Leak check on comments and docs [parallel]
+10. implementer — Fix any findings from the QA gate
+11. documentarian — Update integration reference docs
 
 Skipped: none
 

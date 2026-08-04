@@ -26,7 +26,10 @@ Each ticket: `{WORKSPACE}/notes/{TICKET-KEY}/` with `research.md`, `plan.md`, `p
 
 The implementer, test-writer, and the language-sensitive reviewers (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) are language-neutral skeletons. Their language-specific rules come from a **conventions overlay** the orchestrator loads by detecting the changed code's language and names in each spawn prompt. This section is the **single source of truth** for that detection and injection — `commands/prs.md` (Step 3, Step S6) and `reference/agent-prompts.md` both reference it. Do not re-specify the rule anywhere else.
 
-**When:** compute `LANG` once the changed-file list is known — in the ticket flow that is after Step 4a (the implementer reports its changed files), just before the Step 4c quality gate; in `/prs` it is after `get_pull_request_files`.
+**When:** resolve `LANG` as early as the target is known, so every language-sensitive agent gets the overlay, starting with the implementer that writes the code:
+
+- **Ticket flow:** resolve at Step 3 (branch creation), from the target repo. The repo marker alone determines the language (see the table below), and the repo is known before Step 4a runs, so the implementer (4a) and test-writer (4b) get the overlay too, not just the Step 4c reviewers. Revisit only if the implementer's actual changed-file list later reveals a second language, then switch to `mixed` for the quality gate.
+- **`/prs` flow:** resolve after `get_pull_request_files`, from the changed-file list.
 
 ### Detect `LANG`
 
@@ -53,7 +56,7 @@ Fill `{CONVENTIONS_OVERLAY}` with the path(s) resolved above, then add this bloc
 
 For `LANG = mixed`, list **both** paths on the `Conventions overlay:` line and append: "Each file follows its own language's overlay — apply the TypeScript rules to `.ts`/`.js` files and the Python rules to `.py` files."
 
-**Gets the block:** implementer, test-writer, code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa.
+**Gets the block:** implementer, test-writer, code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa. (In the `/prs` re-review flow, the re-reviewer also gets it, since it judges whether convention-based findings were resolved.)
 **Takes no block** (language-neutral — reasons about ticket criteria, leaks, or runtime behavior, not language conventions): acceptance-qa, self-containment-reviewer, repro-verifier, researcher, documentarian.
 
 **Adding a language later** = add its `<lang>-conventions.md` overlay file and one row to the table above. Zero agent or spawn-template edits.
@@ -98,7 +101,7 @@ TDD: yes | no
 Rationale: {why this workflow}
 ```
 
-`Documentation` and `TDD` are orthogonal flags — they apply on top of any workflow type. `docs-only` implies `Documentation: yes`.
+`Documentation` and `TDD` are orthogonal flags that apply on top of any workflow type. Both default to `yes`: `Documentation: yes` unless the ticket has zero doc surface, and `TDD: yes` (test-first) unless there is no meaningful logic to test first (docs-only, dependency bumps, pure config, mechanical refactors). `docs-only` implies `Documentation: yes` and `TDD: no`.
 
 Show the recommendation to the user. They can override.
 
@@ -158,6 +161,18 @@ Tell the user what was downloaded. These files are available to sub-agents via t
 
 Stays in main because it requires user interaction.
 
+**Planning is interactive: the orchestrator does NOT decide substantive calls solo.** Step 2 is a conversation, not a finished plan you hand over. Surface every substantive judgment call to the user AS YOU HIT IT, present the real options with a recommendation, and wait for their decision before folding it into the plan. This is the flag-and-wait contract (the one the sub-agents follow) pointed at the orchestrator itself.
+
+MUST be surfaced, never silently resolved:
+- Approach forks the research left open (two viable designs, a build-vs-reuse choice)
+- Scope calls on anything the ticket implies but doesn't pin down (do-now vs defer-and-track vs cut; when you defer, write the requirement onto the owning ticket)
+- Anything irreversible or costly (schema/migration shape, a new dependency, a public-contract or API change)
+- Any place the acceptance criteria are ambiguous about expected behavior
+
+Do NOT draft a plan with these resolved your way and raise them only if the user presses. If you catch yourself about to just pick one and move on when the user would have a preference, STOP and surface it. Routine mechanics (file naming, obvious test cases, which existing helper to reuse) need no checkpoint; use judgment, and the bar is whether the user would have a preference or be surprised.
+
+Once the plan and the Done-condition are locked, execution goes quiet: the user steps away, and only a genuine flag (a sub-agent flag, a failed gate, the commit gate) interrupts them again.
+
 1. From research summary, propose approach and steps
 2. Each plan step should be **self-contained enough for a sub-agent**:
    - Exact file path(s)
@@ -186,12 +201,15 @@ Stays in main because it requires user interaction.
 - Branch from default (e.g. `main`). Confirm name if ambiguous.
 - **Create AND check out** in the same step: `cd {WORKSPACE}/{repo} && git switch -c {branch}`. The parent repo MUST be on the feature branch when Step 4a spawns the implementer, otherwise the implementer's patch-apply step lands the commit on whatever was previously checked out (commonly `main`). The `pt-doots:implementer` agent's `git switch "$BRANCH"` defensive check will fail-fast if this step is skipped, but the cleanest path is for the orchestrator to switch first and the implementer to verify.
 - If the branch already exists locally (e.g., fix-cycle resuming from a prior session): `git switch {branch}` (no `-c`). Confirm with the user before reusing a branch that has commits not in `origin/main`.
+- **Resolve `LANG` now.** The target repo is known, so pick the conventions-overlay path(s) per the Language Detection & Conventions-Overlay Injection section and carry them into the Step 4a, 4b, and 4c spawns. Resolving here (not after 4a) is what gets the overlay to the implementer.
 
 **Save to progress.md**: `Branch created: {branch-name}` (or `Branch resumed: {branch-name}` for an existing branch)
 
 ---
 
 ## Step 4: Execute (sub-agents)
+
+**Default sequencing is test-first (TDD).** Unless the scrum-master returned `TDD: no`, Step 4b (test-writer, TDD mode) runs BEFORE Step 4a: write the failing tests against the planned interface, confirm they fail (red), then the implementer makes them pass (green). Do NOT write implementation first and backfill tests; that code-first-then-backfill habit is exactly what this default prevents. The `4a`/`4b` labels name the two agents (implementer / test-writer), not their run order: under the default the order is 4b then 4a, and only `TDD: no` (docs-only, dependency bump, pure config, no meaningful logic) runs 4a first with tests backfilled. The loop diagram just below illustrates the generic verify-and-fix mechanic and applies to whichever step runs first.
 
 ### Verification Loop
 
@@ -208,7 +226,9 @@ Implement → Verify → Test → Verify → Review → Fix → Verify → Commi
 
 ### 4a. Implementation (`pt-doots:implementer`)
 
+- **By default the failing tests from Step 4b already exist** (TDD is the default): implement to make them pass (green). Only under `TDD: no` does 4a run first with no tests yet.
 - Spawn with the **Implementer Prompt (Implementation)** from [agent-prompts.md](agent-prompts.md)
+- **Inject the conventions overlay.** Fill `{CONVENTIONS_OVERLAY}` in the Implementer Prompt with the path(s) for the target repo's `LANG` (resolved at Step 3; see the Language Detection & Conventions-Overlay Injection section). The implementer is language-neutral: without the overlay it reverts to TypeScript-biased defaults. Never spawn with the token unfilled.
 - One agent per logical chunk, or one for the whole plan if small
 - Returns: files changed + descriptions + any [GOVERNANCE] items
 - If it has questions → orchestrator asks the user → spawns new agent with answers
@@ -220,7 +240,8 @@ Implement → Verify → Test → Verify → Review → Fix → Verify → Commi
 
 ### 4b. Tests (`pt-doots:test-writer`)
 
-- Spawn with the **Test Writer Prompt** from [agent-prompts.md](agent-prompts.md) (standard or TDD mode per scrum-master recommendation)
+- **Default: TDD mode, run FIRST (before 4a).** Spawn with the **Test Writer Prompt — TDD** from [agent-prompts.md](agent-prompts.md): write failing tests against the planned interface and confirm they fail. Switch to the **standard** (test-after) prompt and run this AFTER 4a only when the scrum-master returned `TDD: no`.
+- **Inject the conventions overlay** the same way as 4a: fill `{CONVENTIONS_OVERLAY}` in the Test Writer Prompt with the resolved path(s). Test framework, file naming, and per-layer testing conventions come from the overlay.
 - Returns: test files created + pass/fail status
 - **Run `/verify`. Fix failures (max 3 cycles).**
 
@@ -230,12 +251,13 @@ Implement → Verify → Test → Verify → Review → Fix → Verify → Commi
 
 **GATE: Never skip this step, even for small changes, any repo, or when resuming a session.**
 
-**Standard workflow** — spawn all five in parallel:
+**Standard workflow** — spawn all six in parallel:
 - `pt-doots:code-reviewer` — PlexTrac CLAUDE.md standards
 - `pt-doots:acceptance-qa` — acceptance criteria verification
 - `pt-doots:edge-case-qa` — boundary conditions, failure modes
 - `pt-doots:code-smells-reviewer` — design quality, coupling, duplication
 - `pt-doots:test-reviewer` — test quality (hollow assertions, over-mocking, bloat)
+- `pt-doots:self-containment-reviewer` — private-context leaks in comments, docs, and test strings
 
 Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
 
@@ -243,24 +265,38 @@ Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
 - `pt-doots:code-reviewer` (single reviewer)
 - `pt-doots:code-smells-reviewer` (design quality)
 - `pt-doots:test-reviewer` (test quality — if changeset includes test files)
+- `pt-doots:self-containment-reviewer` (private-context leak check)
 
 **Docs-only workflow** — spawn only:
 - `pt-doots:code-reviewer` — verifies the doc changes for accuracy and consistency
+- `pt-doots:self-containment-reviewer` — flags leaked private context in the docs
 
 **Custom workflow** — follow the reviewer set the scrum-master included in its WORKFLOW PLAN steps.
 
-**Conventions overlay (all variants):** before spawning, detect `LANG` from the implementer's changed-file list and inject the matching conventions-overlay path into each language-sensitive reviewer's prompt (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) — see the **Language Detection & Conventions-Overlay Injection** section. The language-neutral acceptance-qa takes no overlay.
+**Conventions overlay (all variants):** before spawning, detect `LANG` from the implementer's changed-file list and inject the matching conventions-overlay path into each language-sensitive reviewer's prompt (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) — see the **Language Detection & Conventions-Overlay Injection** section. The language-neutral acceptance-qa and self-containment-reviewer take no overlay.
 
 Consolidate all findings from all reviewers before proceeding. FIRST clear the completion barrier: every dispatched reviewer must have returned a REAL result, not a truncated or empty completion notification. Retrieve any thin result via SendMessage (see [swarm-coordination.md](swarm-coordination.md) "Completion barrier") before consolidating. Do NOT consolidate a partial set.
 
-**Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail or skipped}. Edge Case QA: {N or skipped}. Code Smells: {N}. Test Review: {N or skipped}.`
+**Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail or skipped}. Edge Case QA: {N or skipped}. Code Smells: {N}. Test Review: {N or skipped}. Self-Containment: {N or skipped}.`
+
+### 4c.5. Repro-Verify (`pt-doots:repro-verifier`) — conditional, standard workflow
+
+Run ONLY when the Step 4c gate produced correctness or edge-case findings to verify (from code-reviewer or edge-case-qa). If the gate is clean of such findings, skip this step entirely. Lightweight and docs-only always skip it (no real logic to reproduce).
+
+- Spawn `pt-doots:repro-verifier` with the **Repro-Verifier Prompt** from [agent-prompts.md](agent-prompts.md), seeded with the consolidated correctness / edge-case findings and a scratch dir path.
+- It writes and runs reproduction scripts in the scratch dir and grounds them by running the repo's own gates. It is read-only toward application code and never writes fixes.
+- It returns a REPRO-VERIFIER REPORT with a verdict per finding: **Confirmed** (reproduced), **Proven-safe** (refuted), or **Inconclusive**.
+- Language-neutral: takes no conventions overlay.
+- The verdicts feed Step 4d: the implementer fixes **Confirmed** findings (and **Inconclusive** ones at the user's discretion) and drops **Proven-safe** false positives instead of chasing them.
+
+**Save to progress.md**: `Repro-verify complete. {N} confirmed, {N} proven-safe, {N} inconclusive.` (or `Repro-verify skipped: no correctness/edge-case findings.`)
 
 ### 4d. Fix Findings (`pt-doots:implementer`, fix-cycle mode)
 
 Only if quality gate has actionable findings.
 
 - Spawn with the **Implementer Prompt (QA Fixes)** from [agent-prompts.md](agent-prompts.md)
-- Pass consolidated findings from all reviewers
+- Pass consolidated findings from all reviewers. If Step 4c.5 ran, pass only **Confirmed** (and user-approved **Inconclusive**) findings; do NOT fix **Proven-safe** false positives.
 - Returns: fixes applied + any deferred
 - **Run `/verify`. Fix failures (max 3 cycles).**
 
@@ -341,7 +377,7 @@ Ask: **"Ready to create a PR? I can use `/create-pr` to push and open a PR with 
 
 **Can parallelize:**
 - Independent plan step implementations (different files/modules)
-- Quality gate reviewers (code-reviewer + acceptance-qa + edge-case-qa)
+- Quality gate reviewers (code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer, self-containment-reviewer)
 
 **Must be sequential:**
 - Research → Plan → Branch → Implement → Verify → Test → Verify → Review → Fix → Verify → Commit
