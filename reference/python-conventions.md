@@ -10,18 +10,16 @@ in this workspace — see the precedence rule immediately below.
 **This overlay is the baseline only.** When you work in a specific repo, that repo's **own
 committed coding standard is authoritative and overrides this overlay for that repo.**
 
-- **Read the target repo's `CLAUDE.md` first** — plus any committed standards doc or `.claude/rules`
-  in the repo — and defer to it wherever it speaks. This overlay fills the gaps the repo's own
-  standard leaves; it never displaces it.
+- **Read the target repo's `CLAUDE.md` first** — plus any committed standards doc in the repo — and
+  defer to it wherever it speaks. This overlay fills the gaps the repo's own standard leaves; it
+  never displaces it.
 - **Do not go rogue.** Never impose this overlay's version of a rule over a repo's committed
   standard. If the repo says something different, the repo is right for that repo — follow it and,
   if the divergence looks like a real gap, flag it rather than silently overriding.
-- **zenith-inbound-service specifically:** the How-to-Code standard is encoded here from memory
-  (`feedback_zenith_inbound_coding_standard.md`) as today's baseline, because it is not yet
-  committed into that repo. It **will** land in the repo's `CLAUDE.md` / a rules doc. **Once it
-  does, the committed repo copy is the source of truth** — always check the repo's `CLAUDE.md`,
-  because the committed standard may have evolved past what is captured here. This is principle #7
-  ("check the source, don't recall it") applied to the standard itself.
+- **The How-to-Code section below is a snapshot, not the source.** It now lives committed in
+  `zenith-inbound-service`'s own `CLAUDE.md` ("How to Code"), so read the repo's copy and treat it
+  as authoritative — it may have evolved past what is captured here. This is principle #7 ("check
+  the source, don't recall it") applied to the standard itself.
 
 Three invariants hold everywhere **within this overlay** (they describe how this file is written;
 they do not override a repo's committed standard):
@@ -39,8 +37,7 @@ they do not override a repo's committed standard):
 
 ## How to code (the calibration that comes first)
 
-This is the team's "How to Code" philosophy and it governs everything below it. It deliberately
-**inverts** the old size-cap / forced-decomposition rules — those are retired. When any guidance
+This is the team's "How to Code" philosophy and it governs everything below it. When any guidance
 elsewhere seems to pull toward more types or smaller units, this section wins.
 
 - **Readability is hops, not lines.** Optimize for the number of jumps a reader makes to
@@ -66,7 +63,7 @@ elsewhere seems to pull toward more types or smaller units, this section wins.
 
 - **Model a closed set of strings as `Literal[...]`, not a `StrEnum`.** A fixed set of string
   constants — a `status` or a `job_type`, say — is a `Literal["open", "closed", ...]`, not a
-  `StrEnum`, now that the old "consolidate strings into an enum" rule is retired.
+  `StrEnum`.
 
 - **Inject at the edges, construct in the middle.** The composition root wires only what crosses
   the process boundary — network, disk, clock, subprocess — plus anything pluggable by design.

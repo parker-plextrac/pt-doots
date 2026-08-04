@@ -13,7 +13,7 @@ specific repo, that repo's **own committed standard is authoritative and overrid
 that repo.**
 
 - **Read the target repo's `CLAUDE.md` first** — the workspace-level `CLAUDE.md` *and* the repo-level
-  one, plus any committed standards doc or `.claude/rules` in the repo — and defer to it wherever it
+  one, plus any committed standards doc in the repo — and defer to it wherever it
   speaks. This overlay exists so the conventions are loaded even before you read, but the live repo
   doc wins whenever the two differ.
 - **Do not go rogue.** Never impose this overlay's version of a rule over a repo's committed
