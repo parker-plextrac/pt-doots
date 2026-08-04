@@ -119,6 +119,8 @@ Planning is a conversation, not a finished plan you present for a yes/no. Surfac
 
 Surface, never silently resolve: approach forks the research left open; scope calls (do-now vs defer-and-track vs cut); anything irreversible or costly (schema/migration shape, a new dependency, a public-contract change); ambiguous acceptance criteria. Do NOT hand over a plan with these decided your way and mention them only when pressed. If you catch yourself about to just pick one, STOP and surface it. Routine mechanics (file names, obvious test cases, which existing helper to reuse) need no checkpoint.
 
+**Run it as an interview, one decision per turn.** Enumerate the open decisions up front, then work them one at a time and WAIT for each answer. Every decision gets: what the ticket asks for → what is actually true (with evidence) → the real options with costs → a recommendation **with an explicit confidence level** and the caveat that would change it → the specific thing you need from the user. Ground "best practice" claims by fetching the authority (context7, the framework's docs) and quoting it, proactively rather than only when challenged; a "is that right?" from the user means you asserted where you should have cited. When new evidence lands, say plainly that the earlier recommendation is suspended or revised.
+
 Once the plan and Done-condition are locked, execution goes quiet: only a genuine flag (a sub-agent flag, a failed gate, the commit gate) interrupts the user again. Full contract: Step 2 of [reference/workflow.md](../reference/workflow.md).
 
 ### Conventions Overlay Injection (MANDATORY)

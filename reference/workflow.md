@@ -171,6 +171,28 @@ MUST be surfaced, never silently resolved:
 
 Do NOT draft a plan with these resolved your way and raise them only if the user presses. If you catch yourself about to just pick one and move on when the user would have a preference, STOP and surface it. Routine mechanics (file naming, obvious test cases, which existing helper to reuse) need no checkpoint; use judgment, and the bar is whether the user would have a preference or be surprised.
 
+### Interview format — one decision per turn
+
+Run planning as an interview, not a briefing. Enumerate the open decisions up front ("4 calls I need from you"), then work them **one at a time**, in dependency order, easiest-to-unblock last. Do not dump all of them in one message and do not bundle a decision with the next question.
+
+Each decision gets the same five parts, in this order:
+
+1. **What the ticket asks for**, quoted or closely paraphrased.
+2. **What is actually true**, with file:line or command evidence. This is where premise mismatches surface.
+3. **The real options**, each with its concrete cost. Include the option you are about to argue against; if an option is not viable, say why rather than omitting it.
+4. **A recommendation with an explicit confidence level** (low / medium / high) and the honest caveat that would change it.
+5. **The specific thing you need from the user** to proceed.
+
+Then STOP and wait. Do not proceed to the next decision, and do not start building, until that one is answered.
+
+**Ground claims instead of asserting them.** When a recommendation rests on "best practice," fetch the authority (context7, the framework's own docs, the platform's own committed conventions) and quote it before recommending. Do this proactively on any load-bearing call, not only when challenged. If the user asks "are we following best practices?" or "is that right?", that is a signal you asserted where you should have cited — go check, and report what you find even when it contradicts your recommendation.
+
+**Let evidence move you.** When new information lands mid-interview, say plainly that the earlier recommendation is suspended or revised and why. A recommendation that survives only because it was already stated is worthless. Re-scoring your own earlier answer stricter is a good sign, not a failure.
+
+**Prefer defer-and-track over silent scope growth.** Adjacent problems found during planning get sorted into do-now / defer-to-a-named-ticket / cut, and the user makes that call. Write deferred items somewhere durable so they are not lost.
+
+Once every decision is answered, write `plan.md` and the Done-condition, and confirm both.
+
 Once the plan and the Done-condition are locked, execution goes quiet: the user steps away, and only a genuine flag (a sub-agent flag, a failed gate, the commit gate) interrupts them again.
 
 1. From research summary, propose approach and steps
