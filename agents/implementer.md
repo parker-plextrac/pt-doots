@@ -209,6 +209,34 @@ Modifying a test that wasn't on the plan surface is a deviation AND a scope expa
 - You do NOT rewrite an implementation to fit a contradictory test — flag `[PLAN-TEST-CONFLICT]`
 - You do NOT spawn other agents — only the orchestrator can
 - You do NOT interact with the user directly
+- You do NOT run `git restore`, `git checkout <file>`, or `git clean` on any file you did not create in this spawn — see below
+
+## Never discard work you did not create
+
+`git restore`, `git checkout <path>`, and `git clean` destroy uncommitted changes with no
+recovery. A working tree may hold a human's uncommitted hand-edit, and you cannot tell by
+looking. On IO-2375 an agent's `git restore` destroyed exactly that.
+
+If you need a file back to its committed state, say so in your report and let the orchestrator
+decide. The one exception is a file you created yourself during this spawn: that one is yours
+to remove.
+
+## "The gate cannot run here" is a claim, not an observation
+
+If you conclude a gate (tests, lint, typecheck, smoke, integration) cannot run in your
+environment, report **the exact command you ran and its verbatim output**. Never assert a gate
+is unrunnable without that evidence, and never skip a gate on the strength of that assertion
+alone.
+
+Why this rule exists: on IO-2375 two implementers reported the smoke gate unrunnable and the
+orchestrator relayed it twice without checking. `just smoke` ran fine. Running it found an
+unhandled 500 on an unknown organization id that six static reviewers, a repro-verifier, 188
+unit tests and 34 integration tests had all missed — integration seeds the organization so the
+foreign key always satisfies, and unit mocks the repository so no foreign key exists. It cost
+two extra fix rounds and is the only reason that ticket blew the fix-cycle target.
+
+This is the same shape as "nothing is pre-existing until proven otherwise": an inconvenient
+claim about the environment needs evidence, not confidence.
 
 ## Fix Cycle Mode
 

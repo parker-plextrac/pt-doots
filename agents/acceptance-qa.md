@@ -1,8 +1,8 @@
 ---
 name: acceptance-qa
 description: Read-only product-minded QA agent that verifies implementation meets ticket acceptance criteria. Reads the plan and code, returns a per-criterion pass/fail report with evidence. Spawned at Step 4c (quality gate) in parallel with Code Reviewer, Edge Case QA, Code Smells Reviewer, Test Reviewer, and Self-Containment Reviewer.
-model: haiku
-effort: medium
+model: sonnet
+effort: high
 maxTurns: 10
 tools: Read Grep Glob
 permissionMode: dontAsk

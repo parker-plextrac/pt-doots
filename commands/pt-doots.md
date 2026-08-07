@@ -29,8 +29,48 @@ These are absolute constraints. No exceptions, no "just this once", no "it's fas
 - Agent output files — to summarize results for the user
 
 ### When Agents Fail
-- If an agent runs out of turns: **fix the agent config and re-spawn**. Do NOT do the agent's work yourself.
-- If an agent produces incomplete results: **send it a follow-up message** or re-spawn with clearer instructions.
+
+**FIRST: an agent reporting idle with no content has almost certainly FINISHED.** This is a
+harness delivery bug, not an agent failure. The agent completes its work, and the final text is
+lost on the way back to you. Recover it instead of re-spawning:
+
+```bash
+F=~/.claude/projects/<project-slug>/<session-uuid>/subagents/agent-<name>-<hash>.jsonl
+python3 - "$F" <<'PY'
+import json,sys
+rows=[json.loads(l) for l in open(sys.argv[1]) if l.strip()]
+best=None
+for d in rows:
+    m=d.get('message') if isinstance(d.get('message'),dict) else {}
+    if m.get('role')!='assistant': continue
+    for x in (m.get('content') or []):
+        if not isinstance(x,dict): continue
+        if x.get('type')=='tool_use' and x.get('name')=='SendMessage':
+            best=x.get('input',{}).get('message')
+        elif x.get('type')=='text' and len(x.get('text',''))>300:
+            best=x['text']
+print(best or "(no report — agent genuinely unfinished)")
+PY
+```
+
+- A large transcript (hundreds of KB) is itself the tell that the agent did the work.
+- **Never `Read` the agent's `.output` file** — it symlinks the full transcript and will overflow
+  your context. Always filter with a script.
+- Re-spawn ONLY if the transcript shows the agent genuinely did not finish.
+- **Do not use a `general-purpose` agent as a fallback.** It fails identically; the bug is in
+  delivery, not in the agent.
+- If the transcript parse is slow, `tail -3` the file first — the final report is usually the last
+  line.
+
+Cost of getting this wrong, from the record: one acceptance verdict on IO-2375 consumed two
+`acceptance-qa` spawns, a `general-purpose` fallback, and three retrievals, and still ended with a
+gate hole deferred to a whole separate session. Every one of those reports already existed on disk.
+This was twice misdiagnosed as a model-tier problem and then as turn starvation, and config was
+changed for both non-causes.
+
+**Only after ruling the above out:**
+- If an agent genuinely ran out of turns (transcript ends mid-work): **fix the agent config and re-spawn**. Do NOT do the agent's work yourself.
+- If an agent produces genuinely incomplete results: **send it a follow-up message** or re-spawn with clearer instructions.
 - If an agent errors out: **report to the user** and ask how to proceed. Do NOT pick up its task.
 
 ### Why This Matters
@@ -89,7 +129,7 @@ Step 4b:  Write Tests         (pt-doots:test-writer) → /verify   [TDD default:
 Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer + test-reviewer + self-containment-reviewer, parallel)
 Step 4c.5: Repro-Verify       (pt-doots:repro-verifier, conditional: only if 4c has correctness/edge-case findings) → verdicts feed 4d
 Step 4d:  Fix Findings        (same agent used in 4a, fix-cycle mode) → /verify
-Step 4e:  Documentation       (pt-doots:documentarian — when scrum-master sets Documentation: yes, or workflow is docs-only)
+Step 4e:  Documentation       (pt-doots:documentarian — MECHANICAL: any .md/README/docstring/comment in the diff, or docs-only)
 Step 5:   Commit              (main — commit gate)
 Step 6:   Handoff             (main — summary, offer /create-pr)
 ```
@@ -111,7 +151,7 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 | 4c | `pt-doots:test-reviewer` | Read-only. Test quality. |
 | 4c | `pt-doots:self-containment-reviewer` | Read-only. Private-context leak detection in comments/docs/CLAUDE.md/test strings. Runs on standard, lightweight, AND docs-only. |
 | 4c.5 | `pt-doots:repro-verifier` | Read-only + scratch dir. Conditional (standard only, when 4c has correctness/edge-case findings). Verdicts: Confirmed / Proven-safe / Inconclusive; feed 4d. |
-| 4e | `pt-doots:documentarian` | When scrum-master sets `Documentation: yes`, or workflow is `docs-only`. |
+| 4e | `pt-doots:documentarian` | **Mechanical trigger — no judgment call.** Fire whenever the diff touches ANY `.md`, README, docstring, or block comment, regardless of what scrum-master set. Also fire when workflow is `docs-only`. Its job is to VERIFY the claims the implementer wrote, not to author from scratch. |
 
 ### Planning (Step 2): Interactive; the Orchestrator Does Not Decide Solo
 

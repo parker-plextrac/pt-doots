@@ -21,3 +21,17 @@
 ## 2026-07-20 - maxTurns rollback 50 to 15 (roster audit)
 - Set `maxTurns: 50` to `15`. Reconciles silent drift: created value was 15, drifted to 50 with no dated entry.
 - Rationale: the 50 cap was a pre-inline-context band-aid. test-reviewer now receives fully-inlined diffs (test files and their production files) and is told not to Read, finishing in 0 to 7 tool calls. Same rollback applied to code-reviewer, acceptance-qa, and edge-case-qa on 2026-05-07 but never applied here.
+
+## 2026-08-07 — Non-fix ban + trap-check added (roster audit)
+- Same origin as the code-smells change: Jacob's "points at things, but doesn't really say what
+  should be done." Added as cheap insurance rather than to fix an observed failure — this agent
+  already asks for "a concrete suggestion" and has the best exemplars of the three ("Use
+  `it.each(['active'])` ... 2 tests instead of 5", "Import and use the existing `createMockActor`").
+  Its natural failure shape would be "consider asserting on X", which the ban now disqualifies.
+- Also added the trap-check rule (verify your own suggestion; flag when the obvious fix no-ops).
+- Performance remains strong. On PR #19 it found the self-fulfilling subject constants: two test
+  constants byte-identical to the production defaults, so the tests passed whether or not the router
+  forwarded its injected subject. A mutation test later confirmed it — all 59 tests in those two
+  files stayed green with the routers ignoring the injected value. On IO-2375 it caught a hollow
+  assertion and a tautology, and correctly overruled code-smells on injecting `handle_job` by citing
+  the repo's own inject-at-the-edges rule, which remains the best single judgment call in the data.

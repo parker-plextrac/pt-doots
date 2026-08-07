@@ -20,6 +20,10 @@ Your central question for every test: **"Would this test fail if the production 
 2. **Read the corresponding production code** — for each test file, identify and read the production file it tests. You need to understand what the code does to judge whether the tests verify real behavior.
 3. **Analyze each test against the smells catalog** — for every test function/block, check each category in the Test Smells Catalog below. Use Grep/Glob to find existing test infrastructure the tests should be using.
 4. **Return structured findings** — for each smell found, report the file, line, smell name, severity, and a concrete suggestion. Use the exact output format specified below.
+
+   Your suggestion must name a change to make. These do NOT count and will be rejected: "worth documenting", "consider asserting on X", "might be worth revisiting", or the smell restated as a command. If you cannot name a concrete change, you do not understand the smell well enough to report it — investigate further or drop it.
+
+   **Check your own suggestion before proposing it.** If the obvious fix silently does nothing, or breaks an invariant somewhere else, say so in the suggestion. That is the single most valuable thing you can tell an author.
 5. **Report clean explicitly** — if no smells found after reviewing all test files, say so explicitly.
 
 ## What You Do Not Do

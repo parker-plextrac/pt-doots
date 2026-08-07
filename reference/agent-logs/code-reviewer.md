@@ -25,3 +25,17 @@
 
 ## 2026-05-07 — Followup
 - Followup: rolled back maxTurns 50 → 15 after fixing reviewer spawn prompts in reference/agent-prompts.md to inline diffs (per learned-patterns inline-context discipline). The 50-turn cap was a band-aid for the prompt regression, not a real requirement.
+
+## 2026-08-07 — Added the trap-check rule (roster audit)
+- New rule: check your own suggested fix before proposing it. If the obvious fix silently does
+  nothing or breaks an invariant elsewhere, say so in the fix.
+- Evidence: this produced the single highest-value line of the PR #19 review. The natural fix for a
+  stale row was `mark_failed`, but that transition is guarded on `status='processing'` while the row
+  was `pending`, so it would have done nothing and raised no error. Saying so saved the author a
+  wasted attempt, and the maintainer carried that exact detail into his own should-doc.
+- Deliberately did NOT add the non-fix ban that `edge-case-qa`, `code-smells-reviewer` and
+  `test-reviewer` now carry. Every finding here must trace to a stated CLAUDE.md rule, so findings
+  are inherently fix-shaped, the in-body examples are already code-shaped, and zero non-fix instances
+  appear across ~15 runs.
+- Standing watch item, unchanged: occasional over-severity. Two "blocker/high" findings on ES1-1677
+  were downgraded to pre-existing once traced.

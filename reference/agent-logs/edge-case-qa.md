@@ -26,3 +26,19 @@
 
 ## 2026-05-07 — Followup
 - Followup: rolled back maxTurns 50 → 15 after fixing spawn prompts.
+
+## 2026-08-07 — Non-fix ban added (roster audit)
+- Origin: Jacob Fjermestad on the PR #19 review — "it points at things, but doesn't really say what
+  should be done." This agent's finding was the concrete trigger: its recommendation on the
+  file-import status gap was "worth a should-doc or at minimum a comment", i.e. record the problem
+  rather than fix it, and that weakness passed straight through into a posted review comment.
+- Added to the `Recommend:` guidance: it must name a change to the code or the tests. "Worth
+  documenting", "consider handling this", and the problem restated as a command are rejected. Plus
+  the trap-check rule — if the obvious fix silently does nothing or breaks an invariant elsewhere,
+  say so, because that is the most valuable thing to tell an author.
+- Standing watch item: **high raise rate.** All 5 findings on IO-2349 were verified false-positive or
+  out-of-scope, and 11 findings on IO-2375 is a lot. On PR #19 it produced 4, of which 2 survived
+  triage. The right counterweight is repro-verifier, which on PR #19 confirmed 3 of 3 selected
+  findings by execution. Route runtime-behaviour findings through it rather than tightening this
+  agent further and losing its real catches (the sibling-delimiter HIGH on IO-1622, unbounded
+  persisted error text on IO-2375).
