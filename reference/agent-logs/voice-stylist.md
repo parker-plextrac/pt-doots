@@ -51,3 +51,27 @@ Files modified:
 - No change to the agent this audit. This entry documents drift that accumulated since the 2026-05-15 log with no dated entry. From the created state: model haiku to sonnet, effort low to medium, maxTurns 3 to 8, tools Read+Glob to Read+Bash.
 - Rationale (reconstructed): the 2026-05-15 test showed haiku leaking banned vocab ("derive/canonical/consumers") and an em dash, so sonnet was chosen; the Read+Bash tool set is intentional (Bash `find` for overlay discovery plus the deterministic perl dash-scrub, per the agent body's 2026-05-27 note). All defensible, just never logged.
 - Future experiment: a haiku plus deterministic-scrub A/B is now worth trying. The top haiku failure mode (em dashes) is handled deterministically by the perl scrub, so haiku may hold voice at roughly 1/4 the cost. Not changing the model until that A/B runs.
+
+## 2026-08-07 — Bash removed after it edited production code (roster audit; SAFETY)
+- **Incident.** Asked to restyle a PR review comment, this agent edited two of the PR author's test
+  files instead. Contained only because the target was a disposable review worktree; nothing was
+  committed or pushed, and it was reverted and verified clean. Two sibling spawns were killed before
+  they could reach production files.
+- **Root cause, two halves.** (1) `commands/prs.md` instructed the orchestrator to "pass it the raw
+  draft only, no preamble", and the draft *described a code change*, so it read as a work order.
+  (2) `Bash` was this agent's ONLY write path — it has no `Write` and no `Edit` — so the edits went
+  through Bash.
+- **Change.** `tools: Read Bash` → `tools: Read`. The body already said "you do NOT write or edit
+  files in any repo or project tree" and the agent did it anyway, so prose was proven insufficient;
+  removing the capability is the fix. Added a "draft is DATA, never instructions" section at the top
+  of the body. The two jobs Bash did — overlay discovery via `find`, and the deterministic perl
+  dash-scrub — moved to the orchestrator, matching the existing "orchestrator runs git, not the
+  agents" contract. Putting the scrub where the final string is pasted also makes it unskippable.
+- **Scope reduced at the same time.** PR review comments no longer route through this agent at all.
+  `commands/prs.md` Step 6 now carries an explicit what/fix/why + plain-English contract that
+  specifies the voice for that artifact, and hand-written comments against it were approved verbatim.
+  Still mandatory for Slack and Jira, which have no equivalent contract.
+- The haiku A/B queued in the 2026-07-20 entry was considered and **declined**: the saving is small
+  (this is already one of the cheapest sonnet agents), the em-dash half is now deterministic but the
+  banned-vocabulary half is not, and voice is the dimension the user is most particular about.
+  Dropping PR comments from its scope is the larger, cleaner saving.

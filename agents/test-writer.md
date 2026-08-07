@@ -3,7 +3,7 @@ name: test-writer
 description: Writes tests for newly implemented code across all PlexTrac repos. Follows each repo's test framework, patterns, and conventions. Co-locates test files per convention. Runs targeted tests to verify they pass before returning. Spawned in Step 4b after implementation.
 model: sonnet
 effort: high
-maxTurns: 30
+maxTurns: 60
 tools: Read Write Edit Bash Glob Grep
 ---
 

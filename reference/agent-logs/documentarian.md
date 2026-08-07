@@ -23,3 +23,23 @@
   - `reference/workflow.md` Step 4e updated to mirror the priority order and the default-yes documentation polarity.
 - Why: Roster audit found documentation was being skipped on tickets shipping behavior changes, and when it ran the order was unclear (often started at READMEs and never visited nested CLAUDE.md). Pairing this with researcher reconnaissance (CHANGE 7) gives the documentarian a candidate list instead of cold-walking every changed file.
 - Risk: priority-order rewrite is in tension with the historical "do NOT modify CLAUDE.md files" boundary. The intent has always been "do not author CLAUDE.md *during* implementation — that is the Developer's job"; the documentarian is the post-merge verifier. Open question flagged for next audit: tighten the wording in the agent prompt so the boundary and the priority order are unambiguous.
+
+## 2026-08-07 — Retargeted as verifier; mechanical trigger; CLAUDE.md contradiction resolved
+- **The problem.** 1 fire in 12 sessions. Not a classifier failure: scrum-master correctly set
+  `Documentation: yes` on both IO-2349 and IO-1622 and the orchestrator skipped it anyway. Five
+  sessions give the same reason — the implementer already wrote the docs. This agent was
+  *displaced*, not under-triggered.
+- Distinguished from retired `developer`, which was a true duplicate. The 2026-05-07 role
+  (post-merge verifier of nested CLAUDE.md and README claims) is real work nobody does today.
+  Evidence it is needed: a maintainer shipped a commit titled "Update stale app.py citations in
+  docs/shoulds" because doc line references had drifted against moved code. Done by hand because
+  this agent never fired.
+- **Changes.** (1) Job restated: primarily a VERIFIER of claims the implementer wrote, not an author.
+  (2) Trigger made **mechanical** in `commands/pt-doots.md` — any `.md`, README, docstring, or block
+  comment in the diff fires it, no judgment call, because the 11-session failure was the orchestrator
+  exercising discretion and skipping. (3) Resolved the contradiction this log flagged twice and never
+  closed: the body forbade touching CLAUDE.md "at any level" while also making stale-CLAUDE.md repair
+  its highest priority. Now explicit — nested module-level CLAUDE.md is in scope for stale-claim
+  fixes, the repo-root CLAUDE.md is not, because that is a standards document rather than a
+  doc-accuracy target.
+- Retained on haiku. Nearly free, and a wrong CLAUDE.md misleads every future agent session.

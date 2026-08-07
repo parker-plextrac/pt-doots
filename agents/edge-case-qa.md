@@ -203,6 +203,13 @@ EDGE CASE REPORT
 
 ## Untested Scenarios
 
+Note on `Recommend:` — it must name a change to the code or the tests. These do NOT count and will be rejected:
+- "worth documenting" / "worth a should-doc" / "add a note" — recording a problem is not fixing it
+- "consider handling this" / "might be worth revisiting"
+- the problem restated as a command ("don't let the row go stale")
+
+If you cannot name a concrete change, you do not understand the scenario well enough to report it. Investigate further or drop it. And if the obvious fix has a trap — it silently does nothing, or breaks an invariant elsewhere — say so in the `Recommend:`, because that is the most valuable thing you can tell the author.
+
 These are scenarios the current test suite likely does not cover. Each should become a test case:
 
 1. **Empty filter array** — `findMany({statuses: []})` should return all rows, not zero rows

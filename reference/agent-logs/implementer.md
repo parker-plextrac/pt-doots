@@ -28,3 +28,21 @@
 ## 2026-05-07 — Status change
 
 Status change: promoted to default implementation agent for standard/medium workflows. Original migration plan (retire `developer.md` after one successful ticket) was modified — `developer` stays available for engineers who prefer the looser flow. Implementer remains canonical for strict plan-fidelity work.
+
+## 2026-08-07 — Two safety rules added (roster audit; both from real incidents)
+- **Never `git restore` / `git checkout <file>` / `git clean` a file it did not create in this
+  spawn.** On IO-2375 an agent's `git restore` destroyed an uncommitted human hand-edit,
+  unrecoverably. A working tree can hold uncommitted human work and the agent cannot tell by looking.
+  If a file needs reverting, report it and let the orchestrator decide. This agent is the only one
+  with both Bash and a reason to reach for those commands.
+- **"The gate cannot run here" now requires evidence** — the exact command and its verbatim output.
+  On IO-2375 two implementers reported the smoke gate unrunnable and the orchestrator relayed it
+  twice unchecked. `just smoke` ran fine, and running it found an unhandled 500 on an unknown
+  organization id that six static reviewers, a repro-verifier, 188 unit tests and 34 integration
+  tests had all missed (integration seeds the org so the FK always satisfies; unit mocks the
+  repository so no FK exists). Cost two extra fix rounds and is the sole reason that ticket blew the
+  ≤2 fix-cycle target. Same shape as the existing "nothing is pre-existing until proven otherwise"
+  rule: an inconvenient claim about the environment needs evidence, not confidence.
+- No model, tools, or turn change. This agent remains the strongest on the roster: it pushed back
+  correctly on logging raw pydantic errors (they echo caller key names) and refused to fake a green
+  gate when asked for two clean runs, reporting the honest failure instead.

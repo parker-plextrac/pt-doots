@@ -14,3 +14,13 @@
   - Per-repo test pattern sections pulled directly from CLAUDE.md standards
   - Does NOT modify production code — reports bugs as [GOVERNANCE] instead
   - Does NOT run full /verify — orchestrator handles that post-return
+
+## 2026-08-07 — maxTurns 30 → 60 (roster audit; acted on a flag raised 2026-07-21 and never actioned)
+- On IO-1622 this agent stalled twice at maxTurns 30 authoring e2e export tests. One resume
+  delivered only the original RED tests plus a fixture, a fourth spawn added nothing, and the heavy
+  test work was rerouted to implementer (200 turns). The 2026-07-21 session flagged "consider
+  bumping" and it was never bumped and never logged.
+- Scoped deliberately: 30 was sufficient on ES1-1676, ES1-1677, IO-2374 (2 spawns) and IO-2375
+  (12 files). The stall is specific to Python e2e authoring in `product-services-export`.
+- 60 is still well under implementer's 200, and one stall already costs a duplicate spawn plus a
+  resume plus a wasted fourth spawn, which exceeds the raised cap. This is a net saving.
