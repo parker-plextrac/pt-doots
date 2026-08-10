@@ -159,7 +159,37 @@ Planning is a conversation, not a finished plan you present for a yes/no. Surfac
 
 Surface, never silently resolve: approach forks the research left open; scope calls (do-now vs defer-and-track vs cut); anything irreversible or costly (schema/migration shape, a new dependency, a public-contract change); ambiguous acceptance criteria. Do NOT hand over a plan with these decided your way and mention them only when pressed. If you catch yourself about to just pick one, STOP and surface it. Routine mechanics (file names, obvious test cases, which existing helper to reuse) need no checkpoint.
 
-**Run it as an interview, one decision per turn.** Enumerate the open decisions up front, then work them one at a time and WAIT for each answer. Every decision gets: what the ticket asks for → what is actually true (with evidence) → the real options with costs → a recommendation **with an explicit confidence level** and the caveat that would change it → the specific thing you need from the user. Ground "best practice" claims by fetching the authority (context7, the framework's docs) and quoting it, proactively rather than only when challenged; a "is that right?" from the user means you asserted where you should have cited. When new evidence lands, say plainly that the earlier recommendation is suspended or revised.
+**Run it as an interview, one decision per turn.** Enumerate the open decisions up front, then work them one at a time and WAIT for each answer. Every decision gets: what the ticket asks for → what is actually true (with evidence) → the real options with costs → a recommendation **with an explicit confidence level** and the caveat that would change it → the specific thing you need from the user. When new evidence lands, say plainly that the earlier recommendation is suspended or revised.
+
+**GROUND EVERY RECOMMENDATION BEFORE PRESENTING IT. This is a hard gate, not a preference.**
+
+Do NOT put a recommendation, a "lean", or a best-practice claim in front of the user until you have
+already fetched the authority and can cite it in the same message. The authorities, in priority order:
+the target repo's own committed `CLAUDE.md` (always authoritative, always read it first), then the
+library's / framework's / vendor's current docs via **context7**, then the vendor's published
+reference (AWS, Docker, etc.) via web search.
+
+- **Label every claim `sourced` or `inference`.** An unsourced assertion must never sit inside a
+  recommendation looking like a fact. If something cannot be grounded, say so in the same breath and
+  say how the build will resolve it empirically.
+- **A "is that right?" / "are you guessing?" from the user is a process failure**, not a request. It
+  means you asserted where you should have cited. Do not wait for it.
+- **Design phase has time and resources; guessing is never justified there.** The whole point of
+  planning is to lock decisions down so the implementer inherits certainty. Cheap doc lookups now
+  are strictly better than an implementer guessing later.
+- **Carry the citations into `plan.md`.** The plan the implementer receives must contain the sourced
+  facts and the reason each decision went the way it did, so the implementer never re-derives or
+  re-guesses a settled call.
+- Correctness-critical API details (signatures, config keys, defaults, ack/retry semantics, version
+  floors, generation/serialization behavior) are **always** context7 lookups, never recall. Verify a
+  default by reading it; never infer one from its absence somewhere else.
+
+**Size the PR here, because this is where PR size is decided.** The plan defines the file surface, the surface becomes the diff, and nobody downstream can shrink it. Reviewers have called these PRs "a bit out of control"; that is a planning failure, not a review failure.
+
+- **The plan covers the ticket, and nothing else.** If a step does not trace to an acceptance criterion, it is a separate ticket. An unrelated fix noticed along the way is `defer-and-track`, not a free rider.
+- **Pulling work forward "so the next ticket is clean" is still scope growth.** It is sometimes right. It is never yours to decide silently: surface the split, with the cost of each option, and let the user choose.
+- **Estimate the surface out loud before locking the plan** — roughly how many files and which. If it is heading past ~10 files or a few hundred lines, say so and offer a split. A user who says "one PR is fine" has made an informed call; one who finds out at review time has not.
+- **"Fix X" answers WHAT, never WHICH BRANCH.** Approval of a change is not approval to land it on whatever branch is open. Unrelated fix, separate branch, unless the user says otherwise.
 
 Once the plan and Done-condition are locked, execution goes quiet: only a genuine flag (a sub-agent flag, a failed gate, the commit gate) interrupts the user again. Full contract: Step 2 of [reference/workflow.md](../reference/workflow.md).
 
@@ -241,6 +271,8 @@ ALL must be true before committing:
 - [ ] All plan steps implemented
 - [ ] Done-condition met (the "Done when:" block from plan.md)
 - [ ] No outstanding [GOVERNANCE] items unaddressed
+- [ ] **Every commit traces to the ticket in the branch name.** No unrelated fix rode along. If one did, say so and offer to move it before committing, do not bury it in the PR body.
+- [ ] **No comment block outgrows the code it explains**, and no derivation, measurement, or rejected alternative was left in source (the implementer reports both as counts).
 
 **Barrier (hard rule):** Do NOT evaluate this gate while any spawned agent or background shell is still running, or while any reviewer's result came back truncated or empty. Retrieve thin results via SendMessage first, then consolidate. Mechanics: [swarm-coordination.md](../reference/swarm-coordination.md) "Completion barrier".
 

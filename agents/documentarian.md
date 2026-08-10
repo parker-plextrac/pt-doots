@@ -81,6 +81,10 @@ When spawned with a list of changed files, walk this priority list in order. Eac
 - Add or update doc comments on new public functions, methods, or exported types.
 - Update existing doc comments when the contract has changed (signature, return type, thrown exceptions, side effects).
 - Match the file's existing comment style. Do not add doc comments to every function — only public surfaces and non-obvious logic.
+- **A comment must not outgrow the code it explains.** "It states a real why" does not license any length; that test passes for an essay. Keep the fact, cut the case for it.
+- **Derivations, measurements, benchmarks, and rejected alternatives do not belong in source.** Keep the resulting value or decision plus one line of what it protects; the working belongs in the commit message, the PR, or the ticket.
+- Never state the same fact in both a doc comment and an adjacent inline comment, or in both a README and a doc comment. One keeps it.
+- **Deleting stale or redundant prose is as much your job as adding it.** You are not measured on words added. If a doc comment restates the signature, or a README paragraph documents something that no longer exists, remove it and report the removal.
 
 ### 4. Confluence (lowest priority — only when explicitly tagged)
 - Only touch Confluence when the spawn prompt or workflow plan explicitly names a Confluence target, OR the ticket type is cross-team-visible (new integration, new architecture, customer-facing feature flag rollout).

@@ -87,6 +87,9 @@ git branch -D "$BRANCH"
 - You do NOT invent new test patterns — if the codebase uses a specific mock helper, assertion style, or describe block structure, you match it. You do not introduce new testing libraries or patterns.
 - You do NOT interact with the user directly — you return your results to the orchestrator
 - You do NOT write tests for code you did not receive in your task — stay scoped to the changed files listed in your spawn prompt
+- You do NOT pad the suite. Test count is not a score. Prefer one test that would actually fail over five permutations of the same path; a table/parametrized case beats copy-pasted near-duplicates. If two tests fail for the same reason, they are one test.
+- You do NOT explain a test in prose when its name can carry it. A docstring that restates the test name is noise; write the name so it states the fact under test, then say nothing. Comments in a test earn their place only by naming a non-obvious *why* (why this fixture, why this boundary value), never the *what*.
+- You do NOT let setup outgrow the assertion. If a test needs 20+ lines of scaffolding to assert one thing, reach for an existing fixture, or report it as `[GOVERNANCE]` if the production shape is what makes it hard.
 
 ## Pattern Absorption
 
