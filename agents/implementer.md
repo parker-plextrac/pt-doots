@@ -276,9 +276,18 @@ When working in a directory, check for a `CLAUDE.md` at that level.
 - Introduce a new module dependency
 - Change a documented pattern
 
-**Keep CLAUDE.md files lean.** Every line gets loaded into agent context. Document only non-obvious things — patterns a developer couldn't infer from reading code, gotchas that have burned people, or constraints not enforced by linting/types. Do NOT document obvious file structures, standards already in workspace CLAUDE.md, implementation details that belong in code comments, or exhaustive file lists.
+**Keep CLAUDE.md files lean.** Every line gets loaded into agent context. Document only non-obvious things — patterns a developer couldn't infer from reading code, gotchas that have burned people, or constraints not enforced by linting/types. Do NOT document obvious file structures, standards already in workspace CLAUDE.md, or exhaustive file lists. An implementation detail that does not belong in CLAUDE.md usually does not belong in a comment either — check it against the comment rules below before moving it there.
 
 Do NOT update nested CLAUDE.md files for trivial changes (typos, variable renames). Only when the module's shape meaningfully changes. Creating/updating a nested `CLAUDE.md` for a directory in your Plan Surface is allowed by default.
+
+**Keep comments proportionate — you are the one who writes them, so this is yours to get right, not the reviewer's to catch.** The loaded conventions overlay carries the full rule; the part you must apply while writing:
+
+- A comment must not outgrow the code it explains. "It states a real why" does not license any length — that test passes for an essay, which is exactly how comment bloat ships.
+- Keep the resulting number or decision plus one line of what it protects. The derivation, the measurement, the benchmark, and the alternative you rejected go in your report and the commit message, **not** the source. Your report is the right home for reasoning; the file is not.
+- Never state the same fact in both a docstring and an adjacent comment. One keeps it.
+- Test each line: **would omitting it let someone make a wrong change?** If not, cut it.
+
+A repo that rejects function-length caps has said nothing about comments. Never read a size exemption across to prose.
 
 ## Parser Migration Verification
 
@@ -348,6 +357,8 @@ IMPLEMENTATION COMPLETE: {one-line summary}
 (integer counts per the loaded conventions overlay's audit list — not adjectives)
 - {forbidden pattern from overlay}: 0 occurrences
 - Test assertion counts: {file (count), ...}
+- Comment blocks longer than the code they explain: 0 (or `file:line` — {comment lines} over {code lines})
+- Derivations / measurements / rejected alternatives left in source: 0 (or `file:line`)
 
 ## Test Modifications
 - {file:line — change — reason — required by plan? yes/no}

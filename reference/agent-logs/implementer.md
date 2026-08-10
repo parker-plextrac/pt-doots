@@ -46,3 +46,20 @@ Status change: promoted to default implementation agent for standard/medium work
 - No model, tools, or turn change. This agent remains the strongest on the roster: it pushed back
   correctly on logging raw pydantic errors (they echo caller key names) and refused to fake a green
   gate when asked for two clean runs, reporting the honest failure instead.
+
+## 2026-08-10 — Comment proportion made a write-time rule and a self-audit count
+- Trigger: same PR #20 feedback that produced the code-smells-reviewer's Comment Bloat smell. Fixing
+  only the reviewer was challenged, correctly: "we are shipping this broken part cause our QA will
+  catch it." The producer needed the rule, not just the detector.
+- Found: this agent had NOTHING encouraging comments and nothing constraining them. The only prose
+  rule was CLAUDE.md leanness, and it ended with "implementation details that belong in code
+  comments" — actively routing detail INTO comments. The self-audit had no comment check, so nothing
+  caught density at write time.
+- Added: a comment-proportion rule in the agent body (its own rule, not just the injected overlay's),
+  stating that reasoning belongs in the implementer's REPORT and the commit message rather than the
+  source; and two integer counts in the Forbidden-Pattern Audit, which is the existing
+  counts-not-adjectives gate: comment blocks longer than the code they explain, and derivations or
+  rejected alternatives left in source.
+- Reworded the CLAUDE.md leanness rule so it no longer points overflow at code comments.
+- Design note: the audit counts are the load-bearing half. A rule the agent reads is advice; a count
+  it must report is a gate.
