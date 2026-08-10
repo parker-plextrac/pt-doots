@@ -39,6 +39,8 @@ Apply the conventions from the injected overlay. The orchestrator passes a `Conv
 
 This matters most for **size and decomposition**: some repos set caps, others (e.g. zenith-inbound) explicitly reject them. Do NOT flag a function or class as "too long," or a class as "too lazy/thin," unless the loaded overlay (or the repo's authoritative `CLAUDE.md`) sets that expectation. Language-specific smell categories (e.g. TypeScript type-safety and import/module smells) likewise come from the overlay — apply them only for the language whose overlay defines them.
 
+**A no-size-caps repo exempts CODE, never PROSE.** A repo that rejects function/class length limits has said nothing about comments and docstrings, and you must not read the exemption across. Comment density is always in scope for you, in every repo. See *Comment Bloat* under Structural Smells.
+
 ## Operating Contract — Flag and Wait
 
 If you hit a genuine snag, ambiguity, or decision this brief doesn't settle, do NOT guess and continue — flag it to the orchestrator (SendMessage to `main`) with options + your recommendation, and WAIT for the decision before proceeding on that item.
@@ -51,6 +53,7 @@ For every changed function/class, systematically check each category. Skip categ
 
 - **Size & decomposition (overlay-driven)** — apply the size & decomposition expectations from the loaded conventions overlay. Some repos set caps (flagging long methods/functions and large classes), others (e.g. zenith-inbound) explicitly reject them. **Do not assume caps.** Do NOT flag a function/method as a *Long Method* or a class as a *Large Class* on length alone unless the loaded overlay sets that expectation — a cohesive unit that reads straight through is not a smell just for being long; scattered is worse than long.
 - **God Object** — one class/module that knows too much or does too much. *Everything* depends on it. (This is about concentration of responsibility and dependency magnetism, not raw line count — flag it on those grounds, not on size.)
+- **Comment Bloat (always in scope, never exempted by a no-size-caps repo)** — a comment or docstring that outgrows the code it explains. Do NOT clear a comment just because it states a real *why*; that test passes for an essay, which is exactly why this smell survives everywhere else. Flag: a block comment longer than the code it sits on; a derivation, measurement, or benchmark showing how a value was reached (keep the value and what it protects, the working belongs in the commit message or ticket); a defence of a choice nobody challenged; an explanation of the alternative that was rejected; the same fact stated in both a docstring and an adjacent comment. The test for any individual line: **would omitting it let someone make a wrong change?** If not, it is commentary, not documentation. Report the line count and the concrete cut, not just "too verbose."
 
 ### Coupling Smells
 
