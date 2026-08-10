@@ -26,9 +26,10 @@ they do not override a repo's committed standard):
 
 - **One standard, no repo gating.** There are no "in repo X do this / in repo Y do that" blocks.
   The same calibration applies to every Python file regardless of which service it lives in.
-- **No size caps.** There is no function-length, class-length, or method-count limit anywhere in
-  this file. Readability is hops, not lines (see below). Do not flag or split code for being
-  "too long."
+- **No size caps on CODE.** There is no function-length, class-length, or method-count limit
+  anywhere in this file. Readability is hops, not lines (see below). Do not flag or split code for
+  being "too long." **This exemption covers code only. It does NOT cover comments or docstrings**,
+  which are governed by the proportion rule under Docstrings below.
 - **Framework rules trigger on the framework the code actually uses**, never on which repo it is.
   If a file imports Pydantic, the Pydantic rules apply to it; if it does not, they do not. The
   same for structlog, orjson, respx, and pytest-asyncio.
@@ -92,6 +93,15 @@ Applies to every Python file.
     the `def` line if anything needs saying.
   - Comments explain the non-obvious **why**, not the **what**. If a comment restates the code,
     delete it; if the code needs a comment to be understood, prefer clearer code first.
+  - **Proportion: a comment must not outgrow the code it explains.** "It states a real why" is not
+    a licence for any length; that test passes for an essay. A block comment longer than the code
+    it sits on has to earn every line, and usually cannot. Keep the fact, cut the case for it.
+  - **Derivations, measurements, benchmarks, and rejected alternatives do not belong in source.**
+    Keep the resulting number or decision plus one line of what it protects; the working belongs in
+    the commit message, the PR, or the ticket. A reader needs to know the cap is 512 MiB and what it
+    catches, not the arithmetic that produced it.
+  - The bar for length is whether omitting a line would let someone make a wrong change. If it
+    would not, the line is commentary, not documentation.
 - **PEP 8** for layout and naming: `snake_case` for functions/variables, `UPPER_SNAKE_CASE` for
   constants, `PascalCase` for classes.
 - **f-strings** for all string interpolation. No `%` formatting or `str.format` in new code.

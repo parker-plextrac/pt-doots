@@ -33,3 +33,25 @@
 - Quality is otherwise good: correctly identified the dual-meaning `job_id` as root cause on
   IO-2375, and on PR #19 it converged independently with acceptance-qa on the same `job_type`
   weakness while correctly declining to flag long-but-cohesive code in a repo that rejects size caps.
+
+## 2026-08-10 — Added Comment Bloat, and closed the no-size-caps loophole
+- Trigger: a human reviewer on zenith-inbound PR #20 said the PRs were "a bit out of control" and
+  "we're gonna have to fix comments and shit." The diff carried an 18-line comment deriving a
+  `mem_limit`, a 13-line note on an aiobotocore bug, and a 5-line comment on a one-line constant.
+  None of them had been flagged by any agent.
+- Root cause, and it was a rule interaction rather than a missing rule: the Python overlay already
+  said "comments explain the non-obvious why, not the what." Every one of those comments PASSED that
+  test, because a derivation of a memory cap genuinely is a non-obvious why. The rule filtered
+  unjustified comments and said nothing about justified-but-enormous ones. Meanwhile this agent was
+  told three separate times not to flag anything as "too long" in a repo that rejects size caps, and
+  zenith-inbound was named as such a repo. So the one reviewer positioned to catch it had been
+  explicitly stood down.
+- Added: **Comment Bloat** under Structural Smells, plus an explicit statement in the Conventions
+  Source section that a no-size-caps repo exempts CODE and never PROSE, so the exemption is not read
+  across. Paired with a proportion rule and a derivations-do-not-belong-in-source rule added to
+  `reference/python-conventions.md`.
+- The load-bearing sentence is the one that pre-empts the old escape hatch: do not clear a comment
+  just because it states a real why, since that test passes for an essay.
+- Note for a future audit: no agent owned comment density before this. self-containment-reviewer
+  checks comments for leaked private context, documentarian checks them for accuracy, test-reviewer
+  flags verbose setup but only in tests. The gap was structural, not a calibration miss.

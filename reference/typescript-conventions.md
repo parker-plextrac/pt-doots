@@ -251,6 +251,28 @@ size/decomposition calibration for TS files (do not assume a blanket cap):
   throughout; that's the codebase's chosen primitive. Don't flag every `cuid: string` parameter as
   obsession — only flag when the primitive is genuinely ambiguous or used in math (e.g. a `string`
   that should be a typed currency value with cents handling).
+- **Every exemption above covers CODE, never PROSE.** A controller that may exceed 200 lines, a
+  procedural orchestration function, an exempt test fixture: none of that says anything about the
+  comments inside them. Never read a size exemption across to comments or JSDoc. See *Comments &
+  JSDoc* below.
+
+---
+
+## Comments & JSDoc (TypeScript)
+
+- Comments explain the non-obvious **why**, not the **what**. If a comment restates the code, delete
+  it; if the code needs a comment to be understood, prefer clearer code first.
+- **Proportion: a comment must not outgrow the code it explains.** "It states a real why" is not a
+  licence for any length; that test passes for an essay. A block comment longer than the code it
+  sits on has to earn every line, and usually cannot. Keep the fact, cut the case for it.
+- **Derivations, measurements, benchmarks, and rejected alternatives do not belong in source.** Keep
+  the resulting number or decision plus one line of what it protects; the working belongs in the
+  commit message, the PR, or the ticket.
+- Don't state the same fact in both a JSDoc block and an adjacent inline comment. One keeps it.
+- The bar for any individual line: **would omitting it let someone make a wrong change?** If not,
+  it's commentary, not documentation.
+- JSDoc belongs on exported/public surfaces and non-obvious logic, not on every function. An
+  `@param` list that restates the signature adds maintenance and no information.
 
 ---
 
