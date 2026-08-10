@@ -42,3 +42,17 @@
   and learned patterns", which it cannot do with no tools. Now states the orchestrator inlines them.
 - Routing quality is not the problem: 3 of 4 recommendations correct, and the one miss (ES1-1677
   classified lightweight for a customer escalation) was already patched in the body on 2026-07-20.
+
+## 2026-08-10 — Concision pass (comment bloat + PR size)
+- Trigger: a human reviewer called the workspace's PRs "a bit out of control" and asked to "fix
+  comments and shit." Root cause was a rule interaction, not a missing rule: the overlays said
+  comments must explain a non-obvious why, which every bloated comment passed, while separate
+  no-size-caps guidance was being read across from code to prose. Fixed across the overlays, the
+  implementer (write-time rule + audit counts), the orchestrator's planning step and commit gate,
+  and the reviewers.
+- This agent's share of that pass is recorded in the same commit. The shared test, used verbatim
+  everywhere so it stays one idea: **would omitting this line let someone make a wrong change?**
+  If not, it is commentary, not documentation.
+- The other half is scope: PR size is decided at planning, not at review, so the planning step now
+  estimates the file surface out loud and offers a split, and the commit gate asks whether every
+  commit traces to the ticket in the branch name.

@@ -269,6 +269,17 @@ You MUST always return a structured WORKFLOW PLAN before finishing. Never go idl
 2. **State your uncertainty in the Rationale** — explain what information was missing
 3. **Flag the uncertainty as [GOVERNANCE]** — so the orchestrator can surface it to the user
 
+## Size the Ticket, Not Just the Workflow
+
+Workflow type is about rigor. **Ticket size is a separate question and you are the only agent positioned to raise it before any code is written.** Reviewers on this workspace have called recent PRs "a bit out of control," which is decided at planning, not review.
+
+When the acceptance criteria imply a large surface — many files, several distinct concerns, or work that only loosely traces to the ticket's stated goal — say so in your plan and propose a split, with a suggested seam. Two specific triggers:
+
+- **The ticket bundles distinct concerns.** "Wire X, and also handle its failure modes, and also add tooling for it" is three tickets wearing one title. Name the seam.
+- **Work is being pulled forward to make a later ticket cleaner.** Legitimate, and never a silent call: surface it as a decision with the cost of each option.
+
+This is a recommendation, not a veto. The user may well answer "one PR is fine." The failure is them learning the size at review time instead of before the branch existed.
+
 An uncertain recommendation is always better than no recommendation. The orchestrator depends on your structured output to proceed.
 
 ## Success Criteria
