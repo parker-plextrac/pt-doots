@@ -203,6 +203,8 @@ The implementer (4a), test-writer (4b), and the language-sensitive quality-gate 
 
 This is the writer/reviewer analog of the Inline-Diff Contract below: both are spawn-time context the orchestrator MUST inject, and both fail silently if skipped.
 
+**Do not dictate comment or docstring text that the overlay would reject.** Injecting the overlay and then asking for a five-line JSDoc, a scope enumeration, or a sentence listing a function's call sites overrides it in practice — no rule survives the orchestrator requesting the violation. Say what a comment must PROTECT ("say why newlines are preserved, so nobody simplifies the regex"), never dictate its sentences or length. If you catch yourself writing prose for the implementer to paste, you are writing the bloat yourself.
+
 ### Step 4c — Inline-Diff Substitution Contract (MANDATORY)
 
 All six quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`, `self-containment-reviewer`) require their full review surface inlined in the spawn prompt. The agent prompts in `reference/agent-prompts.md` contain `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders. The orchestrator MUST populate them before spawning. (`self-containment-reviewer` mainly needs `{INLINED_DIFF}` — the comments, CLAUDE.md entries, committed docs, and test/fixture strings — and rarely needs `{INLINED_FUNCTION_BODIES}`.)
@@ -272,7 +274,7 @@ ALL must be true before committing:
 - [ ] Done-condition met (the "Done when:" block from plan.md)
 - [ ] No outstanding [GOVERNANCE] items unaddressed
 - [ ] **Every commit traces to the ticket in the branch name.** No unrelated fix rode along. If one did, say so and offer to move it before committing, do not bury it in the PR body.
-- [ ] **No comment block outgrows the code it explains**, and no derivation, measurement, or rejected alternative was left in source (the implementer reports both as counts).
+- [ ] **Every comment and docstring is three sentences or fewer** (absolute ceiling, not proportional), and no derivation, measurement, rejected alternative, or ticket reference was left in source (the implementer reports both as counts).
 
 **Barrier (hard rule):** Do NOT evaluate this gate while any spawned agent or background shell is still running, or while any reviewer's result came back truncated or empty. Retrieve thin results via SendMessage first, then consolidate. Mechanics: [swarm-coordination.md](../reference/swarm-coordination.md) "Completion barrier".
 

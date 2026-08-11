@@ -91,17 +91,26 @@ Applies to every Python file.
     **same line** as the text.
   - Non-public (leading-underscore) methods do **not** get a docstring — put a `#` comment after
     the `def` line if anything needs saying.
+  - **A comment states intent, in three sentences at most.** One or two is the norm; three is the
+    ceiling, and it applies to every comment and docstring — module, class, function, and inline
+    alike. Say what the code is for, or what constraint the next edit must not break. Do not argue
+    the case: no derivations, no measured numbers, no alternatives considered and rejected, and
+    never a ticket or epic reference. Evidence worth keeping outlives the line it justified — it
+    belongs in the commit message, the PR, or an ADR.
+  - **The ceiling is absolute, not proportional.** "It states a real why" does not license a fourth
+    sentence; that test passes for an essay. Count sentences — a reviewer asked whether a five-line
+    docstring over a three-line function is *proportionate* will answer "mostly earns it", which is
+    exactly how bloat ships. Over three? Delete the weakest sentence, do not reword them all shorter
+    and keep them all.
+  - **Keep the trap, cut the archaeology.** "Keep `body` as the iteration target; `__aenter__`
+    returns the raw response" earns its place. The paragraph on which release changed that, the
+    issue number, and how it was discovered does not.
   - Comments explain the non-obvious **why**, not the **what**. If a comment restates the code,
     delete it; if the code needs a comment to be understood, prefer clearer code first.
-  - **Proportion: a comment must not outgrow the code it explains.** "It states a real why" is not
-    a licence for any length; that test passes for an essay. A block comment longer than the code
-    it sits on has to earn every line, and usually cannot. Keep the fact, cut the case for it.
-  - **Derivations, measurements, benchmarks, and rejected alternatives do not belong in source.**
-    Keep the resulting number or decision plus one line of what it protects; the working belongs in
-    the commit message, the PR, or the ticket. A reader needs to know the cap is 512 MiB and what it
-    catches, not the arithmetic that produced it.
-  - The bar for length is whether omitting a line would let someone make a wrong change. If it
-    would not, the line is commentary, not documentation.
+  - **Scope and applies-to lists belong in the module docstring, not in a function's own
+    docstring.** Enumerating a function's call sites inside that function's doc is unenforced, goes
+    stale silently the moment a caller changes, and a stale list misleads. Call sites are what grep
+    is for.
 - **PEP 8** for layout and naming: `snake_case` for functions/variables, `UPPER_SNAKE_CASE` for
   constants, `PascalCase` for classes.
 - **f-strings** for all string interpolation. No `%` formatting or `str.format` in new code.

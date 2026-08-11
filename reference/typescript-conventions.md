@@ -260,14 +260,26 @@ size/decomposition calibration for TS files (do not assume a blanket cap):
 
 ## Comments & JSDoc (TypeScript)
 
+**A comment states intent, in three sentences at most.** One or two is the norm; three is the
+ceiling, and it applies to every comment and JSDoc block — module, class, function, and inline
+alike. Say what the code is for, or what constraint the next edit must not break. Do not argue the
+case: no derivations, no measured numbers, no alternatives considered and rejected, and never a
+ticket or epic reference. Evidence worth keeping outlives the line it justified — it belongs in the
+commit message, the PR, or an ADR.
+
+**The ceiling is absolute, not proportional.** "It states a real why" does not license a fourth
+sentence; that test passes for an essay. Count sentences — a reviewer asked whether a five-line
+block over a three-line function is *proportionate* will answer "mostly earns it", which is exactly
+how bloat ships. Over three? Delete the weakest sentence. Do not reword them all shorter and keep
+them all.
+
+- **Keep the trap, cut the archaeology.** The constraint that breaks the code if violated stays. The
+  release that changed it, the issue number, the benchmark, and the story of how it was found go.
 - Comments explain the non-obvious **why**, not the **what**. If a comment restates the code, delete
   it; if the code needs a comment to be understood, prefer clearer code first.
-- **Proportion: a comment must not outgrow the code it explains.** "It states a real why" is not a
-  licence for any length; that test passes for an essay. A block comment longer than the code it
-  sits on has to earn every line, and usually cannot. Keep the fact, cut the case for it.
-- **Derivations, measurements, benchmarks, and rejected alternatives do not belong in source.** Keep
-  the resulting number or decision plus one line of what it protects; the working belongs in the
-  commit message, the PR, or the ticket.
+- **Scope and applies-to lists belong in the module or directory doc, not in a function's own
+  JSDoc.** Enumerating a function's call sites inside that function's doc is unenforced, goes stale
+  silently the moment a caller changes, and a stale list misleads. Call sites are what grep is for.
 - Don't state the same fact in both a JSDoc block and an adjacent inline comment. One keeps it.
 - The bar for any individual line: **would omitting it let someone make a wrong change?** If not,
   it's commentary, not documentation.
