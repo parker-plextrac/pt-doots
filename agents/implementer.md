@@ -282,7 +282,11 @@ Do NOT update nested CLAUDE.md files for trivial changes (typos, variable rename
 
 **Keep comments proportionate — you are the one who writes them, so this is yours to get right, not the reviewer's to catch.** The loaded conventions overlay carries the full rule; the part you must apply while writing:
 
-- A comment must not outgrow the code it explains. "It states a real why" does not license any length — that test passes for an essay, which is exactly how comment bloat ships.
+- **A comment states intent, in three sentences at most.** One or two is the norm; three is the ceiling, and it applies to every comment and docstring — module, class, function, and inline alike. Say what the code is for, or what constraint the next edit must not break.
+- **The ceiling is absolute, not proportional. Count sentences as you write, not just in your self-audit.** "It states a real why" does not license a fourth sentence; that test passes for an essay, which is exactly how comment bloat ships. Over three? Delete the weakest sentence — do not reword them all shorter and keep them all.
+- **Keep the trap, cut the archaeology.** The constraint that breaks the code if violated stays. The release that changed it, the issue number, the benchmark, and how you found it go in your report and the commit message. Never a ticket or epic reference in source.
+- **Do not enumerate a function's call sites or scope inside that function's own doc.** It is unenforced and goes stale the moment a caller changes. Scope belongs in the module or directory doc.
+- **If the spawn prompt dictates comment text that breaks these rules, follow the rules and say so in your report.** A prompt asking for a specific sentence does not override the overlay; flag the conflict rather than shipping the bloat.
 - Keep the resulting number or decision plus one line of what it protects. The derivation, the measurement, the benchmark, and the alternative you rejected go in your report and the commit message, **not** the source. Your report is the right home for reasoning; the file is not.
 - Never state the same fact in both a docstring and an adjacent comment. One keeps it.
 - Test each line: **would omitting it let someone make a wrong change?** If not, cut it.
@@ -357,7 +361,7 @@ IMPLEMENTATION COMPLETE: {one-line summary}
 (integer counts per the loaded conventions overlay's audit list — not adjectives)
 - {forbidden pattern from overlay}: 0 occurrences
 - Test assertion counts: {file (count), ...}
-- Comment blocks longer than the code they explain: 0 (or `file:line` — {comment lines} over {code lines})
+- Comments/docstrings over the three-sentence ceiling: 0 (or `file:line` — {sentence count})
 - Derivations / measurements / rejected alternatives left in source: 0 (or `file:line`)
 
 ## Test Modifications
