@@ -686,7 +686,17 @@ Spawn `subagent_type: "pt-doots:repro-verifier"`. The agent definition carries t
 - **Incidental proven bug**: add it as a new CONFIRMED finding.
 - **Gate failure** (the PR fails the repo's own `just check` / typecheck / tests at this commit): surface as its own HIGH finding. A red gate is a merge blocker regardless of the rest.
 
-If the repro-verifier could not run (environment setup failed, or the diff was not runnable), note "repro-verify: skipped ({reason})" in the review header and proceed with the static findings unchanged. Never block the review on it.
+**Environment blockers are YOURS to clear, not a reason to record SKIPPED.** The verifier is sandboxed and cannot set up the environment; you can. When it reports a setup failure, fix the cause and send it back before accepting any skip. The known ones, all cheap:
+
+- **`node_modules` missing in the worktree** — symlink the main checkout's: `ln -s {WORKSPACE}/{repo}/node_modules {WORKTREE_DIR}/node_modules`. Never run `npm install` in a worktree.
+- **A missing generated artifact** (e.g. `build-metadata.json` in product-core-backend, via `npm run dev:generateBuildMetadata`) — generate it. Confirm it is gitignored first so it cannot reach the diff.
+- **`.env` missing** — symlink the main checkout's.
+- **The suite needs the running stack** (integration tests hitting localhost) — the stack runs from the MAIN checkout, so a worktree run tests the wrong code. Detach main onto the PR commit (`git -C {WORKSPACE}/{repo} checkout {head_sha}`), confirm the nodemon reload in the tmux panes, run it, then restore main to the commit you recorded before touching it. Record that commit FIRST. The workspace CLAUDE.md documents this procedure.
+- **The suite needs Postgres/Redis/MinIO** — they are long-lived Docker containers on this machine and are usually already up. Check `docker ps` before concluding otherwise.
+
+Remove any symlinks you created before removing the worktree in Step 9, so nothing follows them.
+
+Only after those are ruled out: if the diff genuinely is not runnable, note "repro-verify: skipped ({reason})" in the review header and proceed with the static findings unchanged. Never block the review on it. But two accepted skips in a row on a PR whose findings are runtime-falsifiable is a process failure, not an environment fact.
 
 ### Step 4: Save Review State
 
@@ -770,6 +780,16 @@ For each HIGH or MED finding, run this quick check:
 5. **Track demotions in an internal sanity-check log** so you can mention them once at the top when presenting. Don't quietly drop findings without saying so — Parker likes seeing what got pruned and why.
 
 **Rooted-in-what-exists lens (applies across HIGH/MED).** For any finding that RECOMMENDS adding permanent structure (a database constraint, an index, a column, a config key, a new abstraction), confirm it names a present query the code runs or an invariant the code already relies on. If it names neither, reframe it as "leave it out" and drop it from the add set (or downgrade it); do not surface it to the user as an add. Justifications like "in case," "might need," "for consistency," "for symmetry," or "future proofing" are automatic rejects. This gate is only about proposals to COMMIT new structure: correctness findings about code that runs today (null, empty, or out-of-order inputs) are untouched by it and stay.
+
+**Input-provenance gate (applies to the correctness findings the lens above deliberately exempts).** The rooted-in-what-exists lens only governs proposals to add structure, so correctness findings pass it untouched. That is the hole: a finding can be a true statement about the code and still be worthless because the reviewer invented the input that triggers it.
+
+For every HIGH/MED finding whose trigger is a specific input value, make the agent's provenance clause explicit before you show it. If the agent gave none, supply one yourself or demote:
+
+- **Parser, importer, or external-format PR** — find the sample corpus and test the trigger against it. Look in the repo (`tools/helperFiles/`, `tests.api/mockUploads/`, `tests/mocks/`), the local import corpus (`~/Desktop/plextrac-file-imports/`), and the ticket's attachments. Real files beat reasoning: grep the corpus for the exact shape the finding needs.
+- **No real instance found** — reframe as `question:` ("does any real input look like this?") or drop. Do not present it as a defect.
+- **Report what the corpus killed**, in the same sanity-check log as the demotions. "3 findings dropped: zero of 91 real `<location>` values contain a bracket" is the most useful line in the whole review, because it tells the user the pruning was grounded and not taste.
+
+This is the reviewer-side twin of the workspace CLAUDE.md's IO-2196 lesson ("ground on the full local sample corpus before building or changing any parser"). That lesson currently reaches the planning phase only; this gate is what carries it into review.
 
 If after this pass NO HIGH findings remain, default-tone the recommendation toward "ready for an approving follow-up" rather than "needs another round."
 
