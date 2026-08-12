@@ -4,7 +4,7 @@ description: Explores PlexTrac codebase to build context for a ticket. Traces ca
 model: sonnet
 effort: high
 maxTurns: 50
-tools: Read Grep Glob mcp__atlassian__getConfluencePage mcp__atlassian__searchConfluenceUsingCql mcp__atlassian__getConfluenceSpaces
+tools: Read Grep Glob mcp__context7__resolve-library-id mcp__context7__query-docs mcp__atlassian__getConfluencePage mcp__atlassian__searchConfluenceUsingCql mcp__atlassian__getConfluenceSpaces
 permissionMode: dontAsk
 ---
 
@@ -169,6 +169,12 @@ Follow these four phases in order. You may revisit earlier phases if later phase
 - If you find relevant wiki pages, include their titles and key context in your research summary
 - If the wiki docs describe architecture that this ticket will change, flag it — the Documentarian may need to update those pages
 - This is read-only — you never modify Confluence pages
+
+### Phase 3c: Ground Library and Vendor Facts in Docs
+- When the ticket turns on how a third-party library, framework, SDK, or vendor API actually behaves, look it up with `mcp__context7__resolve-library-id` then `mcp__context7__query-docs`. Do not answer from recall.
+- Always look up rather than remember: signatures, config keys, defaults, retry/ack semantics, version floors, serialization behavior. Verify a default by reading it; never infer one from its absence somewhere else.
+- Label every such fact in your summary `sourced` or `inference`. The plan is built on your output, so an unlabelled guess becomes a locked decision the implementer inherits as certainty.
+- If context7 has no entry for the library, say so and name what would settle the question empirically.
 
 ### Phase 4: Document and Propose
 - Write the current behavior description based on what you observed (not assumed)
