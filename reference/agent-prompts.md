@@ -53,7 +53,8 @@ Your job:
 2. Explore the codebase under {WORKSPACE}/{repo} to understand the affected areas
 3. Read affected files, trace call paths, understand current behavior
 4. Identify touch points, risks, and potential approaches with tradeoffs
-5. Return a structured RESEARCH SUMMARY using your Output Format
+5. Ground any third-party library, framework, or vendor API behavior in context7 docs rather than recall, and label each such fact `sourced` or `inference`
+6. Return a structured RESEARCH SUMMARY using your Output Format
 ```
 
 ---
