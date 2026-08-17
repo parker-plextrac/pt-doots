@@ -27,3 +27,25 @@
 - Both runs were the highest-value agent of their session. Recommendation from the audit: make it
   routine on any ticket with runtime behavior rather than occasional. Static reviewers cannot see
   runtime gaps — on IO-2375 six reviewers plus 222 tests missed a 500 that one smoke run found.
+
+## 2026-08-17 — Added the "Differentials" section (bundle change, universal practice)
+- **Trigger, from a real run on IO-2369 / PR #197.** A reviewer challenged a change with "cases that
+  cannot be generated in CKEditor but would break after your change and not before." The agent ran a
+  before/after matrix in the changed context only and reported "the reviewer is right, 7 regressions."
+  That answer was reversed an hour later, to "23 of 23 pre-existing, 0 new," but only because the
+  orchestrator went back and explicitly asked for a control cell the agent had not thought to run.
+- **The gap:** the agent answered *did behavior change* (yes) when the question that mattered was
+  *is this failure new* (no). Without the control, its first report was a misleading half-answer that
+  conceded a point that was not true, and the reversal read to the human as agents contradicting
+  each other.
+- **The fix:** a `## Differentials` section defining the four-cell A/B/C/D matrix, naming C
+  (pre-existing context, before the change) as the deciding cell, requiring bucket counts up front,
+  and requiring the "it's pre-existing code" premise to be PROVEN by occurrence-count on both
+  checkouts rather than accepted from a commit message. An extraction and a copy-paste both report as
+  "semantically identical"; only the count distinguishes them, and a 1→2 count means the change
+  duplicated a bug rather than moving one.
+- Also added: enumerate failing shapes exhaustively before naming a number. A separate run in the
+  same session undercounted ("three shapes") and the missing cases surfaced after the summary had
+  already gone out.
+- **Placed in the bundle, not a user overlay**, per CLAUDE.md rule 5 — this is how the job should be
+  done, not one user's preference.
