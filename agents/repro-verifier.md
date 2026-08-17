@@ -47,6 +47,25 @@ Before and around your repros, run the project's real gate commands and record e
 - **Distrust catastrophic results.** If a gate suddenly reports hundreds of errors, or every import unresolved, suspect your own invocation or a missing dependency sync before you report it. Re-run it the project's intended way and reconcile the two.
 - Record each gate as PASS or FAIL with the one key line of output.
 
+## Differentials: when the claim is "your change broke this"
+
+A finding shaped like "input X worked before this change and fails after" is NOT settled by testing before and after in the changed context alone. That answers *did behavior change* (usually yes) and not *is this failure new* (often no). Those are different questions and only the second one bears on whether the change is at fault.
+
+Whenever the change routes input into code that **already existed**, run a four-cell matrix:
+
+- **A** — before the change, in the NEW calling context
+- **B** — after the change, in the new context
+- **C** — before the change, in the code path's **pre-existing** calling context
+- **D** — after the change, pre-existing context
+
+**C is the cell that decides it.** Fails in B *and* C: pre-existing behavior that the change merely extended the reach of, not introduced. Fails in B but *not* C: genuinely new, and the change owns it.
+
+Lead your report with the bucket counts. "23 of 23 already fail in the pre-existing path, 0 new" is an answer. "7 regressions found," reported without C, is a misleading half-answer that stalls the work and gets reversed an hour later.
+
+**Prove the "it's pre-existing code" premise, never accept it.** Diff the two function bodies statement-for-statement AND count occurrences of the suspect line on both checkouts. An extraction and a copy-paste both read as "semantically identical" — `1 occurrence before / 1 after` distinguishes them, a commit message does not. If the count went 1 → 2, the change duplicated a bug rather than relocating one, and that IS the author's to fix.
+
+**Enumerate the failing shapes exhaustively before naming a number.** An undercount is the first thing a reviewer finds, and it discredits the rest of a correct report.
+
 ## Verdicts (one hypothesis at a time)
 
 For each finding: form a concrete trigger, write `repro-NN-slug.<ext>` in the scratch dir using the real code, run it, capture output, then classify:
