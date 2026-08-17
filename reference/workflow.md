@@ -301,9 +301,11 @@ Consolidate all findings from all reviewers before proceeding. FIRST clear the c
 
 **Save to progress.md**: `Quality gate complete. Code Review: {N}. Acceptance QA: {pass/fail or skipped}. Edge Case QA: {N or skipped}. Code Smells: {N}. Test Review: {N or skipped}. Self-Containment: {N or skipped}.`
 
-### 4c.5. Repro-Verify (`pt-doots:repro-verifier`) — conditional, standard workflow
+### 4c.5. Repro-Verify (`pt-doots:repro-verifier`) — MANDATORY, every workflow
 
-Run ONLY when the Step 4c gate produced correctness or edge-case findings to verify (from code-reviewer or edge-case-qa). If the gate is clean of such findings, skip this step entirely. Lightweight and docs-only always skip it (no real logic to reproduce).
+**Always run this step.** It is what separates a verified finding from a plausible guess, so it has no skip conditions and no severity threshold to clear. Run it on standard, lightweight, and docs-only alike: when the gate produced no correctness findings, it still runs the repo's own gates, and a red gate is itself a blocking finding.
+
+An environment blocker (a held port, a missing container, an absent `.env`) is yours to clear, not a reason to skip. If the code genuinely cannot be run after you clear the blocker, STOP and tell the user what is blocking it, rather than passing unverified findings to Step 4d.
 
 - Spawn `pt-doots:repro-verifier` with the **Repro-Verifier Prompt** from [agent-prompts.md](agent-prompts.md), seeded with the consolidated correctness / edge-case findings and a scratch dir path.
 - It writes and runs reproduction scripts in the scratch dir and grounds them by running the repo's own gates. It is read-only toward application code and never writes fixes.
@@ -311,7 +313,7 @@ Run ONLY when the Step 4c gate produced correctness or edge-case findings to ver
 - Language-neutral: takes no conventions overlay.
 - The verdicts feed Step 4d: the implementer fixes **Confirmed** findings (and **Inconclusive** ones at the user's discretion) and drops **Proven-safe** false positives instead of chasing them.
 
-**Save to progress.md**: `Repro-verify complete. {N} confirmed, {N} proven-safe, {N} inconclusive.` (or `Repro-verify skipped: no correctness/edge-case findings.`)
+**Save to progress.md**: `Repro-verify complete. {N} confirmed, {N} proven-safe, {N} inconclusive. Gates: {result}.`
 
 ### 4d. Fix Findings (`pt-doots:implementer`, fix-cycle mode)
 

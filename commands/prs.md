@@ -370,9 +370,16 @@ Then proceed to Step 9 (clean up worktree).
 
 **Call 1 must run before anything else** — it provides `{head_ref}` (the PR branch name) needed by the worktree setup in Step 2b.
 
-**Call 1:** `mcp__github__get_pull_request` — get PR title, description, author, base branch, head ref/branch name, head SHA, draft status
+**Call 1:** `mcp__github__get_pull_request` — get PR title, description, author, base branch, head ref/branch name, head SHA, base SHA, draft status
 
-Store `{head_ref}` from the response's `head.ref` field. This is the branch the worktree will track in Step 2b.
+Store all four of these from the response; Step 2b and Step 2b-base need them:
+
+| Store as | From | Used for |
+|---|---|---|
+| `{head_ref}` | `head.ref` | the branch the worktree tracks |
+| `{head_sha}` | `head.sha` | pre-flight check that the worktree is at the PR tip; inline comment `commit_id` |
+| `{base_ref}` | `base.ref` | which remote ref to fetch (`main`, or a `release/vX.Y` on a backport) |
+| `{base_sha}` | `base.sha` | **the authority for the diff base.** Step 2b-base asserts its computed `BASE_SHA` against this. |
 
 Then launch these **in parallel** (they don't depend on Call 1's result):
 
@@ -430,12 +437,13 @@ The user often has a parallel Claude session editing the main checkout. **Always
 # Resolve worktree path — keeps all review worktrees in one place
 WORKTREE_DIR={WORKSPACE}/.worktrees/{repo}-{head_ref}
 
-# Fetch the latest PR branch tip
-git -C {WORKSPACE}/{repo} fetch origin {head_ref}
+# Fetch BOTH the PR branch tip and the base branch. The base fetch is not
+# optional — see "Resolve the diff base" below.
+git -C {WORKSPACE}/{repo} fetch origin {head_ref} {base_ref}
 
 # Create the worktree (or reuse if it already exists from a prior review)
 if [ -d "$WORKTREE_DIR" ]; then
-    git -C "$WORKTREE_DIR" fetch origin {head_ref}
+    git -C "$WORKTREE_DIR" fetch origin {head_ref} {base_ref}
     git -C "$WORKTREE_DIR" reset --hard origin/{head_ref}
 else
     git -C {WORKSPACE}/{repo} worktree add "$WORKTREE_DIR" origin/{head_ref}
@@ -443,6 +451,34 @@ fi
 ```
 
 Store `WORKTREE_DIR` for the rest of the review. **All agent prompts and pre-flight checks must reference `WORKTREE_DIR`, not `{WORKSPACE}/{repo}`.** This is the path agents read code from.
+
+#### 2b-base: Resolve the diff base (MANDATORY — do not skip, do not use a bare branch name)
+
+**Every diff in this review is taken against `BASE_SHA`, computed here. Never against a local branch name.**
+
+A local `main` (or `release/vX.Y`) ref is routinely behind its remote, and **a fresh worktree inherits that stale ref** — so this fires exactly when the setup looks cleanest. Diffing against it silently produces a *superset*: files the PR never touched, and pre-existing code presented to reviewers as newly added. Reviewers cannot detect this; they will faithfully review whatever surface you hand them and report pre-existing design as this PR's work.
+
+```bash
+# {base_ref} is base.ref from Call 1 (usually main, sometimes release/vX.Y)
+BASE_SHA=$(git -C "$WORKTREE_DIR" merge-base origin/{base_ref} HEAD)
+```
+
+Then **assert it against the API**, which is the authority:
+
+```bash
+# Must equal base.sha from Call 1
+echo "computed: $BASE_SHA"
+echo "api:      {base_sha}"
+```
+
+- **They match** → proceed; use `$BASE_SHA` for every diff from here on.
+- **They differ** → your fetch did not land or the PR was retargeted. Re-fetch and recompute. Do NOT proceed with a base you have not reconciled, and do NOT fall back to a branch name.
+
+A cheap independent smell test, worth running once: `git -C "$WORKTREE_DIR" rev-parse --short {base_ref}` versus `git -C "$WORKTREE_DIR" rev-parse --short origin/{base_ref}`. If those differ, the local ref is stale and any `{base_ref}...HEAD` diff is wrong.
+
+**Record the file count and insertion/deletion totals from `git diff --stat $BASE_SHA...HEAD` in the review state file.** If a reviewer later reports a finding against a file outside that list, the finding is against the wrong base, not against this PR.
+
+**This cost a real review (zenith-inbound-service #25, 2026-08-17):** patches were built with `git diff main...HEAD` in a fresh worktree while local `main` was 1 merge behind. Six reviewers received 8 files that were not in the PR, plus a 265-line file shown as new that already existed at base. Both HIGH findings from one reviewer were false, and 6 findings total had to be pruned on provenance. It was caught only because a separate agent independently ran `merge-base`.
 
 **Why worktrees by default:** the user almost always has another session editing the main checkout. A normal `git checkout` would either fail (uncommitted changes) or yank their working tree out from under them. Worktrees give a clean isolated copy that the main checkout never notices.
 
@@ -473,7 +509,7 @@ This gives the orchestrator (and user) context on what's already been discussed.
 
 > **Loose profile (`REVIEW_MODE=loose`) — trimmed agent set.** When the run was invoked as `/prs <url> loose`, replace the rigorous 5–7 agent fan-out below with a minimal set. The mode-independent parts of this step still apply: run the same **pre-flight checks** and the same mandatory **diff-inlining context strategy**.
 > - Spawn **only Agent 2 — Acceptance QA** (`pt-doots:acceptance-qa`), exactly as defined below. Do **not** spawn Agent 1 (edge-case-qa), Agent 3 (researcher), Agent 4 (code-reviewer), Agent 5 (code-smells-reviewer), Agent 6 (test-reviewer), or any Agent 7+ dynamic specialist.
-> - **Force the Step 3.5 repro-verifier ON** — override its normal "skip when nothing runnable / no MED+ finding" conditions; in loose mode it always runs, because build → run the repo's own gates → exercise the feature is the whole point. After acceptance-qa returns, spawn `pt-doots:repro-verifier` (Step 3.5 mechanics) seeded with **acceptance-qa's `NOT MET` / `PARTIAL` done-condition items** (instead of a static-reviewer finding list), plus its standing instruction to run the repo's own gates (`just check` / typecheck / tests) and exercise the feature described in the PR/ticket. Scratch dir: `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it). This bullet **is** the loose-mode form of Step 3.5 — do not also run Step 3.5's conditional version.
+> - **Run the Step 3.5 repro-verifier**, which is mandatory in every mode. In loose mode it carries the whole review, because build → run the repo's own gates → exercise the feature is the entire point. After acceptance-qa returns, spawn `pt-doots:repro-verifier` (Step 3.5 mechanics) seeded with **acceptance-qa's `NOT MET` / `PARTIAL` done-condition items** (instead of a static-reviewer finding list), plus its standing instruction to run the repo's own gates (`just check` / typecheck / tests) and exercise the feature described in the PR/ticket. Scratch dir: `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it). This bullet **is** the loose-mode form of Step 3.5 — do not also run the Step 3.5 block separately.
 > - **Skip the rigorous consolidation** at the end of this step (dedupe / severity-sort) — loose mode produces no multi-agent severity findings to merge. Step 5's **Loose output** reads acceptance-qa's per-criterion result and the repro-verifier's verdicts directly.
 > - Continue: Step 4 (save state; record `review_mode: loose`) → Step 5 **Loose output** variant → Step 9 cleanup.
 >
@@ -482,7 +518,8 @@ This gives the orchestrator (and user) context on what's already been discussed.
 **IMPORTANT — Pre-flight checks before spawning agents:**
 1. Confirm `WORKTREE_DIR` exists and is a valid git worktree: `git -C "$WORKTREE_DIR" rev-parse --is-inside-work-tree` returns `true`
 2. Confirm the worktree HEAD points at the PR branch tip: `git -C "$WORKTREE_DIR" rev-parse HEAD` matches the PR's `head.sha` from Call 1
-3. If either check fails, fix it before spawning agents. Do NOT proceed with agents pointed at a stale or missing path.
+3. Confirm `BASE_SHA` (Step 2b-base) is set and equals the PR's `base.sha` from Call 1. **An unset or unreconciled `BASE_SHA` is a hard stop** — every patch you are about to inline is computed from it, and a wrong one silently hands reviewers a superset of the PR.
+4. If any check fails, fix it before spawning agents. Do NOT proceed with agents pointed at a stale or missing path, or at a base you have not reconciled.
 
 (Legacy fallback: if the user opted into in-place review, the checks instead confirm `pwd` is `{WORKSPACE}/{repo}` and the PR branch is checked out there.)
 
@@ -492,11 +529,20 @@ Before spawning ANY agent, the prompt MUST contain the full patch content for ev
 
 Pre-spawn checklist (run this mentally for every agent prompt before calling the Agent tool):
 
+0. Was every patch generated against `$BASE_SHA` from Step 2b-base? Any patch built from a bare branch name (`main...HEAD`, `release/vX.Y...HEAD`) is void — regenerate it. This is item zero because it invalidates all the others: a correct diff of the wrong base is still the wrong review surface.
 1. Does the prompt contain the patch/diff content for every changed file the agent is responsible for? Not a file list — the actual `+`/`-` lines.
 2. For newly-added files, does the prompt contain the FULL file content (not just a description of what was added)?
 3. If the agent is scoped to a subset of files (split-diff strategy), is that scope spelled out explicitly?
 
 If any answer is "no," fix the prompt before spawning. A 20KB prompt that runs in 60s is strictly better than a 5KB prompt that times out at 90s with no findings.
+
+Generate every patch this way, always with `-M` so a rename reads as a rename instead of a delete plus an unrelated 200-line "new" file:
+
+```bash
+git -C "$WORKTREE_DIR" diff -M $BASE_SHA...HEAD -- {paths} > /tmp/{repo}-{pr_number}-{scope}.patch
+```
+
+**Tell each agent which parts of its surface are pre-existing.** A moved or renamed file arrives looking brand new, and reviewers will judge the whole thing as this PR's design. Before fan-out, run `git diff -M --summary $BASE_SHA...HEAD` and `git diff -M --stat $BASE_SHA...HEAD`; for anything reported as a rename, or any file whose diff is a small delta inside a large body, say so explicitly in the prompt ("`parsers/csv.py` is a rename of `csv_parser.py`, 84% similar; the only change is two lines"). Without that, you get confident findings against code that shipped tickets ago.
 
 Agents CAN read additional files from the worktree for surrounding context (CLAUDE.md, imports, types, peer plugin patterns) — but they should never need to read a CHANGED file to learn what changed.
 
@@ -663,14 +709,13 @@ These use general-purpose agents since no pt-doots equivalent exists.
 
 After all agents return, collect all findings. Deduplicate findings that refer to the same file:line from different agents (keep the higher severity). Sort by severity: HIGH → MED → LOW → NICE.
 
-### Step 3.5: Repro-verify findings (conditional)
+### Step 3.5: Repro-verify findings (MANDATORY — runs on every review)
 
-Static reviewers reason from an inlined diff. They cannot run the code, so they both miss bugs that only surface at runtime and over-flag plausible-but-wrong concerns. When the changed code is cheap to exercise, spawn `pt-doots:repro-verifier` to prove or refute the correctness findings by actually running them. This is the execution-grounded upgrade to the manual Step 5a sanity check.
+Static reviewers reason from an inlined diff. They cannot run the code, so they both miss bugs that only surface at runtime and over-flag plausible-but-wrong concerns. `pt-doots:repro-verifier` is what makes the findings legitimate: it proves or refutes them by actually running them. Without it you are presenting guesses with a severity column attached.
 
-**When to run it:**
-- **Auto** when the PR touches repro-friendly code: the Python services (`product-services-export`, `product-services-mcp`), `zenith-inbound-service`, or pure/isolatable logic (parsers, validators, mappers, date/uuid helpers, integration-worker parser code).
-- **On request** for any PR. If the user says "verify it" or "run the bug hunter," run it regardless of repo.
-- **Skip** for frontend-only, style, or config-only diffs, or when no correctness/edge/security finding at MED or above was raised (nothing to verify). Note "repro-verify: skipped (nothing runnable to verify)" and move on.
+**When to run it: ALWAYS. There are no skip conditions, and this step has no "auto" tier to qualify for.** Spawn it on every review, in every repo, at every severity, including reviews where the static agents raised nothing above LOW. On a diff with nothing runtime-falsifiable (frontend-only, style, config), it still runs the repo's own gates, and a red gate is itself the finding.
+
+**The review does not advance to Step 5 until the verifier has returned.** Presenting findings to the user without execution verdicts is the failure this step exists to prevent.
 
 **What to pass it** (seed it with the findings, do NOT make it re-hunt from scratch):
 - `WORKTREE_DIR` (the isolated worktree from Step 2b; the PR code is already there).
@@ -696,7 +741,7 @@ Spawn `subagent_type: "pt-doots:repro-verifier"`. The agent definition carries t
 
 Remove any symlinks you created before removing the worktree in Step 9, so nothing follows them.
 
-Only after those are ruled out: if the diff genuinely is not runnable, note "repro-verify: skipped ({reason})" in the review header and proceed with the static findings unchanged. Never block the review on it. But two accepted skips in a row on a PR whose findings are runtime-falsifiable is a process failure, not an environment fact.
+**There is no skip.** A port held by another worktree's stack, a missing container, an absent `.env` — those are yours to clear, and clearing them takes minutes. If you genuinely cannot make the code run after clearing the blocker, STOP and tell the user what is blocking it and what you tried. Do not quietly present static findings as if they had been verified. "The environment was busy" is not a reason to hand over unverified findings; it is a reason to fix the environment.
 
 ### Step 4: Save Review State
 
@@ -765,6 +810,10 @@ Reviewer agents work from inlined diffs and tend to over-flag plausible-sounding
 **If Step 3.5 (repro-verify) ran, its verdicts take precedence here.** A CONFIRMED finding is proven by execution: present it as-is and do NOT demote it. A PROVEN-SAFE finding was already dropped in Step 3.5. Only run the manual check below on INCONCLUSIVE findings and on findings from a review where the repro-verifier did not run.
 
 For each HIGH or MED finding, run this quick check:
+
+0. **Is the flagged code actually in this PR?** Check the finding's file against the changed-file list you recorded in Step 2b-base, and check that the flagged lines are `+` lines in `git diff -M $BASE_SHA...HEAD`, not context. **If the file is not in the PR, drop the finding outright.** If the file is in the PR but the flagged lines are unchanged context, it is a pre-existing-code observation: drop it, or reframe it as `question:` about whether the author wants to fix it while he is in there. Never present pre-existing design as something this PR introduced — that is how a review picks a fight over a decision that already shipped and was already reviewed.
+
+   Do this first, because it is the cheapest check and it invalidates everything downstream. Renames and moves are where it bites: a file that moved arrives looking new, so a reviewer will judge the whole body as this PR's work. **The tell is a reviewer flagging a `HIGH` against code with no `+` on it.**
 
 1. **Did the agent note that it ran the Verify Before Flag pass?** Look for "verified caller," "checked enclosing try/catch," "ran sanity check," etc. If absent, treat the finding as un-verified and run the verification yourself (see below).
 
