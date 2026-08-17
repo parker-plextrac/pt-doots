@@ -127,7 +127,7 @@ Step 3:   Create Branch       (main)
 Step 4a:  Implement           (pt-doots:implementer) → /verify   [TDD default: runs AFTER 4b, to green]
 Step 4b:  Write Tests         (pt-doots:test-writer) → /verify   [TDD default: runs FIRST, failing tests]
 Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer + test-reviewer + self-containment-reviewer, parallel)
-Step 4c.5: Repro-Verify       (pt-doots:repro-verifier, conditional: only if 4c has correctness/edge-case findings) → verdicts feed 4d
+Step 4c.5: Repro-Verify       (pt-doots:repro-verifier, MANDATORY every workflow) → verdicts feed 4d
 Step 4d:  Fix Findings        (same agent used in 4a, fix-cycle mode) → /verify
 Step 4e:  Documentation       (pt-doots:documentarian — MECHANICAL: any .md/README/docstring/comment in the diff, or docs-only)
 Step 5:   Commit              (main — commit gate)
@@ -150,7 +150,7 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 | 4c | `pt-doots:code-smells-reviewer` | Read-only. Design quality. |
 | 4c | `pt-doots:test-reviewer` | Read-only. Test quality. |
 | 4c | `pt-doots:self-containment-reviewer` | Read-only. Private-context leak detection in comments/docs/CLAUDE.md/test strings. Runs on standard, lightweight, AND docs-only. |
-| 4c.5 | `pt-doots:repro-verifier` | Read-only + scratch dir. Conditional (standard only, when 4c has correctness/edge-case findings). Verdicts: Confirmed / Proven-safe / Inconclusive; feed 4d. |
+| 4c.5 | `pt-doots:repro-verifier` | Read-only + scratch dir. **Mandatory, every workflow, no skip.** Verdicts: Confirmed / Proven-safe / Inconclusive; feed 4d. Also runs the repo's gates. |
 | 4e | `pt-doots:documentarian` | **Mechanical trigger — no judgment call.** Fire whenever the diff touches ANY `.md`, README, docstring, or block comment, regardless of what scrum-master set. Also fire when workflow is `docs-only`. Its job is to VERIFY the claims the implementer wrote, not to author from scratch. |
 
 ### Planning (Step 2): Interactive; the Orchestrator Does Not Decide Solo
@@ -213,11 +213,16 @@ All six quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`
 
 **Per-spawn substitution steps**:
 
-1. Before fan-out, capture the diff against the base branch for the files the implementation/test-writer reported as changed:
+1. Before fan-out, resolve the base **as a SHA against the remote ref**, then capture the diff for the files the implementation/test-writer reported as changed:
    ```bash
-   git -C {WORKSPACE}/{repo} diff main...HEAD -- {file1} {file2} ...
+   # {base_ref} is whatever the branch was created from in Step 3 — usually main, sometimes release/v2.X
+   git -C {WORKSPACE}/{repo} fetch origin {base_ref}
+   BASE_SHA=$(git -C {WORKSPACE}/{repo} merge-base origin/{base_ref} HEAD)
+   git -C {WORKSPACE}/{repo} diff -M $BASE_SHA...HEAD -- {file1} {file2} ...
    ```
-   (Substitute the actual base branch — usually `main`, sometimes `release/v2.X`. Use whatever the branch was created from in Step 3.) Capture stdout as `{INLINED_DIFF}`.
+   Capture stdout as `{INLINED_DIFF}`.
+
+   **Never pass a bare branch name here.** A local `{base_ref}` is routinely behind its remote, and a fresh worktree inherits that stale ref, so `{base_ref}...HEAD` silently yields a *superset*: files the branch never touched, and pre-existing code presented to reviewers as newly written. Reviewers cannot detect this and will report code that shipped tickets ago as this work's design. Sanity check once: if `git rev-parse --short {base_ref}` and `git rev-parse --short origin/{base_ref}` differ, any `{base_ref}...HEAD` diff is wrong. Keep `-M` so a rename reads as a rename rather than a delete plus a spurious "new" file, and tell reviewers in the prompt which files are renames or moves.
 
 2. If the diff is partial — i.e., a hunk shows only a few lines of a function whose body the reviewer needs to judge correctness — also capture the full body of each such function. Two acceptable mechanisms:
    - `git -C {WORKSPACE}/{repo} show HEAD:{path}` and extract the function block in main context, OR
@@ -268,6 +273,7 @@ After every code change → run `/verify`. Max 3 fix cycles per failure. If stil
 
 ALL must be true before committing:
 - [ ] Quality gate ran (4c), and all reviewers returned a REAL result (no truncated or empty completion notifications; thin ones retrieved via SendMessage)
+- [ ] **Repro-verify ran (4c.5) and returned verdicts.** No exceptions. If you are about to tick this from memory rather than from a report you actually received, it did not run.
 - [ ] Findings fixed or explicitly deferred (4d)
 - [ ] Verification passed after most recent change
 - [ ] All plan steps implemented
