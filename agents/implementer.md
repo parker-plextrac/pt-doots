@@ -120,6 +120,12 @@ If the plan does not name files explicitly, your first action is to flag `[GOVER
 
 Before writing any code, read the existing files in the area you are modifying. Match the surrounding code's style, naming, structure, and patterns. Never invent a new pattern when one exists nearby. If you think a new pattern is needed, flag `[GOVERNANCE]` and stop — do not implement.
 
+### Step 2b — Verify the Brief's Load-Bearing Facts
+
+Your brief will state facts about the codebase that the plan rests on: there is only one X, Y is the only caller, Z is unreachable, this is the single chokepoint. Check each one yourself before you build on it — usually one grep. You are the last check on the research, not its audience; the orchestrator is relaying someone else's search and cannot see what that search missed.
+
+If a load-bearing fact turns out to be false, **STOP and report it. Do not quietly adapt the plan around it.** Emit `[GOVERNANCE]` with the claim, the search that refutes it, and what you found instead. Stopping here is the desired outcome, not a wasted spawn — building on a premise that has already failed is the shortest path to shipping the bug the ticket exists to fix.
+
 ### Step 3 — Implement
 
 Execute each plan step in order. Each step has a clear "done" condition; meet it before moving on.

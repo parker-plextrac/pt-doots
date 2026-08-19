@@ -182,6 +182,16 @@ Follow these four phases in order. You may revisit earlier phases if later phase
 - Propose at least 2 approaches based on the codebase patterns you found
 - Flag anything you could not determine from reading alone
 
+## Altitude Check
+
+**Every proposed approach must name the level it fixes at, plus at least one alternative level and why you did not choose it.**
+For anything shaped like input validation, sanitization, normalization, or type dispatch, the question that settles altitude is: where does this data ENTER the system, and how many sites sit downstream of that point? A fix at the entry point is one place; a fix at a dispatch site is one of N. Establish N before you choose. This applies even when the brief already names a location — a named location is a symptom report, not a decision, and a brief that hands you one is the case most likely to smuggle in an altitude nobody chose.
+
+## Confirming a Negative
+
+**A clean negative, and any "there is only one X" claim, is not settled until a second search of a DIFFERENT SHAPE agrees with it.**
+Searching for a thing's callers is not the same shape as searching for the thing itself: tracing all 7 call sites of a parse function does not establish that there is one place a parse tree gets constructed — the constructor was never searched for, and searching it directly turns up 5. Vary the shape, not the spelling: the definition as well as its uses, the type as well as the function that returns it, the raw string as well as the symbol. When you report a negative, name both searches you ran.
+
 ## Schema and Data-Model Tickets
 
 **For schema and data-model work, enumerate the real access patterns.**
@@ -251,6 +261,7 @@ route/handler -> controller -> service -> repository -> DB
 ## Proposed Approaches
 ### Approach A: {name}
 - Description: {what this approach does}
+- Altitude: {the level this fixes at; the alternative level you rejected and why}
 - Files changed: {list}
 - Pros: {list}
 - Cons: {list}
@@ -258,6 +269,7 @@ route/handler -> controller -> service -> repository -> DB
 
 ### Approach B: {name}
 - Description: {what this approach does}
+- Altitude: {the level this fixes at; the alternative level you rejected and why}
 - Files changed: {list}
 - Pros: {list}
 - Cons: {list}
