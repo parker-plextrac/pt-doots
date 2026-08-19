@@ -22,3 +22,29 @@
 ## 2026-07-20 - Reconciled definition vs. body, removed Write (roster audit)
 - Removed `Write` from the tools line (now `Read Grep Glob` plus Confluence MCP). The body already states "You have no Write tool" and the design has the orchestrator save research.md; the 2026-04-06 creation had Write explicitly disallowed. Write was added later with no log entry, so this removes the contradiction.
 - Reconciled the turn budget: frontmatter had drifted to `maxTurns: 200` (created value 25) while the body still said "You have 20 turns." Set both frontmatter and body to `50`, a real budget for genuine 4-repo exploration (researcher runs of 4 to 14 min in metrics) without the drifted 200.
+
+## 2026-08-19 — Altitude Check + Confirming a Negative (bundle change, universal practice)
+- **Trigger, from a real run on IO-2387.** The ticket's root-cause trace named a crashing dispatch
+  site, so the research brief asked "where should the filter live?" — a question that already
+  pre-supposed a guard at a dispatch site. Two guard shapes were researched, built, and passed all
+  six quality-gate reviewers plus the repro-verifier. Only a third round, spawned to ask whether the
+  approach itself was right, challenged the premise and found a 2-line fix at the
+  point where the data ENTERS the system: three crashes closed, plus a leak no dispatch-site guard
+  could reach and four separately-parked bugs, for fewer lines than the guards it replaced.
+- **The gap:** nobody asked what level the fix belonged at. A location named in the brief was
+  inherited as a decision instead of read as a symptom report.
+- **Added `## Altitude Check`:** every proposed approach names the level it fixes at plus a rejected
+  alternative level. For validation / sanitization / normalization / type-dispatch shapes, the
+  deciding question is where data enters and how many sites are downstream — N must be established
+  before choosing, because an entry-point fix is one place and a dispatch-site fix is one of N.
+  Explicitly binding even when the brief names a location.
+- **Added `## Confirming a Negative`:** same session, the researcher reported "exactly one place a
+  string becomes a parse tree" on the strength of tracing all 7 `parse_markup(` call sites, having
+  never grepped the constructor itself. There were 5 live construction sites. Earlier in the same run
+  it had named a single chokepoint that was wrong for the same reason, and caught that one only by
+  widening on its own. Rule: a clean negative or any "there is only one X" claim needs a second
+  search of a DIFFERENT SHAPE before it is reported as settled, and both searches get named.
+- **Enforcement:** `Altitude` is now a required field on each approach in the Output Format. A rule
+  the agent reads is advice; a field it must fill is a gate.
+- **Placed in the bundle, not a user overlay**, per CLAUDE.md rule 5 — this is how research should be
+  done, not one user's preference.

@@ -63,3 +63,22 @@ Status change: promoted to default implementation agent for standard/medium work
 - Reworded the CLAUDE.md leanness rule so it no longer points overflow at code comments.
 - Design note: the audit counts are the load-bearing half. A rule the agent reads is advice; a count
   it must report is a gate.
+
+## 2026-08-19 — Premise-checking made standing behavior (Step 2b)
+- **Trigger, from a real run on IO-2387.** The orchestrator put a researcher claim — "the single
+  chokepoint is X" — into the implementer's brief as established fact. It was false. The implementer
+  caught it and stopped, but ONLY because that one spawn prompt had been hand-written to say "confirm
+  this yourself and STOP if it fails." The guardrail worked perfectly and worked by luck; without it
+  the change would have shipped and reopened the very crash the ticket exists to fix.
+- **The gap:** verifying a brief's factual claims was a per-spawn favor, not agent behavior. Nothing
+  in the definition told the agent that a fact handed down in a brief is checkable, or that stopping
+  is a legitimate outcome rather than a failed spawn.
+- **Added `### Step 2b — Verify the Brief's Load-Bearing Facts`**, between Pattern-First Reading and
+  Implement: check "only one X" / "only caller" / "unreachable" / "single chokepoint" claims cheaply,
+  usually one grep, before building on them. If one is false, STOP and `[GOVERNANCE]` it with the
+  refuting search rather than adapting the plan solo.
+- **Framing matters here.** Written as the implementer being the last check on the research rather
+  than as distrust of the orchestrator, and with stopping named explicitly as the desired outcome —
+  otherwise the agent treats a halt as its own failure and pushes through.
+- Same shape as the two 2026-08-07 rules and "nothing is pre-existing until proven otherwise": an
+  inherited claim needs evidence, not confidence.
