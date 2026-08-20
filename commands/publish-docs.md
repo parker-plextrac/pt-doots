@@ -137,6 +137,10 @@ Learned by getting each one wrong.
   can be split across a newline, so recovery has to be DOTALL. This silently left
   every link unconverted until it was caught by inspecting the generated storage
   rather than trusting a count.
+- **Verify against whitespace-normalised text, never a raw grep.** The same reflow
+  splits ordinary sentences, so `grep "some phrase"` on storage format reports a
+  false negative and sends you hunting a bug that is not there. Strip the tags,
+  collapse whitespace, then search.
 - **The converter HTML-escapes angle brackets unevenly**, turning `<<` into
   `&lt;<`. Placeholders must be letters only.
 - **A mermaid code block never renders**, however it is formatted. The rendering
