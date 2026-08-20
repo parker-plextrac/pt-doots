@@ -20,6 +20,10 @@ somewhere non-engineers can read.
 invisible until the page renders wrong, and one of them costs a publish approval
 each time you get it wrong.
 
+**Needs** `atlassian.sh` on the path with a populated `~/.jira-attlasian-cred`,
+providing `md-to-storage`, `confluence-create`, `confluence-update` and `attach`.
+`pandoc` must be installed; the markdown conversion shells out to it.
+
 ## Steps
 
 ### 1. Decide the tree
@@ -98,6 +102,26 @@ It prints the new page id and URL. Feed the parent's id in as `<PARENT_ID>` for
 each child. To revise a published page, use `confluence-update <page_id> "<Title>"
 <file>`, which bumps the version for you.
 
+### 7. Render the mermaid diagrams
+
+**Run this on every published page that contains a mermaid block.** A mermaid code
+block never renders on its own; the rendering app reads the diagram from a
+plain-text attachment and the macro is only a pointer to it.
+
+```bash
+python3 <plugin-dir>/scripts/mermaid_to_confluence.py <page-id> --dry-run
+python3 <plugin-dir>/scripts/mermaid_to_confluence.py <page-id>
+```
+
+It finds every mermaid block, uploads each one's source as an attachment named
+after the section heading above it, and swaps the block for a `mermaid-cloud`
+macro. `--dry-run` prints the plan and changes nothing. Re-running is safe, since
+re-uploading the same attachment name adds a version rather than failing.
+
+The upload and the page update are both writes, so this step needs its own
+approval. Full background on the macro, including why no PNG is required, is in
+the `mermaid-confluence` skill.
+
 ## What breaks, and why
 
 Learned by getting each one wrong.
@@ -115,9 +139,9 @@ Learned by getting each one wrong.
   rather than trusting a count.
 - **The converter HTML-escapes angle brackets unevenly**, turning `<<` into
   `&lt;<`. Placeholders must be letters only.
-- **Mermaid does not render.** House convention is a code macro with
-  `language=mermaid`, so it shows as a highlighted block. Match it; do not convert
-  diagrams to ASCII.
+- **A mermaid code block never renders**, however it is formatted. The rendering
+  app reads the diagram from a plain-text attachment, not from the page body. Step
+  7 handles it; do not try to fix it by changing the code block.
 - **Links to source files are dead on Confluence, by design.** Repo-root relative
   paths are what a reader looks up in the checkout. Do not rewrite them to URLs.
 
