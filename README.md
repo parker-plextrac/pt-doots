@@ -53,6 +53,7 @@ Install agent-skills first, run `/setup`, then come back here.
 | `/bootstrap-team` | One-time setup — spawns the team-manager to create every agent locally |
 | `/team-audit` | Roster health check + agent performance review |
 | `/voice-profile` | Customize your personal voice overlay for the `voice-stylist` agent |
+| `/publish-docs` | Publish a repo's markdown doc set to Confluence as a parent page with children |
 
 ### Talking to `/pt-doots`
 
