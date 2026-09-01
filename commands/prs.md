@@ -815,6 +815,16 @@ For each HIGH or MED finding, run this quick check:
 
    Do this first, because it is the cheapest check and it invalidates everything downstream. Renames and moves are where it bites: a file that moved arrives looking new, so a reviewer will judge the whole body as this PR's work. **The tell is a reviewer flagging a `HIGH` against code with no `+` on it.**
 
+0.5 **Is the author just following an existing convention?** Before flagging any pattern — a cast, an inline expression, a missing test, a naming choice — COUNT how often that same pattern already exists:
+
+    ```bash
+    grep -rn "<the pattern>" --include='*.ts' apps libs | grep -v '\.test\.ts' | wc -l
+    ```
+
+   A double-digit count means it is house style, not this PR's defect, and the finding is asking the author to be the odd one out in a bugfix PR. Drop it; a codebase-wide cleanup is a separate ticket. Note the rule of three argues AGAINST extracting once a pattern is already everywhere. Also read the repo's own CLAUDE.md before flagging a MISSING artifact — it may declare that artifact optional.
+
+   **This is the highest-yield gate in this step.** On PR #9129 four of thirteen findings died here and not one should have reached the user: raw-tag storage the permitted path does identically, a test cast, a missing controller test that `CLAUDE.md:161` explicitly makes optional, and an inline `map(cleanUpTags)` with 30+ instances codebase-wide. Reviewer agents see a diff, not a codebase, so flagging house style as a new defect is their most common failure — and it is yours to catch, not the user's.
+
 1. **Did the agent note that it ran the Verify Before Flag pass?** Look for "verified caller," "checked enclosing try/catch," "ran sanity check," etc. If absent, treat the finding as un-verified and run the verification yourself (see below).
 
 2. **For HIGH findings, do a 30-second caller trace** before presenting:
@@ -836,6 +846,9 @@ For every HIGH/MED finding whose trigger is a specific input value, make the age
 
 - **Parser, importer, or external-format PR** — find the sample corpus and test the trigger against it. Look in the repo (`tools/helperFiles/`, `tests.api/mockUploads/`, `tests/mocks/`), the local import corpus (`~/Desktop/plextrac-file-imports/`), and the ticket's attachments. Real files beat reasoning: grep the corpus for the exact shape the finding needs.
 - **No real instance found** — reframe as `question:` ("does any real input look like this?") or drop. Do not present it as a defect.
+- **An agent's own stated provenance gap is a HARD STOP, not a caveat to relay.** When a reviewer writes "I did not find a parser that emits this", "flagging on the strength of the sibling guard, not a reproduced crash", or "could not check the corpus", that sentence IS the gate failing. Ground it yourself or drop it. Never forward the admission to the user with a severity still attached.
+- **Narrating the weakness is not filtering it.** If you are writing a paragraph explaining why the evidence is thin, you have already failed the gate — that paragraph is a drop notice, not a disclaimer. Do not hand the user the filtering decision this gate exists to make.
+- **Substitute evidence does not count.** "Defensive code exists nearby, so the input must occur" is not provenance; defensive sweeps are written against hypotheticals too. `git log -S` the guard before leaning on it — on #9129 the guard cited as proof turned out to be a broad "attempt to catch all errors" hardening commit, authored by the reviewer's own user.
 - **Report what the corpus killed**, in the same sanity-check log as the demotions. "3 findings dropped: zero of 91 real `<location>` values contain a bracket" is the most useful line in the whole review, because it tells the user the pruning was grounded and not taste.
 
 This is the reviewer-side twin of the workspace CLAUDE.md's IO-2196 lesson ("ground on the full local sample corpus before building or changing any parser"). That lesson currently reaches the planning phase only; this gate is what carries it into review.
@@ -869,6 +882,15 @@ Otherwise:
 If "none": ask if they want a top-level comment only, approve, or skip entirely.
 
 ### Step 5b: Walk Through Findings One-at-a-Time
+
+> **READINESS GATE — a finding you present must be TERMINAL.** Nothing may be left for you to do on it. Before it goes in the message:
+> - Its trigger is grounded against real data, and it cleared the convention pre-filter (gates in 5a).
+> - Any claim of the form "X would not be caught by the tests" has been **tested, not asserted**: mutate the production line, run the suite, quote the real result.
+> - Your own suggested fix has been **applied and run, both ways** — passes against real code, fails when the thing it protects is removed. A fix you have not executed is a guess with a code block around it.
+> - The paste-ready comment is written, in the same message.
+> - Every hinge another agent asserted and you relied on has been checked yourself.
+>
+> **Never present a finding with an open question attached.** No "want me to run the mutation test?", no "I can check the corpus if you like." Doing the check is your job; scheduling it is not the user's. A finding that arrives half-verified costs a full round trip and burns the user's patience faster than a missed finding does.
 
 **Default to one finding at a time**, each presented with its Ready-to-post comment already drafted (see below), waiting for the user's decision before moving to the next. If the user asks to see the whole set at once ("do them all", "roll the whole PR that way"), present every finding in a single pass — each still in the full format below with its own **Ready to post** block — so they can approve or cherry-pick in one reply. Either way, the finished comment is shown WITH the finding, never as a separate draft-after-approval step.
 
@@ -916,10 +938,9 @@ On the user's response: **post** → post it inline immediately (Step 8 mechanic
 - "what the agent said" is paraphrased, not quoted verbatim. Tight.
 - "why this matters" should go into **decent detail** — Parker hasn't seen the code. Walk through the actual code path that produces the bug, name the surrounding functions, show a concrete real-world input that triggers it, and explain why the existing tests miss it. The user is reading review findings to *learn*, not just to approve. Be specific to the consequence (e.g. "operators won't have a log breadcrumb to debug from"), not abstract style/violation framing.
 - "your suggestions" must name a concrete fix, code-shaped where possible. If you cannot name one, you do not understand the finding well enough to post it — investigate or drop it. "Worth documenting" is not a fix. This is the same bar the posted comment's `fix:` section has to clear; see "The what/fix/why contract" in Step 6.
-- If your suggested fix has a trap (the obvious change silently does nothing, or breaks an invariant elsewhere), say so here and in the posted comment. Verify your own suggestion before proposing it.
+- If your suggested fix has a trap (the obvious change silently does nothing, or breaks an invariant elsewhere), say so here and in the posted comment. **Apply the fix and run the suite before proposing it** — on #9129 two suggested fixes were disproven exactly this way: removing an "avoidable" cast broke two tests because the no-cast precedent ran against a stubbed method, and extracting a helper onto an injected service hid the logic behind the test mock. Both would otherwise have shipped as confident advice.
 - "my opinion" is required, not optional. Parker reads this to decide whether to even spend a review slot on the finding. Tie the recommendation to a real reason (scope, severity, ROI, customer impact); never just "I'd skip" with no rationale.
 - No jokes, no "(may be downgrade-worthy)" asides, no "Counter:" sections, no "So: flag or skip?" editorializing.
-- Pre-filter: if a finding matches existing convention in untouched code and the PR author is following it, skip before presenting.
 
 This format gives the user control over:
 - Which findings to include/skip
