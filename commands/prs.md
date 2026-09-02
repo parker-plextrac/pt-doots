@@ -769,9 +769,9 @@ selected_findings: []
 
 ## Findings
 
-| # | Severity | Agent | File:Line | Finding |
-|---|----------|-------|-----------|---------|
-{populated from agent results}
+| # | Severity | Agent | File:Line | Prior sites | Finding |
+|---|----------|-------|-----------|-------------|---------|
+{populated from agent results; `Prior sites` is the 5a.0.5 ratio, or `n/a`}
 
 ## Blurb
 
@@ -823,7 +823,15 @@ For each HIGH or MED finding, run this quick check:
 
    A double-digit count means it is house style, not this PR's defect, and the finding is asking the author to be the odd one out in a bugfix PR. Drop it; a codebase-wide cleanup is a separate ticket. Note the rule of three argues AGAINST extracting once a pattern is already everywhere. Also read the repo's own CLAUDE.md before flagging a MISSING artifact — it may declare that artifact optional.
 
+   **Count the RATIO, not just the volume.** The threshold above only catches patterns that are everywhere. It misses the case that matters more: a finding about a DECISION the author had to make (which permission scope, which helper, which base class, which table) where the codebase makes that same decision only a handful of times. There, count how many pre-existing sites decide it the author's way and record it as a ratio. **N of N is house style no matter how small N is.** Unanimity among prior sites means the author is following the model rather than breaking it, and the burden flips: you now have to explain why every existing site is also wrong, in a PR that did not create any of them.
+
+   **`must:` is NOT exempt from this gate.** A correctness framing is exactly what makes a convention finding feel like it outranks the check. It does not. Run the count first, then decide the severity.
+
+   **Writing the count into the finding's prose is not running the gate.** "For what it is worth, `reports/service.ts` does the same thing, so this is inherited rather than introduced here" is a drop notice, not a caveat to append. If you are composing that sentence, the gate has already fired and you are talking past it. Put the ratio in the findings table as a bare number and let the number decide.
+
    **This is the highest-yield gate in this step.** On PR #9129 four of thirteen findings died here and not one should have reached the user: raw-tag storage the permitted path does identically, a test cast, a missing controller test that `CLAUDE.md:161` explicitly makes optional, and an inline `map(cleanUpTags)` with 30+ instances codebase-wide. Reviewer agents see a diff, not a codebase, so flagging house style as a new defect is their most common failure — and it is yours to catch, not the user's.
+
+   **A fifth finding on that same PR got through, and it was the only `must:`.** It claimed the author's `doesUserHavePermissionsForTenant` tag gate read the wrong role table because the route was client-scoped. All four pre-existing `CREATE_TAGS` checks in the repo resolved tenant roles: 4 of 4, unanimous. The orchestrator ran the grep, found `reports/service.ts`, and wrote it into the comment as a closing footnote instead of treating it as the answer. The author pushed back and was right. Four of four never reached the user as a number, only as a sentence at the end of a paragraph, which reads as a caveat the author already handled.
 
 1. **Did the agent note that it ran the Verify Before Flag pass?** Look for "verified caller," "checked enclosing try/catch," "ran sanity check," etc. If absent, treat the finding as un-verified and run the verification yourself (see below).
 
@@ -866,12 +874,16 @@ Jira: {ticket_key} | Author: @{author} | Files: {file_count} | Base: {base_branc
 (omit this section if nothing was demoted)
 
 ### Findings ({count})
-| # | Severity | File | Finding |
-|---|----------|------|---------|
-| 1 | HIGH | file.ts:45 | Description of the issue |
-| 2 | MED | other-file.ts:112 | Description |
-| 3 | NICE | test-file.ts | Positive observation |
+| # | Severity | File | Prior sites | Finding |
+|---|----------|------|-------------|---------|
+| 1 | HIGH | file.ts:45 | 2 of 14 | Description of the issue |
+| 2 | MED | other-file.ts:112 | n/a | Description |
+| 3 | NICE | test-file.ts | n/a | Positive observation |
 ```
+
+**The `Prior sites` column is the 5a.0.5 count, carried forward as a bare ratio.** For any finding that asks the author to do something differently from code that already exists, it is: how many pre-existing sites already do it the author's way, over how many sites make that same decision at all. Write `n/a` only when the finding is genuinely not about a convention (a null deref, a typo, a missing await). Do NOT write prose in this column, and do NOT leave it blank. A blank cell means you skipped the count, and skipping the count is the failure this column exists to make visible.
+
+A ratio whose numerator equals its denominator should have been dropped at 5a.0.5. If one reaches this table, the gate leaked: drop it now, or say out loud why every existing site is also wrong.
 
 If **no findings** (all agents returned NO_FINDINGS or all were demoted):
 > "No issues found! This PR looks clean. Want to leave an approving review, or skip?"
@@ -1330,9 +1342,9 @@ status: findings_ready
 ## Arm 1 — product-core-backend (PR #8540)
 
 ### Findings ({count})
-| # | Severity | Agent | File:Line | Finding |
-|---|----------|-------|-----------|---------|
-| 1 | HIGH | code-reviewer | apps/.../jira-service.ts:142 | ... |
+| # | Severity | Agent | File:Line | Prior sites | Finding |
+|---|----------|-------|-----------|-------------|---------|
+| 1 | HIGH | code-reviewer | apps/.../jira-service.ts:142 | 2 of 14 | ... |
 ...
 
 ---
@@ -1340,7 +1352,7 @@ status: findings_ready
 ## Arm 2 — product-core-frontend (branch IO-2168-fe-table)
 
 ### Findings ({count})
-| # | Severity | Agent | File:Line | Finding |
+| # | Severity | Agent | File:Line | Prior sites | Finding |
 ...
 
 ---
@@ -1356,7 +1368,7 @@ status: findings_ready
 (walk-through pending)
 ```
 
-Apply Mode 2's **Step 5a pre-promotion sanity check** to each arm's HIGH/MED findings before saving — same caller-tracing rules, same FF-gate checks. Track demotions per arm.
+Apply Mode 2's **Step 5a pre-promotion sanity check** to each arm's HIGH/MED findings before saving — same caller-tracing rules, same FF-gate checks, and the same 5a.0.5 convention count written into the `Prior sites` column. Track demotions per arm.
 
 ### Step S8: Cross-arm consolidation (orchestrator pass)
 
@@ -1390,15 +1402,15 @@ Arms: {N} | Jira: {fetched | unavailable} | Saved: {path}
 {demotions across all arms, if any — e.g. "BE HIGH on jira-service.ts:142 demoted to MED (FF gate present)"}
 
 ### Arm 1 — product-core-backend ({count} findings)
-| # | Severity | File | Finding |
-|---|----------|------|---------|
-| 1 | HIGH | jira-service.ts:142 | ... |
-| 2 | MED | jira-repository.ts:88 | ... |
+| # | Severity | File | Prior sites | Finding |
+|---|----------|------|-------------|---------|
+| 1 | HIGH | jira-service.ts:142 | 2 of 14 | ... |
+| 2 | MED | jira-repository.ts:88 | n/a | ... |
 
 ### Arm 2 — product-core-frontend ({count} findings)
-| # | Severity | File | Finding |
-|---|----------|------|---------|
-| 3 | MED | JiraConfigForm.tsx:113 | ... |
+| # | Severity | File | Prior sites | Finding |
+|---|----------|------|-------------|---------|
+| 3 | MED | JiraConfigForm.tsx:113 | n/a | ... |
 
 ### Cross-Arm Observations
 - {bullet 1}
