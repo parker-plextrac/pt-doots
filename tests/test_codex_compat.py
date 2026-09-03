@@ -67,6 +67,9 @@ class CodexCompatibilityTests(unittest.TestCase):
         self.assertEqual(inventories.commands, {"ship": self.root / "commands/ship.md"})
         self.assertEqual(inventories.agents, {"reviewer": self.root / "agents/reviewer.md"})
 
+    def test_tests_directory_is_an_importable_package(self) -> None:
+        self.assertTrue((REPOSITORY_ROOT / "tests" / "__init__.py").is_file())
+
     def test_parses_markdown_frontmatter_and_rejects_malformed_input(self) -> None:
         good = self.write(
             "commands/ship.md",
