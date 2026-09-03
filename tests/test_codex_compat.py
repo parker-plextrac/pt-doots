@@ -54,7 +54,15 @@ class CodexCompatibilityTests(unittest.TestCase):
     def canonical_agent(self, name: str) -> None:
         self.write(
             f"agents/{name}.md",
-            f"---\nname: {name}\ndescription: agent\n---\n# {name}\n",
+            "---\n"
+            f"name: {name}\n"
+            "description: agent\n"
+            "model: sonnet\n"
+            "effort: high\n"
+            "maxTurns: 10\n"
+            "tools: Read Grep Glob\n"
+            "---\n"
+            f"# {name}\n",
         )
 
     def skill(self, name: str) -> None:
@@ -64,7 +72,18 @@ class CodexCompatibilityTests(unittest.TestCase):
         )
 
     def agent_adapter(self, name: str) -> None:
-        self.write(f"codex/agents/{name}.toml", f'name = "{name}"\n')
+        self.write(
+            f"codex/agents/{name}.toml",
+            f'''name = "{name}"
+description = "agent"
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+developer_instructions = """Locate the PlexTrac workspace by walking upward for product-core-backend, product-core-frontend, product-services-export, and product-services-mcp. Load the complete canonical agent file at pt-doots/agents/{name}.md before work; the canonical file wins on behavior.
+
+Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task turn only. If exhausted, return the required canonical output marked PARTIAL or BLOCKED; only the orchestrator may follow up."""
+''',
+        )
 
     def test_discovers_only_top_level_canonical_definitions(self) -> None:
         self.canonical_command("ship")
@@ -189,6 +208,35 @@ class CodexCompatibilityTests(unittest.TestCase):
         adapter = self.write('codex/agents/reviewer.toml', 'name = "reviewer"\n')
 
         self.assertEqual(self.validator.parse_toml(adapter), {"name": "reviewer"})
+
+    def test_rejects_semantically_invalid_agent_adapters(self) -> None:
+        self.canonical_agent("reviewer")
+        valid = (self.root / "codex" / "agents" / "reviewer.toml")
+        self.agent_adapter("reviewer")
+        valid_contents = valid.read_text(encoding="utf-8")
+        cases = {
+            "wrong name": valid_contents.replace('name = "reviewer"', 'name = "other"'),
+            "missing fields": 'name = "reviewer"\n',
+            "invalid model": valid_contents.replace("gpt-5.6-terra", "not-a-model"),
+            "invalid reasoning": valid_contents.replace('model_reasoning_effort = "high"', 'model_reasoning_effort = "low"'),
+            "invalid sandbox": valid_contents.replace('sandbox_mode = "read-only"', 'sandbox_mode = "workspace-write"'),
+            "unsafe prompt reference": valid_contents.replace(
+                "pt-doots/agents/reviewer.md", "../agents/reviewer.md"
+            ),
+        }
+
+        for label, contents in cases.items():
+            with self.subTest(label=label):
+                valid.write_text(contents, encoding="utf-8")
+                report = self.validator.validate_repository(self.root)
+                self.assertTrue(
+                    any(
+                        error.startswith(
+                            "invalid agent adapter: codex/agents/reviewer.toml"
+                        )
+                        for error in report.errors
+                    )
+                )
 
     def test_validates_relative_references_without_escaping_repository(self) -> None:
         target = self.write("commands/ship.md", "content\n")

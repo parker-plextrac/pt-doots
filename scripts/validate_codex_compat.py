@@ -10,6 +10,13 @@ from pathlib import Path
 from typing import Any
 
 
+MODEL_MAPPING = {
+    "haiku": "gpt-5.6-luna",
+    "sonnet": "gpt-5.6-terra",
+    "opus": "gpt-5.6-sol",
+}
+
+
 class Inventories:
     """Canonical command and agent files discovered from a repository root."""
 
@@ -175,9 +182,20 @@ def validate_repository(root: Path) -> ValidationReport:
         if path.stem not in inventories.agents:
             errors.append(f"unexpected agent adapter: {relative}")
         try:
-            parse_toml(path)
+            adapter = parse_toml(path)
         except (OSError, tomllib.TOMLDecodeError, ValueError):
             errors.append(f"malformed agent adapter: {relative}")
+            continue
+
+        canonical_path = inventories.agents.get(path.stem)
+        if canonical_path is None:
+            continue
+        try:
+            canonical = parse_markdown_frontmatter(canonical_path)
+        except (OSError, ValueError):
+            continue
+        for detail in validate_agent_adapter(path.stem, canonical, adapter):
+            errors.append(f"invalid agent adapter: {relative} ({detail})")
 
     return ValidationReport(
         command_count=len(inventories.commands),
@@ -194,6 +212,61 @@ def _skill_paths(root: Path) -> list[Path]:
 def _agent_adapter_paths(root: Path) -> list[Path]:
     agents = root / "codex" / "agents"
     return sorted(path for path in agents.glob("*.toml") if path.is_file()) if agents.is_dir() else []
+
+
+def validate_agent_adapter(
+    name: str,
+    canonical: dict[str, str],
+    adapter: dict[str, Any],
+) -> list[str]:
+    """Return semantic compatibility errors for one canonical-agent adapter pair."""
+    errors: list[str] = []
+    expected_model = MODEL_MAPPING.get(canonical.get("model"))
+    expected_sandbox = (
+        "workspace-write" if "Write" in canonical.get("tools", "").split() else "read-only"
+    )
+    expected_values = {
+        "name": canonical.get("name"),
+        "description": canonical.get("description"),
+        "model": expected_model,
+        "model_reasoning_effort": canonical.get("effort"),
+        "sandbox_mode": expected_sandbox,
+    }
+    for field, expected in expected_values.items():
+        actual = adapter.get(field)
+        if not isinstance(actual, str) or not actual.strip():
+            errors.append(f"missing required field `{field}`")
+        elif actual != expected:
+            errors.append(f"field `{field}` must be `{expected}`")
+
+    instructions = adapter.get("developer_instructions")
+    if not isinstance(instructions, str) or not instructions.strip():
+        errors.append("missing required field `developer_instructions`")
+        return errors
+
+    prompt_reference = f"pt-doots/agents/{name}.md"
+    required_markers = (
+        "walking upward",
+        "product-core-backend",
+        "product-core-frontend",
+        "product-services-export",
+        "product-services-mcp",
+        prompt_reference,
+        "complete canonical agent file",
+        "canonical file wins",
+        f"maxTurns {canonical.get('maxTurns', '')}",
+        "interaction/tool-call budget",
+        "one task turn only",
+        "PARTIAL",
+        "BLOCKED",
+        "only the orchestrator may follow up",
+    )
+    for marker in required_markers:
+        if not marker or marker not in instructions:
+            errors.append(f"developer_instructions must include `{marker}`")
+    if "../" in instructions or prompt_reference not in instructions:
+        errors.append("developer_instructions must use the safe canonical prompt reference")
+    return errors
 
 
 def main(argv: list[str] | None = None) -> int:
