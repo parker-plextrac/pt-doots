@@ -117,6 +117,60 @@ class CodexCompatibilityTests(unittest.TestCase):
             self.assertLessEqual(len(body), 800)
             self.assertNotIn("```", body)
 
+    def test_agent_adapters_match_canonical_metadata_and_runtime_contract(self) -> None:
+        canonical_agents = self.validator.discover_inventories(REPOSITORY_ROOT).agents
+        adapter_paths = sorted((REPOSITORY_ROOT / "codex" / "agents").glob("*.toml"))
+        adapter_names = {path.stem for path in adapter_paths}
+        if adapter_names != set(canonical_agents):
+            self.fail("Codex agent adapters must exactly match top-level canonical agents")
+
+        model_mapping = {
+            "haiku": "gpt-5.6-luna",
+            "sonnet": "gpt-5.6-terra",
+            "opus": "gpt-5.6-sol",
+        }
+        writers = {
+            "implementer",
+            "test-writer",
+            "team-manager",
+            "documentarian",
+            "repro-verifier",
+        }
+        for name, canonical_path in canonical_agents.items():
+            canonical = self.validator.parse_markdown_frontmatter(canonical_path)
+            adapter = self.validator.parse_toml(
+                REPOSITORY_ROOT / "codex" / "agents" / f"{name}.toml"
+            )
+            instructions = adapter["developer_instructions"]
+            canonical_tools = canonical.get("tools", "").split()
+
+            self.assertEqual(adapter["name"], canonical["name"])
+            self.assertEqual(adapter["description"], canonical["description"])
+            self.assertEqual(adapter["model"], model_mapping[canonical["model"]])
+            self.assertEqual(adapter["model_reasoning_effort"], canonical["effort"])
+            expected_sandbox = "workspace-write" if name in writers else "read-only"
+            self.assertEqual(adapter["sandbox_mode"], expected_sandbox)
+            self.assertEqual("Write" in canonical_tools, name in writers)
+            self.assertIsInstance(instructions, str)
+            self.assertIn("walking upward", instructions)
+            self.assertIn("product-core-backend", instructions)
+            self.assertIn(f"pt-doots/agents/{name}.md", instructions)
+            self.assertIn("complete canonical agent file", instructions)
+            self.assertIn("canonical file wins", instructions)
+            self.assertIn(canonical["maxTurns"], instructions)
+            self.assertIn("interaction/tool-call budget", instructions)
+            self.assertIn("one task turn only", instructions)
+            self.assertIn("PARTIAL", instructions)
+            self.assertIn("BLOCKED", instructions)
+            self.assertIn("only the orchestrator may follow up", instructions)
+            self.assertLessEqual(len(instructions), 1400)
+            self.assertNotIn("##", instructions)
+
+        repro_instructions = self.validator.parse_toml(
+            REPOSITORY_ROOT / "codex" / "agents" / "repro-verifier.toml"
+        )["developer_instructions"]
+        self.assertIn("must not write application code", repro_instructions)
+
     def test_parses_markdown_frontmatter_and_rejects_malformed_input(self) -> None:
         good = self.write(
             "commands/ship.md",
@@ -220,7 +274,7 @@ class CodexCompatibilityTests(unittest.TestCase):
         self.assertEqual(report.command_count, 1)
         self.assertEqual(report.agent_count, 1)
 
-    def test_current_repository_parity_fails_until_later_agent_adapters_exist(self) -> None:
+    def test_current_repository_parity_passes_with_complete_adapters(self) -> None:
         completed = subprocess.run(
             ["python3", str(VALIDATOR_PATH), str(REPOSITORY_ROOT)],
             capture_output=True,
@@ -228,11 +282,11 @@ class CodexCompatibilityTests(unittest.TestCase):
             check=False,
         )
 
-        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(completed.returncode, 0)
         self.assertIn("Diagnostic: canonical commands=6", completed.stdout)
         self.assertIn("Diagnostic: canonical agents=15", completed.stdout)
         self.assertNotIn("missing command adapter:", completed.stdout)
-        self.assertIn("missing agent adapter: codex/agents/implementer.toml", completed.stdout)
+        self.assertNotIn("missing agent adapter:", completed.stdout)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,8 @@
+name = "voice-stylist"
+description = """Rewrites prose drafts (PR review comments, Slack messages, Jira comments) into the user's voice. Loads a bundled universal profile plus any user-specific overlay files from memory, then applies them as a layered rule set. Returns the rewrite only, no commentary. Use as the final pass on any human-facing draft before it's shown to the user."""
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
+sandbox_mode = "read-only"
+developer_instructions = """Locate the PlexTrac workspace by walking upward from cwd for known sibling repos including product-core-backend, product-core-frontend, product-services-export, and product-services-mcp. Load the complete canonical agent file at pt-doots/agents/voice-stylist.md before work; the canonical file wins on behavior.
+
+Treat the original maxTurns 8 as an interaction/tool-call budget. Run one task turn only. If exhausted or unable to complete the work, return the required canonical output marked PARTIAL or BLOCKED; only the orchestrator may follow up."""

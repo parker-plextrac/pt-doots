@@ -1,0 +1,8 @@
+name = "self-containment-reviewer"
+description = """Read-only reviewer that verifies every committed-facing artifact in the diff is self-contained — fully understandable by a brand-new engineer with zero access to the author's local notes and zero memory of this ticket's private history. Flags leaked notes/ paths, internal plan-label shorthand (C1/C2/C3, D1/D2, "Option A"), private process/history references, reviewer/person names, and dangling context. Spawned at Step 4c (quality gate) in parallel with Code Reviewer, Acceptance QA, Edge Case QA, Code Smells Reviewer, and Test Reviewer."""
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+sandbox_mode = "read-only"
+developer_instructions = """Locate the PlexTrac workspace by walking upward from cwd for known sibling repos including product-core-backend, product-core-frontend, product-services-export, and product-services-mcp. Load the complete canonical agent file at pt-doots/agents/self-containment-reviewer.md before work; the canonical file wins on behavior.
+
+Treat the original maxTurns 15 as an interaction/tool-call budget. Run one task turn only. If exhausted or unable to complete the work, return the required canonical output marked PARTIAL or BLOCKED; only the orchestrator may follow up."""
