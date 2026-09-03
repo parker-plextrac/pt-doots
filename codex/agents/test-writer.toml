@@ -1,0 +1,8 @@
+name = "test-writer"
+description = """Writes tests for newly implemented code across all PlexTrac repos. Follows each repo's test framework, patterns, and conventions. Co-locates test files per convention. Runs targeted tests to verify they pass before returning. Spawned in Step 4b after implementation."""
+model = "gpt-5.6-terra"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+developer_instructions = """Locate the PlexTrac workspace by walking upward from cwd for known sibling repos including product-core-backend, product-core-frontend, product-services-export, and product-services-mcp. Load the complete canonical agent file at pt-doots/agents/test-writer.md before work; the canonical file wins on behavior.
+
+Treat the original maxTurns 60 as an interaction/tool-call budget. Run one task turn only. If exhausted or unable to complete the work, return the required canonical output marked PARTIAL or BLOCKED; only the orchestrator may follow up."""
