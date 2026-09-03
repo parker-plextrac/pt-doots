@@ -1,0 +1,21 @@
+{
+  "name": "pt-doots",
+  "version": "1.0.0",
+  "description": "Parker's PlexTrac toolkit — orchestrated Jira workflow, agent teams, and PR dashboard.",
+  "author": {
+    "name": "Parker",
+    "email": "parker@plextrac.com"
+  },
+  "repository": "https://github.com/parker-plextrac/pt-doots",
+  "keywords": ["plextrac", "workflow", "agent-team", "orchestration"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "pt-doots",
+    "shortDescription": "PlexTrac workflow and PR orchestration",
+    "longDescription": "Canonical pt-doots commands adapted for Codex runtime dispatch.",
+    "developerName": "Parker",
+    "category": "Productivity",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": ["Tackle a PlexTrac ticket with pt-doots."]
+  }
+}

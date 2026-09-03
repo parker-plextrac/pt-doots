@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import tempfile
 import unittest
@@ -77,6 +78,44 @@ class CodexCompatibilityTests(unittest.TestCase):
 
     def test_tests_directory_is_an_importable_package(self) -> None:
         self.assertTrue((REPOSITORY_ROOT / "tests" / "__init__.py").is_file())
+
+    def test_codex_manifest_reuses_plugin_identity_and_declares_skills(self) -> None:
+        codex_manifest_path = REPOSITORY_ROOT / ".codex-plugin" / "plugin.json"
+        claude_manifest_path = REPOSITORY_ROOT / ".claude-plugin" / "plugin.json"
+        if not codex_manifest_path.is_file():
+            self.fail("Codex plugin manifest is missing")
+
+        codex_manifest = json.loads(codex_manifest_path.read_text(encoding="utf-8"))
+        claude_manifest = json.loads(claude_manifest_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(codex_manifest["name"], claude_manifest["name"])
+        self.assertEqual(codex_manifest["version"], claude_manifest["version"])
+        self.assertEqual(codex_manifest["skills"], "./skills/")
+        self.assertNotIn("mcpServers", codex_manifest)
+
+    def test_command_skill_wrappers_have_exact_thin_canonical_mapping(self) -> None:
+        command_names = set(self.validator.discover_inventories(REPOSITORY_ROOT).commands)
+        skill_paths = sorted((REPOSITORY_ROOT / "skills").glob("*/SKILL.md"))
+        self.assertEqual({path.parent.name for path in skill_paths}, command_names)
+
+        for name in command_names:
+            path = REPOSITORY_ROOT / "skills" / name / "SKILL.md"
+            if not path.is_file():
+                self.fail(f"Codex skill wrapper is missing: {path}")
+            contents = path.read_text(encoding="utf-8")
+            frontmatter = self.validator.parse_markdown_frontmatter(path)
+            body = contents.split("\n---\n", 1)[1]
+
+            self.assertEqual(frontmatter["name"], name)
+            self.assertTrue(frontmatter.get("description", "").strip())
+            self.assertEqual(body.count(f"commands/{name}.md"), 1)
+            self.assertIn("PLUGIN_ROOT", body)
+            self.assertIn("complete canonical command file", body)
+            self.assertIn("reference/codex-compatibility.md", body)
+            self.assertIn("runtime translation", body)
+            self.assertIn("argument semantics and approval gates", body)
+            self.assertLessEqual(len(body), 800)
+            self.assertNotIn("```", body)
 
     def test_parses_markdown_frontmatter_and_rejects_malformed_input(self) -> None:
         good = self.write(
@@ -181,7 +220,7 @@ class CodexCompatibilityTests(unittest.TestCase):
         self.assertEqual(report.command_count, 1)
         self.assertEqual(report.agent_count, 1)
 
-    def test_current_repository_parity_fails_until_later_adapters_exist(self) -> None:
+    def test_current_repository_parity_fails_until_later_agent_adapters_exist(self) -> None:
         completed = subprocess.run(
             ["python3", str(VALIDATOR_PATH), str(REPOSITORY_ROOT)],
             capture_output=True,
@@ -192,7 +231,7 @@ class CodexCompatibilityTests(unittest.TestCase):
         self.assertNotEqual(completed.returncode, 0)
         self.assertIn("Diagnostic: canonical commands=6", completed.stdout)
         self.assertIn("Diagnostic: canonical agents=15", completed.stdout)
-        self.assertIn("missing command adapter: skills/pt-doots/SKILL.md", completed.stdout)
+        self.assertNotIn("missing command adapter:", completed.stdout)
         self.assertIn("missing agent adapter: codex/agents/implementer.toml", completed.stdout)
 
 
