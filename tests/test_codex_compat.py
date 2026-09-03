@@ -25,15 +25,23 @@ class CodexCompatibilityTests(unittest.TestCase):
     def setUp(self) -> None:
         self.validator = load_validator()
         self.temp_dir = tempfile.TemporaryDirectory()
+        self.external_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
 
     def tearDown(self) -> None:
+        self.external_dir.cleanup()
         self.temp_dir.cleanup()
 
     def write(self, relative_path: str, content: str) -> Path:
         path = self.root / relative_path
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+        return path
+
+    def symlink(self, relative_path: str, target: Path) -> Path:
+        path = self.root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.symlink_to(target)
         return path
 
     def canonical_command(self, name: str) -> None:
@@ -136,6 +144,30 @@ class CodexCompatibilityTests(unittest.TestCase):
         self.assertIn(
             "unexpected agent adapter: codex/agents/retired-agent.toml", report.errors
         )
+
+    def test_rejects_external_skill_adapter_symlink(self) -> None:
+        self.canonical_command("ship")
+        self.canonical_agent("reviewer")
+        self.agent_adapter("reviewer")
+        external_skill = Path(self.external_dir.name) / "SKILL.md"
+        external_skill.write_text("---\nname: ship\n---\n# Ship\n", encoding="utf-8")
+        self.symlink("skills/ship/SKILL.md", external_skill)
+
+        report = self.validator.validate_repository(self.root)
+
+        self.assertIn("escaped command adapter: skills/ship/SKILL.md", report.errors)
+
+    def test_rejects_external_agent_adapter_symlink(self) -> None:
+        self.canonical_command("ship")
+        self.canonical_agent("reviewer")
+        self.skill("ship")
+        external_adapter = Path(self.external_dir.name) / "reviewer.toml"
+        external_adapter.write_text('name = "reviewer"\n', encoding="utf-8")
+        self.symlink("codex/agents/reviewer.toml", external_adapter)
+
+        report = self.validator.validate_repository(self.root)
+
+        self.assertIn("escaped agent adapter: codex/agents/reviewer.toml", report.errors)
 
     def test_valid_fixture_has_adapter_parity(self) -> None:
         self.canonical_command("ship")
