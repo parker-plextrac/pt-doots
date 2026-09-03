@@ -136,6 +136,63 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
             self.assertLessEqual(len(body), 800)
             self.assertNotIn("```", body)
 
+    def test_runtime_mapping_covers_phase_one_translation_contract(self) -> None:
+        mapping_path = REPOSITORY_ROOT / "reference" / "codex-compatibility.md"
+        if not mapping_path.is_file():
+            self.fail("Codex runtime compatibility mapping is missing")
+        mapping = mapping_path.read_text(encoding="utf-8")
+
+        required_topics = (
+            "named-agent dispatch",
+            "haiku → gpt-5.6-luna",
+            "sonnet → gpt-5.6-terra",
+            "opus → gpt-5.6-sol",
+            "advisory",
+            "maxTurns",
+            "canonical file wins",
+            "inline complete context",
+            "progress.md",
+            "before dispatch",
+            "after each step",
+            "one decision at a time",
+            "flag-and-wait",
+            "completion barrier",
+            "real agent result",
+            "worktree isolation",
+            "tool-name",
+            "${HOME}/.claude/pt-doots",
+            "REST helper",
+            "Atlassian MCP",
+            "never reads or writes product source",
+            "parallel quality gate",
+            "repro-verifier",
+            "documentation gate",
+            "~/.codex/agents",
+            "symlink",
+            "spawn_agent",
+            "followup_task",
+            "wait_agent",
+            "read-only",
+            "workspace-write",
+            "one task turn",
+            "not a hard runtime limit",
+        )
+        for topic in required_topics:
+            self.assertIn(topic, mapping)
+        self.assertLessEqual(len(mapping), 6000)
+
+    def test_command_skills_read_canonical_command_before_runtime_mapping(self) -> None:
+        command_names = self.validator.discover_inventories(REPOSITORY_ROOT).commands
+        for name in command_names:
+            contents = (REPOSITORY_ROOT / "skills" / name / "SKILL.md").read_text(
+                encoding="utf-8"
+            )
+            self.assertLess(
+                contents.index(f"commands/{name}.md"),
+                contents.index("reference/codex-compatibility.md"),
+            )
+            self.assertIn("If it conflicts with the canonical command", contents)
+
     def test_agent_adapters_match_canonical_metadata_and_runtime_contract(self) -> None:
         canonical_agents = self.validator.discover_inventories(REPOSITORY_ROOT).agents
         adapter_paths = sorted((REPOSITORY_ROOT / "codex" / "agents").glob("*.toml"))
