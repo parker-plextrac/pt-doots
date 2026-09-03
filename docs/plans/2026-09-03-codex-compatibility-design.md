@@ -8,7 +8,7 @@ Make the complete `pt-doots` harness available in both Claude Code and Codex whi
 
 - Preserve the existing Claude Code behavior and packaging.
 - Load Codex directly from the live local checkout; do not require publishing a marketplace release during development.
-- Support all six commands and all sixteen agents as one atomic compatibility surface.
+- Support all six commands and every top-level agent as one atomic compatibility surface.
 - Keep shared prompts, references, scripts, overlays, telemetry formats, and progress files in their current locations.
 - Do not duplicate the workflow into independently maintained Claude and Codex implementations.
 - Preserve unrelated working-tree edits, including the current voice-stylist changes.
@@ -22,11 +22,17 @@ Codex receives a thin platform adapter in the same repository:
 
 - `.codex-plugin/plugin.json` identifies the checkout as a Codex plugin.
 - Codex skills provide entry points corresponding to every command.
-- Codex subagent definitions expose every agent using Codex-native metadata and tool names while referring to the canonical agent prompt content.
+- Codex subagent definitions expose every agent using Codex-native metadata and tool names while referring to the canonical agent prompt content. A local onboarding script links these definitions into `~/.codex/agents/`; the checked-in checkout remains authoritative.
 - Small compatibility mappings translate runtime-specific concepts such as slash-command arguments, tool identifiers, task dispatch, model selection, and lifecycle behavior.
 - Shared references, scripts, overlays, telemetry, and `notes/{TICKET}/` artifacts are consumed in place by both runtimes.
 
 This follows the established Codex orchestration pattern used by projects such as Oh My Codex: workflow skills drive role-based agents, parallel reviewers operate on a shared scope, and durable state lives outside transient conversations. That pattern informs only the Codex adapter; it does not replace or refactor the `pt-doots` workflow.
+
+## Phase 1 Source of Truth
+
+This compatibility work is an experiment. For Phase 1, the existing Claude Code files remain authoritative. Codex adapters read and apply those files rather than moving their bodies into a new neutral hierarchy.
+
+A future platform-neutral core remains a deliberate follow-up design: canonical command and agent bodies would move outside both runtime adapters, with Claude and Codex each receiving thin metadata wrappers and live symlinks. That refactor is explicitly deferred until the Phase 1 integration has produced evidence about the real compatibility boundaries.
 
 ## Source-of-Truth Rules
 
@@ -41,10 +47,22 @@ This follows the established Codex orchestration pattern used by projects such a
 The initial change is all-or-nothing:
 
 - Commands: `pt-doots`, `prs`, `bootstrap-team`, `team-audit`, `voice-profile`, and `publish-docs`.
-- Agents: all sixteen definitions currently under `agents/`.
+- Agents: every top-level definition currently under `agents/` (15 at design time). Validation derives this inventory from the filesystem rather than relying on a handwritten count.
 - Shared dependencies: PlexTrac agent skills, Jira and Confluence REST helpers, GitHub CLI, repository instruction files, hooks, scripts, overlays, telemetry, and progress formats.
 
 No partial installation will be described as supported.
+
+### Model and budget mapping
+
+Claude model tiers map by intent:
+
+- `haiku` → `gpt-5.6-luna`
+- `sonnet` → `gpt-5.6-terra`
+- `opus` → `gpt-5.6-sol`
+
+Reasoning effort maps directly where supported.
+
+Codex custom-agent configuration does not expose Claude Code's `maxTurns` setting. Phase 1 therefore preserves each declared limit as an explicit agent budget, runs each spawn as one bounded task turn, and requires a blocked or partial report instead of autonomous continuation after the budget is exhausted. The orchestrator alone decides whether to send a follow-up. This is an advisory compatibility boundary rather than a hard runtime counter and must be documented honestly.
 
 ## Local Development and Loading
 
@@ -65,7 +83,7 @@ Automated validation will verify:
 - The Codex plugin can be discovered from the live checkout.
 - Representative orchestration paths resolve all required agents and dependencies.
 
-The change is complete only when all six commands, all sixteen agents, manifests, and documentation pass validation together.
+The change is complete only when all six commands, every canonical agent, manifests, and documentation pass validation together.
 
 ## Documentation
 
@@ -96,7 +114,7 @@ Architecture and development documents containing Claude-only assumptions will b
 - Claude Code continues to load and operate the existing harness.
 - Codex loads the same checkout as a local plugin.
 - All six commands are available through Codex skills.
-- All sixteen agents can be dispatched through Codex-native subagent support.
+- Every canonical agent can be dispatched through Codex-native subagent support.
 - Shared ticket state and telemetry remain compatible across platforms.
 - Parity validation detects missing or stale adapters.
 - README onboarding supports a fresh Claude Code or Codex installation.
