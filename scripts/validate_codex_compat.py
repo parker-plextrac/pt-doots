@@ -95,15 +95,23 @@ def validate_relative_reference(root: Path, reference: str) -> str | None:
     if candidate.is_absolute():
         return f"reference must be relative: {reference}"
 
-    root = root.resolve()
-    resolved = (root / candidate).resolve()
-    try:
-        resolved.relative_to(root)
-    except ValueError:
+    resolved = resolve_within_root(root, root / candidate)
+    if resolved is None:
         return f"relative reference escapes repository: {reference}"
     if not resolved.is_file():
         return f"relative reference does not exist: {reference}"
     return None
+
+
+def resolve_within_root(root: Path, path: Path) -> Path | None:
+    """Resolve a path only when its final target remains inside ``root``."""
+    root = root.resolve()
+    try:
+        resolved = path.resolve()
+        resolved.relative_to(root)
+    except (OSError, ValueError):
+        return None
+    return resolved
 
 
 def discover_inventories(root: Path) -> Inventories:
@@ -128,10 +136,14 @@ def validate_repository(root: Path) -> ValidationReport:
 
     for kind, definitions in (("command", inventories.commands), ("agent", inventories.agents)):
         for name, path in definitions.items():
+            relative = path.relative_to(root)
+            if resolve_within_root(root, path) is None:
+                errors.append(f"escaped canonical {kind}: {relative}")
+                continue
             try:
                 parse_markdown_frontmatter(path)
             except (OSError, ValueError) as error:
-                errors.append(f"malformed canonical {kind}: {path.relative_to(root)} ({error})")
+                errors.append(f"malformed canonical {kind}: {relative} ({error})")
 
     skill_paths = _skill_paths(root)
     for name in inventories.commands:
@@ -140,6 +152,9 @@ def validate_repository(root: Path) -> ValidationReport:
             errors.append(f"missing command adapter: skills/{name}/SKILL.md")
     for path in skill_paths:
         relative = path.relative_to(root)
+        if resolve_within_root(root, path) is None:
+            errors.append(f"escaped command adapter: {relative}")
+            continue
         if path.parent.name not in inventories.commands:
             errors.append(f"unexpected command adapter: {relative}")
         try:
@@ -154,6 +169,9 @@ def validate_repository(root: Path) -> ValidationReport:
             errors.append(f"missing agent adapter: codex/agents/{name}.toml")
     for path in agent_paths:
         relative = path.relative_to(root)
+        if resolve_within_root(root, path) is None:
+            errors.append(f"escaped agent adapter: {relative}")
+            continue
         if path.stem not in inventories.agents:
             errors.append(f"unexpected agent adapter: {relative}")
         try:
