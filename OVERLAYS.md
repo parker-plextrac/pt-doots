@@ -4,6 +4,15 @@
 
 pt-doots agents are tuned via **overlay files** in user memory, not by editing the plugin tree. This keeps personal preferences upgrade-safe — `git pull` on the plugin never clobbers your tweaks.
 
+## Codex compatibility
+
+These are Claude Code user-memory preference overlays. They remain owned by the
+Claude path during Phase 1 and are not copied into Codex skills or custom-agent
+TOML files. Codex adapters load canonical behavior from `commands/*.md` and
+`agents/*.md`; see [Codex onboarding](./docs/codex-onboarding.md) for the live
+checkout and reload rules. Keep a personal preference here, and change shared
+behavior in the canonical file instead.
+
 ## Where overlays live
 
 `~/.claude/projects/{project}/memory/feedback_{agent-slug}_<topic>.md`

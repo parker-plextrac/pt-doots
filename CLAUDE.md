@@ -33,6 +33,25 @@
 
 **Editing mechanics:** this is the inline dev checkout (`pt-doots@inline`); edits go live on the next session reload, no reinstall. Work on `main`.
 
+## Codex compatibility
+
+Claude Code remains canonical for Phase 1: `commands/*.md`, top-level
+`agents/*.md`, Claude packaging, hooks, and preference overlays keep their
+current ownership. Codex is a thin adapter in the same checkout, not a second
+workflow. When changing a canonical command or agent, update its matching
+`skills/` or `codex/agents/` adapter and run:
+
+```bash
+python3 scripts/validate_codex_compat.py .
+python3 -m unittest discover -s tests -v
+```
+
+The live Codex setup and its supported-host limits are in
+[`docs/codex-onboarding.md`](./docs/codex-onboarding.md). Do not move prompt
+bodies into a platform-neutral core yet; that design is deferred until the
+Phase 1 integration has real evidence. Codex named-agent selection is fail
+closed, so never replace an unavailable named adapter with a generic agent.
+
 ## How to tune agent behavior
 
 When the user asks to change how a pt-doots agent reviews, drafts, or
