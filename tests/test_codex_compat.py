@@ -143,7 +143,7 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
         mapping = mapping_path.read_text(encoding="utf-8")
 
         required_topics = (
-            "named-agent dispatch",
+            "Named-agent dispatch",
             "haiku → gpt-5.6-luna",
             "sonnet → gpt-5.6-terra",
             "opus → gpt-5.6-sol",
@@ -180,6 +180,28 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
         for topic in required_topics:
             self.assertIn(topic, mapping)
         self.assertLessEqual(len(mapping), 6000)
+
+    def test_runtime_mapping_fails_closed_when_named_agent_dispatch_is_unavailable(self) -> None:
+        mapping = (
+            REPOSITORY_ROOT / "reference" / "codex-compatibility.md"
+        ).read_text(encoding="utf-8")
+        normalized_mapping = " ".join(mapping.split())
+
+        required_guardrails = (
+            "registered custom agent name",
+            "not selected",
+            "STOP",
+            "must not fall back to a generic or prompt-only agent",
+            "Task 7",
+            "fresh-session integration gate",
+            "Successful named-agent selection",
+            "model, sandbox, and developer instructions",
+            "Only after the runtime confirms named-agent selection",
+        )
+        for guardrail in required_guardrails:
+            self.assertIn(guardrail, normalized_mapping)
+        self.assertNotIn("sandbox_mode is inherited by that task", mapping)
+        self.assertNotIn("adapter selects the minimum mode", mapping)
 
     def test_command_skills_read_canonical_command_before_runtime_mapping(self) -> None:
         command_names = self.validator.discover_inventories(REPOSITORY_ROOT).commands
