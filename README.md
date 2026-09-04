@@ -34,15 +34,16 @@ short [Codex onboarding guide](./docs/codex-onboarding.md); it has the exact
 setup, verification, reload, permissions, and troubleshooting steps. In short:
 
 ```bash
-python3 scripts/setup_codex.py --dry-run --links-only
-python3 scripts/setup_codex.py --links-only
-codex plugin marketplace add "$(pwd)"
-codex plugin add pt-doots@pt-doots-local
+python3 scripts/setup_codex.py --dry-run
+python3 scripts/setup_codex.py
 ```
 
-The Codex wrappers never replace the Claude command or agent definitions. If
-you edit a live checkout, start a new Codex thread after reloading so it sees
-the revised skills and linked adapters.
+The Codex wrappers never replace the Claude command or agent definitions. The
+installer registers each checked-in adapter directly in `~/.codex/config.toml`;
+after editing an adapter, start a new Codex thread so it reloads. Codex
+caches installed plugin skills and canonical files by plugin version, so use
+the cachebuster/reinstall procedure in the onboarding guide after changing
+those files.
 
 ## Tuning agent behavior
 

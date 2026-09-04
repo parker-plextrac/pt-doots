@@ -1,4 +1,4 @@
-"""Tests for safe, checkout-backed Codex onboarding."""
+"""Tests for direct, checkout-backed Codex named-agent onboarding."""
 
 from __future__ import annotations
 
@@ -6,9 +6,10 @@ import json
 import subprocess
 import sys
 import tempfile
+import tomllib
 import unittest
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import create_autospec
 
 from scripts import setup_codex
 
@@ -22,12 +23,16 @@ class SetupCodexTests(unittest.TestCase):
         self.root = Path(self.temporary_directory.name) / "checkout"
         self.home = Path(self.temporary_directory.name) / "home"
         self.write("codex/agents/alpha.toml", 'name = "alpha"\n')
-        self.write(".agents/plugins/marketplace.json", "{}\n")
-        self.validator_runner = Mock(
-            return_value=subprocess.CompletedProcess([], 0, stdout="ok", stderr="")
+        self.write("codex/agents/beta.toml", 'name = "beta"\n')
+        self.write(".codex-plugin/plugin.json", '{"name": "pt-doots"}\n')
+        self.write(".agents/plugins/marketplace.json", '{"name": "pt-doots-local"}\n')
+        self.validator_runner = create_autospec(
+            subprocess.run,
+            return_value=subprocess.CompletedProcess([], 0, stdout="ok", stderr=""),
         )
-        self.cli_runner = Mock(
-            return_value=subprocess.CompletedProcess([], 0, stdout="registered", stderr="")
+        self.cli_runner = create_autospec(
+            subprocess.run,
+            return_value=subprocess.CompletedProcess([], 0, stdout="registered", stderr=""),
         )
 
     def tearDown(self) -> None:
@@ -40,144 +45,155 @@ class SetupCodexTests(unittest.TestCase):
         return path
 
     def setup(self, **kwargs: object) -> setup_codex.SetupResult:
-        return setup_codex.setup_codex(
-            checkout=self.root,
-            home=self.home,
-            validator_runner=self.validator_runner,
-            cli_runner=self.cli_runner,
-            **kwargs,
-        )
+        return setup_codex.setup_codex(checkout=self.root, home=self.home, validator_runner=self.validator_runner, cli_runner=self.cli_runner, **kwargs)
 
-    def test_creates_live_agent_links_after_preflight(self) -> None:
+    @property
+    def config_path(self) -> Path:
+        return self.home / ".codex" / "config.toml"
+
+    def test_registers_direct_config_files_for_every_adapter_after_preflight(self) -> None:
         result = self.setup(links_only=True)
 
-        destination = self.home / ".codex" / "agents" / "alpha.toml"
-        self.assertTrue(destination.is_symlink())
-        self.assertEqual(destination.resolve(), (self.root / "codex/agents/alpha.toml").resolve())
-        self.assertEqual(result.linked, (destination,))
-        self.assertEqual(
-            self.validator_runner.call_args.args[0],
-            [
-                sys.executable,
-                str(self.root.resolve() / "scripts/validate_codex_compat.py"),
-                str(self.root.resolve()),
-            ],
-        )
+        config = tomllib.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(config["agents"]["alpha"]["config_file"], str((self.root / "codex/agents/alpha.toml").resolve()))
+        self.assertEqual(config["agents"]["beta"]["config_file"], str((self.root / "codex/agents/beta.toml").resolve()))
+        self.assertEqual(result.registered, ("alpha", "beta"))
+        self.assertFalse((self.home / ".codex" / "agents").exists())
+        self.assertEqual(self.validator_runner.call_args.args[0], [sys.executable, str(self.root.resolve() / "scripts/validate_codex_compat.py"), str(self.root.resolve())])
 
-    def test_correct_owned_link_is_idempotent(self) -> None:
+    def test_correct_direct_registrations_are_idempotent(self) -> None:
         self.setup(links_only=True)
 
         result = self.setup(links_only=True)
 
-        self.assertEqual(result.linked, ())
-        self.assertEqual(result.unchanged, (self.home / ".codex/agents/alpha.toml",))
+        self.assertEqual(result.registered, ())
+        self.assertEqual(result.unchanged, ("alpha", "beta"))
+        self.assertEqual(self.config_path.read_text(encoding="utf-8").count(setup_codex.MANAGED_BLOCK_START), 1)
 
-    def test_refuses_colliding_files_and_non_owned_links(self) -> None:
-        destination = self.home / ".codex" / "agents" / "alpha.toml"
-        destination.parent.mkdir(parents=True)
-        foreign = self.write("foreign/alpha.toml", 'name = "foreign"\n')
+    def test_preserves_unrelated_config_and_unrelated_named_agents(self) -> None:
+        original = 'model = "gpt-5.6"\n\n[agents."foreign"]\nconfig_file = "/tmp/foreign.toml"\n'
+        self.config_path.parent.mkdir(parents=True)
+        self.config_path.write_text(original, encoding="utf-8")
 
-        collisions: dict[str, object] = {
-            "real file": lambda: destination.write_text("keep", encoding="utf-8"),
-            "broken symlink": lambda: destination.symlink_to(self.root / "missing.toml"),
-            "foreign symlink": lambda: destination.symlink_to(foreign),
-            "other checkout link": lambda: destination.symlink_to(
-                Path(self.temporary_directory.name) / "other/codex/agents/alpha.toml"
-            ),
-        }
-        for label, create in collisions.items():
-            with self.subTest(label=label):
-                if destination.exists() or destination.is_symlink():
-                    destination.unlink()
-                if label == "other checkout link":
-                    other_source = Path(self.temporary_directory.name) / "other/codex/agents/alpha.toml"
-                    other_source.parent.mkdir(parents=True, exist_ok=True)
-                    other_source.write_text('name = "other"\n', encoding="utf-8")
-                create()
-                with self.assertRaisesRegex(setup_codex.SetupError, "refusing to overwrite"):
-                    self.setup(links_only=True)
+        self.setup(links_only=True)
 
-    def test_refuses_a_symlinked_codex_agent_directory(self) -> None:
-        external_directory = Path(self.temporary_directory.name) / "external-agents"
-        external_directory.mkdir()
-        codex_directory = self.home / ".codex"
-        codex_directory.mkdir(parents=True)
-        (codex_directory / "agents").symlink_to(external_directory, target_is_directory=True)
+        contents = self.config_path.read_text(encoding="utf-8")
+        config = tomllib.loads(contents)
+        self.assertIn(original.rstrip(), contents)
+        self.assertEqual(config["model"], "gpt-5.6")
+        self.assertEqual(config["agents"]["foreign"]["config_file"], "/tmp/foreign.toml")
 
-        with self.assertRaisesRegex(
-            setup_codex.SetupError, "refusing to use symlinked Codex agent directory"
-        ):
+    def test_matching_unmanaged_registration_is_preserved_and_idempotent(self) -> None:
+        self.config_path.parent.mkdir(parents=True)
+        self.config_path.write_text(f'[agents."alpha"]\nconfig_file = {json.dumps(str((self.root / "codex/agents/alpha.toml").resolve()))}\n', encoding="utf-8")
+
+        result = self.setup(links_only=True)
+
+        self.assertEqual(result.registered, ("beta",))
+        self.assertEqual(result.unchanged, ("alpha",))
+
+    def test_refuses_foreign_registration_collision_without_mutating_config(self) -> None:
+        original = '[agents."alpha"]\nconfig_file = "/tmp/foreign.toml"\n'
+        self.config_path.parent.mkdir(parents=True)
+        self.config_path.write_text(original, encoding="utf-8")
+
+        with self.assertRaisesRegex(setup_codex.SetupError, "refusing to overwrite existing named-agent registration: alpha"):
             self.setup(links_only=True)
 
-        self.assertFalse((external_directory / "alpha.toml").exists())
+        self.assertEqual(self.config_path.read_text(encoding="utf-8"), original)
 
-    def test_dry_run_does_not_create_links_or_register_marketplace(self) -> None:
+    def test_full_setup_detects_collision_before_cli_registration(self) -> None:
+        original = '[agents."alpha"]\nconfig_file = "/tmp/foreign.toml"\n'
+        self.config_path.parent.mkdir(parents=True)
+        self.config_path.write_text(original, encoding="utf-8")
+
+        with self.assertRaisesRegex(
+            setup_codex.SetupError,
+            "refusing to overwrite existing named-agent registration: alpha",
+        ):
+            self.setup()
+
+        self.cli_runner.assert_not_called()
+        self.assertEqual(self.config_path.read_text(encoding="utf-8"), original)
+
+    def test_dry_run_does_not_create_config_or_register_marketplace(self) -> None:
         result = self.setup(dry_run=True)
 
-        self.assertFalse((self.home / ".codex").exists())
-        self.assertEqual(result.linked, (self.home / ".codex/agents/alpha.toml",))
+        self.assertFalse(self.config_path.exists())
+        self.assertEqual(result.registered, ("alpha", "beta"))
         self.assertTrue(result.dry_run)
         self.cli_runner.assert_not_called()
         self.assertIn("codex plugin marketplace add", result.manual_command)
 
-    def test_links_only_skips_registration_and_reports_manual_command(self) -> None:
+    def test_agents_only_skips_registration_and_reports_manual_command(self) -> None:
         result = self.setup(links_only=True)
 
         self.cli_runner.assert_not_called()
         self.assertIn(str(self.root.resolve()), result.manual_command)
 
-    def test_uninstall_removes_only_owned_links(self) -> None:
-        owned = self.home / ".codex" / "agents" / "alpha.toml"
-        foreign = self.home / ".codex" / "agents" / "foreign.toml"
-        real_file = self.home / ".codex" / "agents" / "note.txt"
-        owned.parent.mkdir(parents=True)
-        owned.symlink_to(self.root / "codex/agents/alpha.toml")
-        foreign_target = Path(self.temporary_directory.name) / "external/foreign.toml"
-        foreign_target.parent.mkdir(parents=True)
-        foreign_target.write_text('name = "foreign"\n', encoding="utf-8")
-        foreign.symlink_to(foreign_target)
-        real_file.write_text("keep", encoding="utf-8")
+    def test_uninstall_removes_only_installer_owned_registrations(self) -> None:
+        self.config_path.parent.mkdir(parents=True)
+        self.config_path.write_text('model = "gpt-5.6"\n\n[agents."foreign"]\nconfig_file = "/tmp/foreign.toml"\n', encoding="utf-8")
+        self.setup(links_only=True)
 
         result = self.setup(uninstall=True)
 
-        self.assertFalse(owned.exists())
-        self.assertTrue(foreign.is_symlink())
-        self.assertEqual(real_file.read_text(encoding="utf-8"), "keep")
-        self.assertEqual(result.removed, (owned,))
-        self.assertEqual(result.preserved, (foreign, real_file))
+        config = tomllib.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(config["model"], "gpt-5.6")
+        self.assertEqual(config["agents"], {"foreign": {"config_file": "/tmp/foreign.toml"}})
+        self.assertEqual(result.removed, ("alpha", "beta"))
         self.cli_runner.assert_not_called()
 
-    def test_uninstall_preserves_broken_link_lexically_pointing_to_checkout(self) -> None:
-        destination = self.home / ".codex" / "agents" / "stale.toml"
-        destination.parent.mkdir(parents=True)
-        destination.symlink_to(self.root / "codex/agents/removed.toml")
+    def test_uninstall_preserves_unmanaged_matching_registration(self) -> None:
+        self.config_path.parent.mkdir(parents=True)
+        self.config_path.write_text(f'[agents."alpha"]\nconfig_file = {json.dumps(str((self.root / "codex/agents/alpha.toml").resolve()))}\n', encoding="utf-8")
+        self.setup(links_only=True)
+
+        self.setup(uninstall=True)
+
+        config = tomllib.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertIn("alpha", config["agents"])
+        self.assertNotIn("beta", config["agents"])
+
+    def test_uninstall_removes_retired_agent_from_owned_block(self) -> None:
+        self.setup(links_only=True)
+        (self.root / "codex/agents/beta.toml").unlink()
 
         result = self.setup(uninstall=True)
 
-        self.assertTrue(destination.is_symlink())
-        self.assertEqual(result.removed, ())
-        self.assertEqual(result.preserved, (destination,))
+        self.assertEqual(result.removed, ("alpha", "beta"))
+        self.assertEqual(self.config_path.read_text(encoding="utf-8"), "")
 
-    def test_uninstall_preserves_same_checkout_links_that_are_not_owned_pairs(self) -> None:
-        directory = self.home / ".codex" / "agents"
-        directory.mkdir(parents=True)
-        non_adapter_target = self.write("reference/notes.md", "keep\n")
-        non_adapter = directory / "same-checkout-reference.toml"
-        renamed_adapter = directory / "renamed-alpha.toml"
-        non_adapter.symlink_to(non_adapter_target)
-        renamed_adapter.symlink_to(self.root / "codex/agents/alpha.toml")
+    def test_uninstall_preserves_edited_managed_agent_entry(self) -> None:
+        self.setup(links_only=True)
+        contents = self.config_path.read_text(encoding="utf-8").replace(
+            f'config_file = {json.dumps(str((self.root / "codex/agents/alpha.toml").resolve()))}',
+            f'config_file = {json.dumps(str((self.root / "codex/agents/alpha.toml").resolve()))}\nuser_added = "retain-me"',
+        )
+        self.config_path.write_text(contents, encoding="utf-8")
 
-        result = self.setup(uninstall=True)
+        self.setup(uninstall=True)
 
-        self.assertTrue(non_adapter.is_symlink())
-        self.assertTrue(renamed_adapter.is_symlink())
-        self.assertEqual(result.removed, ())
-        self.assertEqual(result.preserved, (renamed_adapter, non_adapter))
+        config = tomllib.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(config["agents"]["alpha"]["user_added"], "retain-me")
+        self.assertNotIn("beta", config["agents"])
+
+    def test_uninstall_preserves_unrelated_table_after_owned_entry(self) -> None:
+        self.setup(links_only=True)
+        contents = self.config_path.read_text(encoding="utf-8").replace(
+            f'[agents.{json.dumps("beta")}]',
+            '[custom]\nvalue = "retain-me"\n\n'
+            f'[agents.{json.dumps("beta")}]',
+        )
+        self.config_path.write_text(contents, encoding="utf-8")
+
+        self.setup(uninstall=True)
+
+        config = tomllib.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(config["custom"]["value"], "retain-me")
 
     def test_preflight_failure_prevents_any_mutation(self) -> None:
-        self.validator_runner.return_value = subprocess.CompletedProcess(
-            [], 1, stdout="missing adapter", stderr=""
-        )
+        self.validator_runner.return_value = subprocess.CompletedProcess([], 1, stdout="missing adapter", stderr="")
 
         with self.assertRaisesRegex(setup_codex.SetupError, "compatibility preflight failed"):
             self.setup(links_only=True)
@@ -194,68 +210,50 @@ class SetupCodexTests(unittest.TestCase):
         self.assertFalse(self.home.exists())
         self.cli_runner.assert_not_called()
 
-    def test_cli_registration_uses_marketplace_directory_source(self) -> None:
+    def test_symlinked_config_path_fails_closed(self) -> None:
+        self.config_path.parent.mkdir(parents=True)
+        target = self.root / "foreign-config.toml"
+        target.write_text("", encoding="utf-8")
+        self.config_path.symlink_to(target)
+
+        with self.assertRaisesRegex(setup_codex.SetupError, "refusing to modify symlinked Codex configuration"):
+            self.setup(links_only=True)
+
+    def test_cli_setup_registers_marketplace_and_installs_plugin(self) -> None:
         self.setup()
 
-        self.assertEqual(
-            self.cli_runner.call_args.args[0],
-            [
-                "codex",
-                "plugin",
-                "marketplace",
-                "add",
-                str(self.root.resolve()),
-            ],
+        self.assertEqual([call.args[0] for call in self.cli_runner.call_args_list], [["codex", "plugin", "marketplace", "add", str(self.root.resolve())], ["codex", "plugin", "add", "pt-doots@pt-doots-local"]])
+
+    def test_cli_failure_is_nonzero_and_does_not_mutate_config(self) -> None:
+        self.cli_runner.return_value = subprocess.CompletedProcess(
+            [], 1, stdout="", stderr="plugin rejected"
         )
-        self.assertTrue((Path(self.cli_runner.call_args.args[0][-1]) / ".agents/plugins/marketplace.json").is_file())
 
-    def test_setup_refuses_parent_directory_swap_before_link_creation(self) -> None:
-        external_directory = Path(self.temporary_directory.name) / "external-agents"
-        external_directory.mkdir()
-        agents_directory = self.home / ".codex" / "agents"
+        with self.assertRaisesRegex(setup_codex.SetupError, "plugin rejected"):
+            self.setup()
 
-        def swap_parent(event: str, destination: Path) -> None:
-            if event != "before_link":
-                return
-            agents_directory.rename(agents_directory.with_name("agents-original"))
-            agents_directory.symlink_to(external_directory, target_is_directory=True)
+        self.assertFalse(self.config_path.exists())
 
-        with self.assertRaisesRegex(setup_codex.SetupError, "Codex agent directory changed"):
-            self.setup(links_only=True, mutation_hook=swap_parent)
+    def test_unavailable_cli_is_nonzero_and_does_not_mutate_config(self) -> None:
+        self.cli_runner.side_effect = OSError("codex unavailable")
 
-        self.assertFalse((external_directory / "alpha.toml").exists())
-        self.assertFalse((self.home / ".codex/agents-original/alpha.toml").exists())
+        with self.assertRaisesRegex(setup_codex.SetupError, "codex unavailable"):
+            self.setup()
 
-    def test_uninstall_refuses_destination_swap_before_unlink(self) -> None:
-        destination = self.home / ".codex" / "agents" / "alpha.toml"
-        destination.parent.mkdir(parents=True)
-        destination.symlink_to(self.root / "codex/agents/alpha.toml")
-
-        def replace_destination(event: str, candidate: Path) -> None:
-            if event != "before_unlink":
-                return
-            candidate.unlink()
-            candidate.write_text("do not delete", encoding="utf-8")
-
-        with self.assertRaisesRegex(setup_codex.SetupError, "refusing to remove changed agent destination"):
-            self.setup(uninstall=True, mutation_hook=replace_destination)
-
-        self.assertEqual(destination.read_text(encoding="utf-8"), "do not delete")
+        self.assertFalse(self.config_path.exists())
 
     def test_checkout_root_is_derived_from_script_location(self) -> None:
         self.assertEqual(setup_codex.checkout_root(), REPOSITORY_ROOT)
 
     def test_repo_marketplace_entry_resolves_to_plugin_checkout_root(self) -> None:
-        marketplace_path = REPOSITORY_ROOT / ".agents/plugins/marketplace.json"
-        marketplace = json.loads(marketplace_path.read_text(encoding="utf-8"))
-
+        marketplace = json.loads((REPOSITORY_ROOT / ".agents/plugins/marketplace.json").read_text(encoding="utf-8"))
+        entry = marketplace["plugins"][0]
         self.assertEqual(marketplace["name"], "pt-doots-local")
         self.assertEqual(marketplace["interface"]["displayName"], "pt-doots local checkout")
-        self.assertEqual(len(marketplace["plugins"]), 1)
-        entry = marketplace["plugins"][0]
         self.assertEqual(entry["name"], "pt-doots")
         self.assertEqual(entry["source"]["source"], "local")
-        self.assertEqual((marketplace_path.parent / entry["source"]["path"]).resolve(), REPOSITORY_ROOT)
+        self.assertEqual(entry["source"]["path"], ".")
+        self.assertEqual((REPOSITORY_ROOT / entry["source"]["path"]).resolve(), REPOSITORY_ROOT)
         self.assertEqual(entry["policy"], {"installation": "AVAILABLE", "authentication": "ON_INSTALL"})
         self.assertEqual(entry["category"], "Productivity")
 

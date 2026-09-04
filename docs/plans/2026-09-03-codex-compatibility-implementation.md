@@ -4,9 +4,16 @@
 
 **Goal:** Make every current `pt-doots` command and agent available in Codex from the live local checkout without changing the existing Claude Code workflow.
 
-**Architecture:** Existing Claude command and agent files remain canonical during Phase 1. A Codex skills plugin wraps all six commands, checked-in custom-agent adapters load all 15 canonical agent prompts, and an idempotent onboarding script installs live symlinks plus the local plugin. A parity validator derives both inventories from disk and fails on missing, stale, duplicated, or invalid adapters.
+**Architecture:** Existing Claude command and agent files remain canonical during
+Phase 1. A Codex skills plugin wraps all six commands, checked-in custom-agent
+adapters load all 15 canonical agent prompts, and an idempotent onboarding
+script installs direct named-agent `config_file` registrations plus the local
+plugin. A parity validator derives both inventories from disk and fails on
+missing, stale, duplicated, or invalid adapters.
 
-**Tech Stack:** Markdown Agent Skills, Codex plugin JSON, Codex custom-agent TOML, Python 3 standard library, filesystem symlinks, `unittest`, Codex CLI validation.
+**Tech Stack:** Markdown Agent Skills, Codex plugin JSON, Codex custom-agent
+TOML, Python 3 standard library, TOML configuration updates, `unittest`, Codex
+CLI validation.
 
 ---
 
@@ -65,7 +72,7 @@ Reuse the existing plugin identity/version. Each wrapper must read its canonical
 
 ```bash
 python3 -m unittest tests/test_codex_compat.py -v
-python3 /Users/parker/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
+python3 "$HOME/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py" .
 ```
 
 Expected: command/plugin checks pass; agent checks still fail.
@@ -90,7 +97,7 @@ For each canonical agent, assert:
 - Matching name and description.
 - `haiku → gpt-5.6-luna`, `sonnet → gpt-5.6-terra`, `opus → gpt-5.6-sol`.
 - Reasoning effort is preserved.
-- Read-only roles use `sandbox_mode = "read-only"`; writers use the minimum workable write sandbox.
+- Read-only roles declare `sandbox_mode = "read-only"`; writers declare the minimum intended write sandbox. These declarations are forward-compatible intent metadata and are not a security boundary in the current runtime.
 - `developer_instructions` names `pt-doots/agents/<name>.md`, requires reading it in full, states the original `maxTurns` interaction budget, and forbids autonomous continuation after a partial/blocked report.
 
 **Step 2: Run and verify failure**
@@ -149,7 +156,12 @@ git commit -m "docs: define Codex orchestration mapping"
 
 **Step 1: Write failing installer tests**
 
-Against a temporary home, assert setup creates `~/.codex/agents`, symlinks every adapter, refuses to overwrite real/foreign files, is idempotent, supports `--dry-run`, removes only owned links, validates parity before mutation, and can operate in `--links-only` mode.
+Against a temporary home, assert setup creates direct
+`~/.codex/config.toml` named-agent `config_file` registrations for every
+adapter, preserves unrelated TOML and agent registrations, fails closed on name
+collisions, is idempotent, supports `--dry-run`, removes only installer-owned
+registrations, validates parity before mutation, and can operate in
+`--agents-only` mode.
 
 **Step 2: Run and verify failure**
 
@@ -159,7 +171,11 @@ Expected: FAIL because setup is absent.
 
 **Step 3: Implement setup/removal**
 
-Resolve the checkout from `__file__`, never a Parker-specific path. Use explicit `pathlib` targets. Fail closed on collisions. Run parity validation first. Create live agent links, then use supported Codex CLI commands for the repo-local marketplace/plugin registration.
+Resolve the checkout from `__file__`, never a Parker-specific path. Use
+explicit `pathlib` targets. Fail closed on collisions. Run parity validation
+first. Register every live adapter through direct named `config_file` entries,
+then use supported Codex CLI commands for the repo-local marketplace/plugin
+registration.
 
 **Step 4: Add the local marketplace**
 
@@ -219,7 +235,7 @@ git commit -m "docs: add Codex onboarding and maintenance"
 ```bash
 python3 -m unittest discover -s tests -v
 python3 scripts/validate_codex_compat.py
-python3 /Users/parker/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
+python3 "$HOME/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py" .
 jq empty .claude-plugin/plugin.json .claude-plugin/marketplace.json .codex-plugin/plugin.json .agents/plugins/marketplace.json
 python3 -m py_compile scripts/*.py
 ```
@@ -230,7 +246,8 @@ Expected: all commands pass.
 
 Run: `python3 scripts/setup_codex.py`
 
-Expected: every owned agent symlink targets this checkout and Codex reports the local plugin installed/enabled.
+Expected: every owned named-agent `config_file` entry targets this checkout and
+Codex reports the local plugin installed/enabled.
 
 **Step 3: Verify discovery**
 
@@ -238,7 +255,16 @@ Using supported Codex inspection commands, confirm all six skills and every deri
 
 **Step 4: Smoke-test non-mutating paths in a fresh thread**
 
-Exercise status/dry-run paths for `pt-doots`, `prs`, `team-audit`, `voice-profile`, `publish-docs`, and `bootstrap-team`. Confirm canonical files load, named agents route to the expected models, and the orchestrator does not touch product code.
+Exercise status/dry-run paths for `pt-doots`, `prs`, `team-audit`, `voice-profile`, `publish-docs`, and `bootstrap-team`. Confirm canonical files load, named agents route to the expected models and reasoning effort, and the orchestrator does not touch product code.
+
+Run a reversible fresh-session canary with a uniquely registered temporary
+agent and unpredictable response instruction. Confirm collaboration dispatch
+selects that registered instruction and that runtime debug metadata identifies
+the configured child model and reasoning effort independently from the parent.
+Also test a restrictive child sandbox against a broader parent session. Record
+the observed limitation without committing tokens, temporary paths, or
+machine-specific values: the current runtime applies the named instructions,
+model, and reasoning effort but does not enforce the child's `sandbox_mode`.
 
 **Step 5: Verify Claude remains intact**
 
@@ -272,7 +298,10 @@ Record concise pass/fail evidence.
 
 **Step 3: Check acceptance criteria**
 
-Confirm all six commands, every canonical agent, model routing, bounded-agent instructions, shared telemetry, live links, parity detection, and both onboarding paths.
+Confirm all six commands, every canonical agent, model and reasoning routing,
+bounded-agent instructions, the non-enforced per-agent sandbox limitation,
+shared telemetry, live named-agent registrations, parity detection, and both
+onboarding paths.
 
 **Step 4: Prepare handoff**
 

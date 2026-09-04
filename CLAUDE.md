@@ -51,6 +51,8 @@ The live Codex setup and its supported-host limits are in
 bodies into a platform-neutral core yet; that design is deferred until the
 Phase 1 integration has real evidence. Codex named-agent selection is fail
 closed, so never replace an unavailable named adapter with a generic agent.
+Named instructions, model, and reasoning selection are runtime-verified;
+per-agent `sandbox_mode` remains advisory and must not be treated as isolation.
 
 ## How to tune agent behavior
 

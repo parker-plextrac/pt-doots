@@ -5,24 +5,28 @@ its complete canonical command file first, then this mapping; the canonical file
 
 ## Dispatch and agent lifecycle
 
-Checked-in `codex/agents/*.toml` definitions may be installed as live symlinks
-under `~/.codex/agents`, but installation alone neither selects nor proves a
-runtime agent contract. Named-agent dispatch must request the registered custom
-agent name; do not treat `task_name` or a generic `spawn_agent` call as profile
-selection.
+Checked-in `codex/agents/*.toml` definitions are registered as direct
+`[agents."<name>"]` `config_file` entries in `~/.codex/config.toml`, targeting
+the live checkout. Named-agent dispatch must request the registered custom
+agent name through the collaboration runtime; do not treat `task_name` alone or
+a generic `spawn_agent` call as profile selection.
 If the named agent is unavailable, not selected, or its selection cannot be
 confirmed, STOP and report the blocked dispatch. It must not fall back to a generic or prompt-only agent.
-Adapters declare their intended `read-only` or `workspace-write` sandbox; a
-generic dispatch must not be assumed to inherit either setting.
+Fresh-session runtime canaries prove that registered named-agent selection
+applies the adapter's developer instructions, model, and reasoning effort.
+The same canaries prove that this Codex runtime does **not** enforce an
+adapter's `sandbox_mode`: a child declared `read-only` could still write under
+the parent's broader session permissions. Keep `read-only` and
+`workspace-write` declarations as forward-compatible intent metadata, but do
+not treat them as security isolation. Child tool access inherits the parent or
+broader session behavior, so the orchestrator must enforce every canonical
+read/write boundary in the prompt and review the resulting actions.
 
-Successful named-agent selection, including application of its model, sandbox,
-and developer instructions, is an explicit Task 7 fresh-session integration gate,
-not a proven Phase 1 fact. Only after the runtime confirms named-agent selection
-may the orchestrator use `spawn_agent`, `followup_task`, and `wait_agent` for
-that agent's lifecycle. It passes inline complete context: ticket,
+After confirmed named-agent selection, the orchestrator may use `spawn_agent`,
+`followup_task`, and `wait_agent` for that agent's lifecycle. It passes inline complete context: ticket,
 workspace/repository, branch, plan constraints, file surface, prior reports, and
-the exact requested outcome. The current exposed `spawn_agent` surface has no
-named-agent selector, so it cannot establish that contract by itself.
+the exact requested outcome. The CLI has no direct named-agent flag; selection
+is performed by requesting the registered name through collaboration dispatch.
 
 Treat a completed turn as a report, not completion proof. Use `wait_agent` for a
 real agent result before dependent work, and apply a completion barrier before

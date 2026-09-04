@@ -28,6 +28,8 @@ class CodexCompatibilityTests(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.external_dir = tempfile.TemporaryDirectory()
         self.root = Path(self.temp_dir.name)
+        self.write(".codex-plugin/plugin.json", '{"name": "pt-doots"}\n')
+        self.write(".agents/plugins/marketplace.json", '{"name": "pt-doots-local"}\n')
 
     def tearDown(self) -> None:
         self.external_dir.cleanup()
@@ -167,8 +169,8 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
             "parallel quality gate",
             "repro-verifier",
             "documentation gate",
-            "~/.codex/agents",
-            "symlink",
+            "~/.codex/config.toml",
+            "config_file",
             "spawn_agent",
             "followup_task",
             "wait_agent",
@@ -181,7 +183,7 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
             self.assertIn(topic, mapping)
         self.assertLessEqual(len(mapping), 6000)
 
-    def test_runtime_mapping_fails_closed_when_named_agent_dispatch_is_unavailable(self) -> None:
+    def test_runtime_mapping_documents_proven_named_dispatch_and_sandbox_limit(self) -> None:
         mapping = (
             REPOSITORY_ROOT / "reference" / "codex-compatibility.md"
         ).read_text(encoding="utf-8")
@@ -192,15 +194,15 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
             "not selected",
             "STOP",
             "must not fall back to a generic or prompt-only agent",
-            "Task 7",
-            "fresh-session integration gate",
-            "Successful named-agent selection",
-            "model, sandbox, and developer instructions",
-            "Only after the runtime confirms named-agent selection",
+            "Fresh-session runtime canaries prove",
+            "developer instructions, model, and reasoning effort",
+            "does **not** enforce",
+            "forward-compatible intent metadata",
+            "do not treat them as security isolation",
+            "inherits the parent or broader session behavior",
         )
         for guardrail in required_guardrails:
             self.assertIn(guardrail, normalized_mapping)
-        self.assertNotIn("sandbox_mode is inherited by that task", mapping)
         self.assertNotIn("adapter selects the minimum mode", mapping)
 
     def test_dual_runtime_documentation_states_supported_codex_boundaries(self) -> None:
@@ -227,12 +229,13 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
         required_onboarding_topics = (
             "macOS",
             "Native Windows is not supported",
-            "python3 scripts/setup_codex.py --dry-run --links-only",
-            "python3 scripts/setup_codex.py --links-only",
+            "python3 scripts/setup_codex.py --dry-run",
+            "python3 scripts/setup_codex.py",
             "codex plugin marketplace add",
             "codex plugin add pt-doots@pt-doots-local",
             "codex plugin list --marketplace pt-doots-local --available --json",
-            "~/.codex/agents",
+            "~/.codex/config.toml",
+            "config_file",
             "new Codex thread",
             "commands/*.md",
             "agents/*.md",
@@ -250,7 +253,9 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
             "REST helper",
             "Troubleshooting",
             "named agent",
-            "Task 7",
+            "Fresh-session runtime canaries prove",
+            "sandbox_mode",
+            "currently advisory metadata",
             "platform-neutral",
             "deferred",
         )
@@ -401,6 +406,21 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
         self.assertIn("missing command adapter: skills/ship/SKILL.md", report.errors)
         self.assertIn("malformed command adapter: skills/broken/SKILL.md", report.errors)
         self.assertIn("malformed agent adapter: codex/agents/reviewer.toml", report.errors)
+
+    def test_reports_missing_and_malformed_codex_manifests(self) -> None:
+        (self.root / ".codex-plugin/plugin.json").unlink()
+        self.write(".agents/plugins/marketplace.json", "not json\n")
+
+        report = self.validator.validate_repository(self.root)
+
+        self.assertIn(
+            "missing or escaped Codex manifest: .codex-plugin/plugin.json",
+            report.errors,
+        )
+        self.assertIn(
+            "malformed Codex manifest: .agents/plugins/marketplace.json",
+            report.errors,
+        )
 
     def test_reports_stale_adapters_that_break_exact_parity(self) -> None:
         self.canonical_command("ship")

@@ -4,10 +4,10 @@
 from __future__ import annotations
 
 import ast
+import json
 import sys
 import tomllib
 from pathlib import Path
-from typing import Any
 
 
 MODEL_MAPPING = {
@@ -87,7 +87,7 @@ def _parse_scalar(value: str, path: Path) -> str:
     return value
 
 
-def parse_toml(path: Path) -> dict[str, Any]:
+def parse_toml(path: Path) -> dict[str, object]:
     """Load an adapter TOML file using Python's standard-library TOML parser."""
     with path.open("rb") as source:
         data = tomllib.load(source)
@@ -140,6 +140,19 @@ def validate_repository(root: Path) -> ValidationReport:
     root = root.resolve()
     inventories = discover_inventories(root)
     errors: list[str] = []
+
+    for relative in (Path(".codex-plugin/plugin.json"), Path(".agents/plugins/marketplace.json")):
+        path = root / relative
+        if not path.is_file() or resolve_within_root(root, path) is None:
+            errors.append(f"missing or escaped Codex manifest: {relative}")
+            continue
+        try:
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            errors.append(f"malformed Codex manifest: {relative}")
+            continue
+        if not isinstance(manifest, dict):
+            errors.append(f"malformed Codex manifest: {relative}")
 
     for kind, definitions in (("command", inventories.commands), ("agent", inventories.agents)):
         for name, path in definitions.items():
@@ -217,7 +230,7 @@ def _agent_adapter_paths(root: Path) -> list[Path]:
 def validate_agent_adapter(
     name: str,
     canonical: dict[str, str],
-    adapter: dict[str, Any],
+    adapter: dict[str, object],
 ) -> list[str]:
     """Return semantic compatibility errors for one canonical-agent adapter pair."""
     errors: list[str] = []
@@ -270,6 +283,7 @@ def validate_agent_adapter(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Validate one repository and return a process exit status."""
     arguments = sys.argv[1:] if argv is None else argv
     if len(arguments) > 1:
         print("usage: validate_codex_compat.py [repository-root]", file=sys.stderr)
