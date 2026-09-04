@@ -22,6 +22,7 @@ class SetupCodexTests(unittest.TestCase):
         self.root = Path(self.temporary_directory.name) / "checkout"
         self.home = Path(self.temporary_directory.name) / "home"
         self.write("codex/agents/alpha.toml", 'name = "alpha"\n')
+        self.write(".agents/plugins/marketplace.json", "{}\n")
         self.validator_runner = Mock(
             return_value=subprocess.CompletedProcess([], 0, stdout="ok", stderr="")
         )
@@ -123,7 +124,7 @@ class SetupCodexTests(unittest.TestCase):
         result = self.setup(links_only=True)
 
         self.cli_runner.assert_not_called()
-        self.assertIn(str(self.root / ".agents/plugins"), result.manual_command)
+        self.assertIn(str(self.root.resolve()), result.manual_command)
 
     def test_uninstall_removes_only_owned_links(self) -> None:
         owned = self.home / ".codex" / "agents" / "alpha.toml"
@@ -203,9 +204,43 @@ class SetupCodexTests(unittest.TestCase):
                 "plugin",
                 "marketplace",
                 "add",
-                str(self.root.resolve() / ".agents/plugins"),
+                str(self.root.resolve()),
             ],
         )
+        self.assertTrue((Path(self.cli_runner.call_args.args[0][-1]) / ".agents/plugins/marketplace.json").is_file())
+
+    def test_setup_refuses_parent_directory_swap_before_link_creation(self) -> None:
+        external_directory = Path(self.temporary_directory.name) / "external-agents"
+        external_directory.mkdir()
+        agents_directory = self.home / ".codex" / "agents"
+
+        def swap_parent(event: str, destination: Path) -> None:
+            if event != "before_link":
+                return
+            agents_directory.rename(agents_directory.with_name("agents-original"))
+            agents_directory.symlink_to(external_directory, target_is_directory=True)
+
+        with self.assertRaisesRegex(setup_codex.SetupError, "Codex agent directory changed"):
+            self.setup(links_only=True, mutation_hook=swap_parent)
+
+        self.assertFalse((external_directory / "alpha.toml").exists())
+        self.assertFalse((self.home / ".codex/agents-original/alpha.toml").exists())
+
+    def test_uninstall_refuses_destination_swap_before_unlink(self) -> None:
+        destination = self.home / ".codex" / "agents" / "alpha.toml"
+        destination.parent.mkdir(parents=True)
+        destination.symlink_to(self.root / "codex/agents/alpha.toml")
+
+        def replace_destination(event: str, candidate: Path) -> None:
+            if event != "before_unlink":
+                return
+            candidate.unlink()
+            candidate.write_text("do not delete", encoding="utf-8")
+
+        with self.assertRaisesRegex(setup_codex.SetupError, "refusing to remove changed agent destination"):
+            self.setup(uninstall=True, mutation_hook=replace_destination)
+
+        self.assertEqual(destination.read_text(encoding="utf-8"), "do not delete")
 
     def test_checkout_root_is_derived_from_script_location(self) -> None:
         self.assertEqual(setup_codex.checkout_root(), REPOSITORY_ROOT)
