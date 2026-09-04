@@ -22,7 +22,7 @@ Codex receives a thin platform adapter in the same repository:
 
 - `.codex-plugin/plugin.json` identifies the checkout as a Codex plugin.
 - Codex skills provide entry points corresponding to every command.
-- Codex subagent definitions expose every agent using Codex-native metadata and tool names while referring to the canonical agent prompt content. A local onboarding script links these definitions into `~/.codex/agents/`; the checked-in checkout remains authoritative.
+- Codex subagent definitions expose every agent using Codex-native metadata and tool names while referring to the canonical agent prompt content. A local onboarding script links these definitions into `~/.codex/agents/`; the checked-in checkout remains authoritative. Named-agent selection is fail-closed until the fresh-session integration gate proves it.
 - Small compatibility mappings translate runtime-specific concepts such as slash-command arguments, tool identifiers, task dispatch, model selection, and lifecycle behavior.
 - Shared references, scripts, overlays, telemetry, and `notes/{TICKET}/` artifacts are consumed in place by both runtimes.
 
@@ -66,7 +66,12 @@ Codex custom-agent configuration does not expose Claude Code's `maxTurns` settin
 
 ## Local Development and Loading
 
-Codex will be configured to load the plugin from `/Users/parker/workspaces/plextrac/pt-doots`. The checked-out working tree is the active development source. After adapter or canonical workflow changes, restarting or reloading Codex picks up the live checkout rather than a cached release.
+Codex is configured from the checkout root that contains
+`.agents/plugins/marketplace.json`; the checked-out working tree is the active
+development source. The safe-link installer requires POSIX directory-descriptor
+operations and is verified on macOS; native Windows is not a supported setup
+path. After adapter or canonical workflow changes, reload Codex and begin a new
+thread so it picks up the live checkout rather than earlier thread state.
 
 The installation documentation must distinguish local development loading from any future distribution mechanism.
 
@@ -94,6 +99,7 @@ Documentation will include:
 - Separate Claude Code and Codex onboarding sections.
 - A platform compatibility and terminology mapping.
 - Codex local-checkout installation and reload instructions.
+- Supported-host, permissions, hooks, and named-agent fail-closed boundaries.
 - Prerequisites for plugins, commands, credentials, hooks, permissions, MCP or REST integrations, and repository guidance.
 - A contributor guide identifying canonical files and adapter responsibilities.
 - The parity-validation command required before committing.
@@ -112,9 +118,9 @@ Architecture and development documents containing Claude-only assumptions will b
 ## Acceptance Criteria
 
 - Claude Code continues to load and operate the existing harness.
-- Codex loads the same checkout as a local plugin.
+- Codex loads the same checkout as a local plugin on the documented supported host.
 - All six commands are available through Codex skills.
-- Every canonical agent can be dispatched through Codex-native subagent support.
+- Every canonical agent has a matching static adapter; named-agent runtime behavior is verified separately in Task 7.
 - Shared ticket state and telemetry remain compatible across platforms.
 - Parity validation detects missing or stale adapters.
 - README onboarding supports a fresh Claude Code or Codex installation.

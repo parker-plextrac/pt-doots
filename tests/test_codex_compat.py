@@ -203,6 +203,59 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
         self.assertNotIn("sandbox_mode is inherited by that task", mapping)
         self.assertNotIn("adapter selects the minimum mode", mapping)
 
+    def test_dual_runtime_documentation_states_supported_codex_boundaries(self) -> None:
+        onboarding_path = REPOSITORY_ROOT / "docs" / "codex-onboarding.md"
+        if not onboarding_path.is_file():
+            self.fail("Codex onboarding documentation is missing")
+        readme = (REPOSITORY_ROOT / "README.md").read_text(encoding="utf-8")
+        claude_notes = (REPOSITORY_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        overlays = (REPOSITORY_ROOT / "OVERLAYS.md").read_text(encoding="utf-8")
+        design = (
+            REPOSITORY_ROOT / "docs/plans/2026-09-03-codex-compatibility-design.md"
+        ).read_text(encoding="utf-8")
+        onboarding = onboarding_path.read_text(encoding="utf-8")
+
+        self.assertIn("## Claude Code quick start", readme)
+        self.assertIn("## Codex quick start", readme)
+        self.assertIn("docs/codex-onboarding.md", readme)
+        self.assertIn("Codex compatibility", claude_notes)
+        self.assertIn("Claude Code remains canonical", claude_notes)
+        self.assertIn("Codex compatibility", overlays)
+        self.assertIn("deferred", design.lower())
+        self.assertIn("platform-neutral", design)
+
+        required_onboarding_topics = (
+            "macOS",
+            "Native Windows is not supported",
+            "python3 scripts/setup_codex.py --dry-run --links-only",
+            "python3 scripts/setup_codex.py --links-only",
+            "codex plugin marketplace add",
+            "codex plugin add pt-doots@pt-doots-local",
+            "~/.codex/agents",
+            "new Codex thread",
+            "commands/*.md",
+            "agents/*.md",
+            "haiku → gpt-5.6-luna",
+            "sonnet → gpt-5.6-terra",
+            "opus → gpt-5.6-sol",
+            "maxTurns",
+            "advisory",
+            "tool-call budget",
+            "not a hard runtime limit",
+            "python3 scripts/validate_codex_compat.py .",
+            "permissions",
+            "hooks",
+            "Atlassian MCP",
+            "REST helper",
+            "Troubleshooting",
+            "named agent",
+            "Task 7",
+            "platform-neutral",
+            "deferred",
+        )
+        for topic in required_onboarding_topics:
+            self.assertIn(topic, onboarding)
+
     def test_command_skills_read_canonical_command_before_runtime_mapping(self) -> None:
         command_names = self.validator.discover_inventories(REPOSITORY_ROOT).commands
         for name in command_names:
