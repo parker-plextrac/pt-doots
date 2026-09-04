@@ -146,14 +146,32 @@ class SetupCodexTests(unittest.TestCase):
         self.assertEqual(result.preserved, (foreign, real_file))
         self.cli_runner.assert_not_called()
 
-    def test_uninstall_removes_broken_link_lexically_pointing_to_checkout(self) -> None:
+    def test_uninstall_preserves_broken_link_lexically_pointing_to_checkout(self) -> None:
         destination = self.home / ".codex" / "agents" / "stale.toml"
         destination.parent.mkdir(parents=True)
         destination.symlink_to(self.root / "codex/agents/removed.toml")
 
-        self.setup(uninstall=True)
+        result = self.setup(uninstall=True)
 
-        self.assertFalse(destination.is_symlink())
+        self.assertTrue(destination.is_symlink())
+        self.assertEqual(result.removed, ())
+        self.assertEqual(result.preserved, (destination,))
+
+    def test_uninstall_preserves_same_checkout_links_that_are_not_owned_pairs(self) -> None:
+        directory = self.home / ".codex" / "agents"
+        directory.mkdir(parents=True)
+        non_adapter_target = self.write("reference/notes.md", "keep\n")
+        non_adapter = directory / "same-checkout-reference.toml"
+        renamed_adapter = directory / "renamed-alpha.toml"
+        non_adapter.symlink_to(non_adapter_target)
+        renamed_adapter.symlink_to(self.root / "codex/agents/alpha.toml")
+
+        result = self.setup(uninstall=True)
+
+        self.assertTrue(non_adapter.is_symlink())
+        self.assertTrue(renamed_adapter.is_symlink())
+        self.assertEqual(result.removed, ())
+        self.assertEqual(result.preserved, (renamed_adapter, non_adapter))
 
     def test_preflight_failure_prevents_any_mutation(self) -> None:
         self.validator_runner.return_value = subprocess.CompletedProcess(

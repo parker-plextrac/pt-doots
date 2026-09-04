@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import os
 import shlex
 import subprocess
 import sys
@@ -96,30 +95,6 @@ def codex_agent_directory(home: Path) -> Path:
     return directory
 
 
-def _is_within(path: Path, root: Path) -> bool:
-    try:
-        path.relative_to(root)
-    except ValueError:
-        return False
-    return True
-
-
-def link_points_to_checkout(link: Path, checkout: Path) -> bool:
-    """Whether a symlink resolves or lexically points into this checkout."""
-    if not link.is_symlink():
-        return False
-    root_resolved = checkout.resolve()
-    try:
-        if _is_within(link.resolve(), root_resolved):
-            return True
-        target = link.readlink()
-    except OSError:
-        return False
-    lexical_target = target if target.is_absolute() else link.parent / target
-    normalized_lexical_target = Path(os.path.abspath(os.fspath(lexical_target)))
-    return _is_within(normalized_lexical_target, Path(os.path.abspath(os.fspath(checkout))))
-
-
 def _is_expected_link(destination: Path, source: Path) -> bool:
     if not destination.is_symlink():
         return False
@@ -127,6 +102,13 @@ def _is_expected_link(destination: Path, source: Path) -> bool:
         return destination.resolve() == source.resolve()
     except OSError:
         return False
+
+
+def _is_owned_adapter_link(destination: Path, sources: tuple[Path, ...]) -> bool:
+    """Match only the exact destination filename and adapter target we install."""
+    expected_sources = {source.name: source for source in sources}
+    expected_source = expected_sources.get(destination.name)
+    return expected_source is not None and _is_expected_link(destination, expected_source)
 
 
 def _register_marketplace(
@@ -150,10 +132,11 @@ def _uninstall_links(checkout: Path, home: Path, *, dry_run: bool) -> SetupResul
     directory = codex_agent_directory(home)
     if not directory.is_dir():
         return SetupResult(dry_run=dry_run)
+    sources = agent_sources(checkout)
     removed: list[Path] = []
     preserved: list[Path] = []
     for destination in sorted(directory.iterdir()):
-        if destination.is_symlink() and link_points_to_checkout(destination, checkout):
+        if destination.is_symlink() and _is_owned_adapter_link(destination, sources):
             removed.append(destination)
             if not dry_run:
                 destination.unlink()
