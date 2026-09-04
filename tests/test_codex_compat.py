@@ -231,6 +231,7 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
             "python3 scripts/setup_codex.py --links-only",
             "codex plugin marketplace add",
             "codex plugin add pt-doots@pt-doots-local",
+            "codex plugin list --marketplace pt-doots-local --available --json",
             "~/.codex/agents",
             "new Codex thread",
             "commands/*.md",
