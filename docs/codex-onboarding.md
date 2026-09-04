@@ -53,7 +53,7 @@ Confirm what Codex sees:
 
 ```bash
 codex plugin marketplace list
-codex plugin list --marketplace pt-doots-local --available
+codex plugin list --marketplace pt-doots-local --available --json
 ```
 
 The `../..` path in `.agents/plugins/marketplace.json` is intentional: it is
