@@ -1,14 +1,18 @@
 # pt-doots
 
-A Claude Code plugin for PlexTrac engineers. Turns a Jira ticket into a
-finished PR via an orchestrated team of sub-agents — research → plan →
+A dual-runtime harness for PlexTrac engineers. Claude Code remains the canonical
+runtime in Phase 1; Codex is an experimental thin adapter over the same files.
+It turns a Jira ticket into a finished PR via an orchestrated team of
+sub-agents — research → plan →
 implement → test → review → commit.
 
 Opinionated for our repos (`product-core-backend`, `product-core-frontend`,
 `product-services-export`, `product-services-mcp`), our standards
 (per-repo CLAUDE.md), and our tooling (Jira/Confluence REST, GitHub via `gh` CLI).
 
-## Install (from marketplace)
+## Claude Code quick start
+
+The existing Claude Code setup is unchanged.
 
 ```
 /plugin marketplace add parker-plextrac/pt-doots
@@ -22,6 +26,24 @@ echo 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1' >> ~/.claude/settings.local.json
 ```
 
 Restart Claude Code after install.
+
+## Codex quick start
+
+Codex runs from this live checkout on a supported POSIX host. Start with the
+short [Codex onboarding guide](./docs/codex-onboarding.md); it has the exact
+setup, verification, reload, permissions, and troubleshooting steps. In short:
+
+```bash
+python3 scripts/setup_codex.py --dry-run
+python3 scripts/setup_codex.py
+```
+
+The Codex wrappers never replace the Claude command or agent definitions. The
+installer registers each checked-in adapter directly in `~/.codex/config.toml`;
+after editing an adapter, start a new Codex thread so it reloads. Codex
+caches installed plugin skills and canonical files by plugin version, so use
+the cachebuster/reinstall procedure in the onboarding guide after changing
+those files.
 
 ## Tuning agent behavior
 
