@@ -274,6 +274,7 @@ After every code change → run `/verify`. Max 3 fix cycles per failure. If stil
 ALL must be true before committing:
 - [ ] Quality gate ran (4c), and all reviewers returned a REAL result (no truncated or empty completion notifications; thin ones retrieved via SendMessage)
 - [ ] **Repro-verify ran (4c.5) and returned verdicts.** No exceptions. If you are about to tick this from memory rather than from a report you actually received, it did not run.
+- [ ] **prove-it gate clear** — only if `command -v prove-it-gate` and a gate was opened in 4c.5: `prove-it-gate status` shows every finding Confirmed-and-fix-confirmed or Proven-safe (none blocking), or an `override --reason "..."` was recorded. Then `prove-it-gate close`. If prove-it-gate is not installed, this row is N/A. Full contract: [reference/workflow.md](../reference/workflow.md) §4c.5 / §4d / Step 5.
 - [ ] Findings fixed or explicitly deferred (4d)
 - [ ] Verification passed after most recent change
 - [ ] All plan steps implemented

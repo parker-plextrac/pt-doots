@@ -307,13 +307,19 @@ Consolidate all findings from all reviewers before proceeding. FIRST clear the c
 
 An environment blocker (a held port, a missing container, an absent `.env`) is yours to clear, not a reason to skip. If the code genuinely cannot be run after you clear the blocker, STOP and tell the user what is blocking it, rather than passing unverified findings to Step 4d.
 
-- Spawn `pt-doots:repro-verifier` with the **Repro-Verifier Prompt** from [agent-prompts.md](agent-prompts.md), seeded with the consolidated correctness / edge-case findings and a scratch dir path.
+- Spawn `pt-doots:repro-verifier` with the **Repro-Verifier Prompt** from [agent-prompts.md](agent-prompts.md), seeded with the consolidated correctness / edge-case findings and a scratch dir path. **When `command -v prove-it-gate` succeeds, resolve that scratch dir with `prove-it-gate repro-dir {TICKET-KEY}`** so the repros are durable (they live under `~/.claude/prove-it/repros/{TICKET-KEY}/`, outside the repo, and survive to the fix/confirm step, which is often a later session). Otherwise use a `/tmp` scratch dir as before.
 - It writes and runs reproduction scripts in the scratch dir and grounds them by running the repo's own gates. It is read-only toward application code and never writes fixes.
 - It returns a REPRO-VERIFIER REPORT with a verdict per finding: **Confirmed** (reproduced), **Proven-safe** (refuted), or **Inconclusive**.
 - Language-neutral: takes no conventions overlay.
 - The verdicts feed Step 4d: the implementer fixes **Confirmed** findings (and **Inconclusive** ones at the user's discretion) and drops **Proven-safe** false positives instead of chasing them.
 
 **Save to progress.md**: `Repro-verify complete. {N} confirmed, {N} proven-safe, {N} inconclusive. Gates: {result}.`
+
+**Gate ledger — optional enforcement (only when `command -v prove-it-gate` succeeds; if it is not installed, skip this whole block and proceed exactly as before).** This turns the verdicts above into a binding record that Step 4d must clear and the Step 5 commit gate checks:
+- Open the gate on the defect-claims the verifier did not drop: `prove-it-gate open --target {TICKET-KEY} --finding {id}:{file}:{summary}` — one `--finding` per Confirmed or Inconclusive finding. Reuse these ids in every later `prove-it-gate` call for this ticket.
+- Record each verdict in the mode the verifier reached: Confirmed → `prove-it-gate verify {id} --repro {path}` (the CLI re-runs the repro and requires it to FAIL); Proven-safe → `prove-it-gate verify {id} --repro {path} --proven-safe` (requires it to PASS; drops the finding); Inconclusive → `prove-it-gate verify {id} --repro {path} --inconclusive --reason "{why}"`.
+- `{path}` is the repro the verifier wrote under the durable repro-dir. The gate executes it rather than trusting the verdict; if it rejects one (a claimed Confirmed whose repro exits 0, say), that is real signal the repro does not demonstrate the claim — surface it, do not force the command to agree.
+- Enforcement here is the orchestrator driving this ledger and gating Step 5 on it, NOT the passive hook: the hook cannot see the 4d implementer's sub-agent edits, and it exempts the orchestrator's own `notes/` writes by design.
 
 ### 4d. Fix Findings (`pt-doots:implementer`, fix-cycle mode)
 
@@ -325,6 +331,8 @@ Only if quality gate has actionable findings.
 - **Run `/verify`. Fix failures (max 3 cycles).**
 
 **Save to progress.md**: `Findings fixed. {N} applied, {N} deferred. Verification: {pass/fail}`
+
+**Confirm each fix in the gate — only when `command -v prove-it-gate` succeeds and a gate was opened in 4c.5.** For every Confirmed finding just fixed: `prove-it-gate confirm-fix {id}` — it re-runs that finding's own recorded repro and requires it to now exit 0. A green `/verify` suite does NOT substitute; those tests did not catch the defect in the first place. If confirm-fix still fails, the fix is not done: send it back to the fix step (respect the cross-loop budget), then re-run `confirm-fix {id}`.
 
 ### 4e. Documentation (`pt-doots:documentarian`)
 
@@ -355,6 +363,7 @@ The agent does not skip a higher-priority level just because work exists at a lo
 - [ ] All plan steps implemented
 - [ ] Done-condition met (the "Done when:" block from plan.md; verified by acceptance-qa on standard, or by code-reviewer plus the orchestrator on lightweight/docs-only where acceptance-qa is skipped)
 - [ ] No outstanding [GOVERNANCE] items unaddressed
+- [ ] **prove-it gate clear** (only if `command -v prove-it-gate` and a gate was opened): `prove-it-gate status` shows every finding Confirmed-and-fix-confirmed or Proven-safe, none still blocking — or a `prove-it-gate override --reason "..."` was recorded. `close` refuses while anything is unconfirmed; that refusal is the gate doing its job, not an error to work around.
 
 Show checklist to user before committing:
 ```
@@ -372,6 +381,8 @@ Ready to commit: `{TICKET-KEY}: {short description}`
 Stage relevant files, commit: `{TICKET-KEY}: short description`. **Never push.** Remind user to push.
 
 **Save to progress.md**: `Committed: {hash} — {TICKET-KEY}: {description}`
+
+**Close the gate (only if `command -v prove-it-gate` and a gate was opened in 4c.5):** run `prove-it-gate close` to archive the cycle. It refuses if any Confirmed finding's fix was never confirmed — resolve those with `confirm-fix {id}` (or `override --reason "..."`) rather than leaving the gate open. Never carry an open gate across tickets: its state is machine-wide and would block the next review until cleared.
 
 ---
 

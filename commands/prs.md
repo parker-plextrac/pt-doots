@@ -720,7 +720,7 @@ Static reviewers reason from an inlined diff. They cannot run the code, so they 
 **What to pass it** (seed it with the findings, do NOT make it re-hunt from scratch):
 - `WORKTREE_DIR` (the isolated worktree from Step 2b; the PR code is already there).
 - The consolidated correctness / edge-case / security findings from Step 3 at MED severity and above, each with file:line and the concern. Skip pure style / naming / smell / test-quality findings; those are not runtime-falsifiable.
-- Its scratch workspace, which is its ONLY writable path: `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it).
+- Its scratch workspace, which is its ONLY writable path. **When `command -v prove-it-gate` succeeds, resolve it with `prove-it-gate repro-dir {repo}-{pr_number}`** so the repros are durable: they persist under `~/.claude/prove-it/repros/{repo}-{pr_number}/`, outside any worktree, so a later re-review (Step 1b) or a follow-up can re-run the exact repro instead of rebuilding it. Otherwise use `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it).
 
 Spawn `subagent_type: "pt-doots:repro-verifier"`. The agent definition carries the full contract, the run-the-repo's-own-gates step, and the report format. Its safety rails forbid touching any shared or production service.
 
@@ -742,6 +742,8 @@ Spawn `subagent_type: "pt-doots:repro-verifier"`. The agent definition carries t
 Remove any symlinks you created before removing the worktree in Step 9, so nothing follows them.
 
 **There is no skip.** A port held by another worktree's stack, a missing container, an absent `.env` — those are yours to clear, and clearing them takes minutes. If you genuinely cannot make the code run after clearing the blocker, STOP and tell the user what is blocking it and what you tried. Do not quietly present static findings as if they had been verified. "The environment was busy" is not a reason to hand over unverified findings; it is a reason to fix the environment.
+
+**Gate scope for reviews.** `/prs` reviews code it does not fix, so it uses prove-it only for the durable repro-dir above — it does NOT open / verify / confirm-fix / close a `prove-it-gate` cycle. That binding fix-loop belongs to the ticket flow ([reference/workflow.md](../reference/workflow.md) §4c.5–Step 5), where a fix actually lands and must be re-proven by its own repro. (A `/prs self` review that then hands work to the ticket flow picks the gate up there.)
 
 ### Step 4: Save Review State
 
