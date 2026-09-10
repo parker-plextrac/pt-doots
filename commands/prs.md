@@ -118,13 +118,31 @@ For each PR in **Your PRs**, **Team**, and **IO Tickets (All Open)**, also fetch
 mcp__github__get_pull_request_status(owner: "PlexTrac", repo: "{repo_name}", sha: "{head.sha}")
 ```
 
-For each PR in **Team** and **IO Tickets (All Open)**, also fetch review state to detect if Parker has reviewed:
+For each PR in **Your PRs**, **Team**, and **IO Tickets (All Open)**, also fetch **who else has engaged** — anyone other than the author (and not a bot) who has approved or left a comment. This drives the `Engaged` column and shows at a glance which PRs already have eyes on them. Use **GraphQL**, not the REST `pulls/{n}/reviews` + `pulls/{n}/comments` endpoints — those intermittently 404 on this token (see the `gh-rest-404-use-graphql` skill), and one GraphQL call returns reviews, conversation comments, and inline thread comments together:
 
 ```bash
-/opt/homebrew/bin/gh api "repos/PlexTrac/{repo_name}/pulls/{pr_number}/reviews" --jq '[.[] | select(.user.login == "parker-plextrac") | .state] | last // "NONE"'
+/opt/homebrew/bin/gh api graphql -f owner=PlexTrac -f repo="{repo_name}" -F num={pr_number} -f query='
+query($owner:String!,$repo:String!,$num:Int!){
+  repository(owner:$owner,name:$repo){
+    pullRequest(number:$num){
+      author{login}
+      reviews(first:50){nodes{author{login __typename} state}}
+      comments(first:100){nodes{author{login __typename}}}
+      reviewThreads(first:100){nodes{comments(first:20){nodes{author{login __typename}}}}}
+    }
+  }
+}' -q '.data.repository.pullRequest as $pr
+  | ($pr.author.login // "?") as $a
+  | ([$pr.reviews.nodes[] | select(.author.__typename=="User" and .author.login != $a)]) as $revs
+  | ([$revs[]|select(.state=="APPROVED")|.author.login]|unique) as $approved
+  | ([ ($revs[]|select(.state!="APPROVED")|.author.login),
+       ($pr.comments.nodes[]|select(.author.__typename=="User")|.author.login),
+       ($pr.reviewThreads.nodes[].comments.nodes[]|select(.author.__typename=="User")|.author.login) ]
+     | map(select(. != $a)) | unique) as $commented
+  | { approved: $approved, commented: ($commented - $approved) }'
 ```
 
-This returns Parker's most recent review state (`APPROVED`, `COMMENTED`, `CHANGES_REQUESTED`) or `NONE` if he has not reviewed.
+Filter bots by `__typename == "User"` — GraphQL drops the `[bot]` suffix from a bot's `login`, so a substring match on `[bot]` misses `github-actions`. The result is `{approved: [...logins], commented: [...logins]}` (author excluded, approvers not double-listed as commenters). Map each login via `LOGIN_TO_NAME`, falling back to `@{login}`.
 
 For each PR in **Requesting Your Review**, also fetch whether anyone has already approved it — so an already-signed-off PR is obvious at a glance and you don't re-review it by mistake:
 
@@ -149,16 +167,15 @@ Sort both sections with **IO-prefixed PRs first**. IO detection: PR title or bra
 
 #### Your PRs
 
-| # | Repo | PR | CI | Approvals | Comments | Days | Draft? |
-|---|------|----|----|-----------|----------|------|--------|
+| # | Repo | PR | CI | Engaged | Days | Draft? |
+|---|------|----|----|---------|------|--------|
 
 Column definitions:
 - **#**: Row number for easy reference (e.g. "review #1")
 - **Repo**: Short repo name (e.g. `product-core-backend`)
 - **PR**: `#{number} {title}` — truncate title to ~50 chars if needed
 - **CI**: From status checks — `PASS` (all succeed), `FAIL` (any failed), `PENDING` (running), `—` (no checks)
-- **Approvals**: `{approved}/{requested}` count
-- **Comments**: Total count (`comments` + `review_comments` fields)
+- **Engaged**: Who else (not you, not bots) has touched it — `✓ {names}` for approvers, `💬 {names}` for non-approving commenters, combined as `✓ Alex · 💬 Sam`; `—` if nobody else yet. From the GraphQL engagement fetch in Step 1; names via `LOGIN_TO_NAME`, fall back to `@{login}`. Replaces the old raw Approvals/Comments counts — the comment count was mostly CI/bot noise, and this shows whether a human has actually looked.
 - **Days**: Days since `created_at` (e.g. `3d`, `14d`)
 - **Draft?**: `DRAFT` if `draft: true`, empty otherwise
 
@@ -182,8 +199,8 @@ If no review-requested PRs: "No PRs requesting your review."
 
 #### Team
 
-| # | Repo | PR | Author | CI | Reviewed | Days | Draft? |
-|---|------|----|--------|----|----------|------|--------|
+| # | Repo | PR | Author | CI | Engaged | Days | Draft? |
+|---|------|----|--------|----|---------|------|--------|
 
 Column definitions:
 - **#**: Row number (continues numbering)
@@ -191,7 +208,7 @@ Column definitions:
 - **PR**: `#{number} {title}`
 - **Author**: Display name from `LOGIN_TO_NAME[user.login]`; fall back to `@{user.login}` if the login isn't in the overlay (shouldn't happen since the section is filtered to overlay members)
 - **CI**: `PASS` / `FAIL` / `PENDING` / `—`
-- **Reviewed**: Parker's last review state — `APPROVED` / `COMMENTED` / `CHANGES_REQ` / `—` (not reviewed)
+- **Engaged**: Who else (not the author, not bots) has approved or commented — `✓ {names}` for approvers, `💬 {names}` for non-approving commenters, combined as `✓ Alex · 💬 Sam`; `—` if nobody else yet. From the GraphQL engagement fetch in Step 1; names via `LOGIN_TO_NAME`, fall back to `@{login}`. Surfaces which teammate PRs already have coverage vs. which are sitting untouched.
 - **Days**: Days since `created_at`
 - **Draft?**: `DRAFT` if `draft: true`, empty otherwise
 
@@ -199,8 +216,8 @@ If none: "No open PRs from your team."
 
 #### IO Tickets (All Open)
 
-| # | Repo | PR | Author | CI | Reviewed | Days | Draft? |
-|---|------|----|--------|----|----------|------|--------|
+| # | Repo | PR | Author | CI | Engaged | Days | Draft? |
+|---|------|----|--------|----|---------|------|--------|
 
 Column definitions:
 - **#**: Row number (continues numbering)
@@ -208,7 +225,7 @@ Column definitions:
 - **PR**: `#{number} {title}`
 - **Author**: `@{user.login}`
 - **CI**: `PASS` / `FAIL` / `PENDING` / `—`
-- **Reviewed**: Parker's last review state — `APPROVED` / `COMMENTED` / `CHANGES_REQ` / `—` (not reviewed)
+- **Engaged**: Who else (not the author, not bots) has approved or commented — `✓ {names}` for approvers, `💬 {names}` for non-approving commenters; `—` if nobody else yet. From the GraphQL engagement fetch in Step 1; names via `LOGIN_TO_NAME`, fall back to `@{login}`.
 - **Days**: Days since `created_at`
 - **Draft?**: `DRAFT` if `draft: true`, empty otherwise
 
