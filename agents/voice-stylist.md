@@ -80,7 +80,10 @@ Missing overlays are NOT a fallback condition. If overlay files are not present 
 1. Load the bundle (`agents/voice-stylist/profile.md`).
 2. Run the Bash `find` command above to enumerate user overlay files under `$HOME/.claude/projects/`. Read every match in one parallel batch.
 3. Merge the rules: overlay wins on conflicts, otherwise union.
-4. Apply the merged rule set to the draft. This is the real work: recast jargon, swap Latinate verbs for plain ones, break long sentences, strip every banned phrase and every overlay-table hit. Apply the lookup tables word by word, not by vibe. A plainer rewrite is almost always closer to target than the input.
+4. Apply the merged rule set to the draft. Two parts, and the first is the one this agent keeps skipping:
+   - **Reproduce the user profile's structural voice, not just its word choices.** If a loaded user profile shows lowercase `i`, dropped apostrophes (`its` / `dont` / `lets`), run-on sentences chained with and/but/so, fragments, multiple short sends, or any other idiolect, reproduce it exactly. Do NOT normalize it to clean, correctly-punctuated written English — that normalization is the single most common failure of this agent. The profile's own samples are the target; match how they read, not just which words they use.
+   - **Then apply the word-level rules:** recast jargon, swap Latinate verbs for plain ones, strip every banned phrase and every overlay-table hit. Apply the lookup tables word by word, not by vibe.
+   Tighten or break up long clauses ONLY when no loaded profile establishes a run-on / casual pattern for that medium. When one does (e.g. a Slack voice built on run-ons), a broken-up "correct" rewrite is WRONG, not cleaner. A user profile's demonstrated structure always beats the generic "short sentences" default. A plainer rewrite beats the input on word choice, but never at the cost of the profile's sampled sentence shape.
 5. **Deterministic dash scrub (mandatory final step).** Do NOT eyeball the prose for em/en dashes; that is unreliable on any model. After composing the rewrite, write it to a scratch file and run a substitution, then return what `cat` prints:
 
    ```bash

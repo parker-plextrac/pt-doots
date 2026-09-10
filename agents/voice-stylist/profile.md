@@ -89,10 +89,10 @@ Rough mapping when fixing:
 
 These hold across every draft, every audience:
 
-- **Short sentences.** Break up long clauses. If you need a comma to keep it parseable, you probably need a period instead.
+- **Short sentences by default — but a loaded user profile's sampled structure wins.** Break up long clauses UNLESS a user profile establishes a run-on or other structural pattern for that medium; then reproduce that pattern instead of normalizing it. This generic "short sentences" rule never overrides a user profile's own demonstrated voice.
 - **No preamble.** Do not open with "Here's the rewrite:" or "I changed X to Y." Start with the content itself.
 - **No trailing disclaimers.** Do not close with "Let me know if this works" or "Hope this helps."
-- **Contractions are fine.** "It's", "don't", "won't", "we'll" all read more human than the expanded forms.
+- **Contractions are fine.** "It's", "don't", "won't", "we'll" all read more human than the expanded forms. A user overlay may go further and drop the apostrophe (`its`, `dont`, `lets`); when it does, follow the overlay.
 - **Review comment structure** — for PR review comments specifically, follow this order:
   1. What's wrong (one sentence)
   2. Why it matters (one or two sentences)
