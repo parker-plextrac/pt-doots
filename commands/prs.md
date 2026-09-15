@@ -338,7 +338,7 @@ Launch THREE parallel agents:
 
 The re-reviewer needs it too: judging whether a prior convention-based finding was actually resolved requires the convention, not just the finding text. Without this block, a Python re-review silently reverts to TypeScript-biased defaults.
 
-**Agent 1 — Re-reviewer (verifier)** (`subagent_type: "pt-doots:re-reviewer"`)
+**Agent 1 — Re-reviewer (verifier)** (`subagent_type: "pt-doots:re-reviewer"` — stays pt-doots in both rosters; prove-it has no re-reviewer lane)
 
 Pass the agent:
 - The full prior findings list (from the saved review file's "## Findings" table) with severity and original concern
@@ -348,11 +348,11 @@ Pass the agent:
 
 The agent returns a structured verdict per finding (Addressed / Partial / Not addressed / Pushback warrants accepting / Explicitly deferred) with current-state line citations. See `pt-doots:re-reviewer` agent definition for full output format.
 
-**Agent 2 — Edge-case scan of the delta** (`subagent_type: "pt-doots:edge-case-qa"`)
+**Agent 2 — Edge-case scan of the delta** (`subagent_type: "prove-it:edge-case-qa"` by default; `pt-doots:edge-case-qa` in fallback)
 
 Scope the prompt tightly: examine ONLY new code introduced in the delta. List the prior findings as "already raised — do not re-flag" so the agent doesn't duplicate them. Cap at 8 findings.
 
-**Agent 3 — Test smell scan of the delta** (`subagent_type: "pt-doots:test-reviewer"`)
+**Agent 3 — Test smell scan of the delta** (`subagent_type: "prove-it:test-reviewer"` by default; `pt-doots:test-reviewer` in fallback)
 
 Only spawn if the delta includes test files. Scope to new tests added in the delta. Cap at 8 findings.
 
@@ -524,12 +524,72 @@ This gives the orchestrator (and user) context on what's already been discussed.
 **Do NOT invoke the `code-review:code-review` skill.** The review pipeline is built directly here for full control over output format and posting.
 
 > **Loose profile (`REVIEW_MODE=loose`) — trimmed agent set.** When the run was invoked as `/prs <url> loose`, replace the rigorous 5–7 agent fan-out below with a minimal set. The mode-independent parts of this step still apply: run the same **pre-flight checks** and the same mandatory **diff-inlining context strategy**.
-> - Spawn **only Agent 2 — Acceptance QA** (`pt-doots:acceptance-qa`), exactly as defined below. Do **not** spawn Agent 1 (edge-case-qa), Agent 3 (researcher), Agent 4 (code-reviewer), Agent 5 (code-smells-reviewer), Agent 6 (test-reviewer), or any Agent 7+ dynamic specialist.
-> - **Run the Step 3.5 repro-verifier**, which is mandatory in every mode. In loose mode it carries the whole review, because build → run the repo's own gates → exercise the feature is the entire point. After acceptance-qa returns, spawn `pt-doots:repro-verifier` (Step 3.5 mechanics) seeded with **acceptance-qa's `NOT MET` / `PARTIAL` done-condition items** (instead of a static-reviewer finding list), plus its standing instruction to run the repo's own gates (`just check` / typecheck / tests) and exercise the feature described in the PR/ticket. Scratch dir: `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it). This bullet **is** the loose-mode form of Step 3.5 — do not also run the Step 3.5 block separately.
+> - Spawn **only the acceptance-qa lane** (`prove-it:acceptance-qa` by default, `pt-doots:acceptance-qa` in fallback), exactly as the Agent 2 template defines it. Do **not** spawn any other review lane or Agent 7+ specialist.
+> - **Run the Step 3.5 repro-verifier**, which is mandatory in every mode. In loose mode it carries the whole review, because build → run the repo's own gates → exercise the feature is the entire point. After acceptance-qa returns, spawn `prove-it:repro-verifier` (or `pt-doots:repro-verifier` in fallback; Step 3.5 mechanics) seeded with **acceptance-qa's `NOT MET` / `PARTIAL` done-condition items** (instead of a static-reviewer finding list), plus its standing instruction to run the repo's own gates (`just check` / typecheck / tests) and exercise the feature described in the PR/ticket. Scratch dir: `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it). This bullet **is** the loose-mode form of Step 3.5 — do not also run the Step 3.5 block separately.
 > - **Skip the rigorous consolidation** at the end of this step (dedupe / severity-sort) — loose mode produces no multi-agent severity findings to merge. Step 5's **Loose output** reads acceptance-qa's per-criterion result and the repro-verifier's verdicts directly.
 > - Continue: Step 4 (save state; record `review_mode: loose`) → Step 5 **Loose output** variant → Step 9 cleanup.
 >
 > Everything below is the **rigorous** default (`REVIEW_MODE=rigorous`) and runs unchanged when no `loose` keyword was given.
+
+**Reviewer roster — prove-it lanes by default.**
+
+The review pass runs the **prove-it** reviewer lanes when the prove-it plugin is installed, and falls back to the pt-doots roster (the `Agent 1..7+` blocks below) when it is not. Detect once, up front — the quickest proxy is the gate CLI, which travels with the plugin on this setup:
+
+```bash
+command -v prove-it-gate >/dev/null 2>&1 && echo "prove-it" || echo "pt-doots"
+```
+
+`prove-it` present ⇒ **default roster**; absent ⇒ **fallback roster**. Say which one ran when you present findings.
+
+**Default roster (prove-it) — up to 10 parallel lanes** (the relevance gate below spawns only the lanes the diff earns), each spawned as a standard **unnamed** subagent (Agent tool, `subagent_type` + a distinct `description`, and **no `name`**). Not naming them is load-bearing: a `name` turns a reviewer into an in-process teammate that inherits the orchestrator's Bash/Write/Edit and silently bypasses its read-only allowlist. Unnamed, each lane has exactly the read-only tools its definition declares.
+
+| `subagent_type` | Lane | Overlay |
+|---|---|---|
+| `prove-it:code-reviewer` | Conventions compliance | yes |
+| `prove-it:code-smells-reviewer` | Design / maintainability | yes |
+| `prove-it:edge-case-qa` | Boundaries, error paths | yes |
+| `prove-it:test-reviewer` | Test quality (only if the diff has tests) | yes |
+| `prove-it:contract-reviewer` | Type / interface / schema contracts | yes |
+| `prove-it:security-reviewer` | Exploitable vulns, attack paths | yes |
+| `prove-it:acceptance-qa` | Stated intent met | no |
+| `prove-it:doc-vouching-reviewer` | Defects hidden behind vouching comments | no |
+| `prove-it:self-containment-reviewer` | Leaked private / local context | no |
+| `prove-it:comment-claim-verifier` | Falsifiable claims in changed comments | no |
+
+Each lane's spawn prompt is the same shape as the shared `Agent` templates below — PR number / title / description, `{WORKTREE_DIR}`, the inlined diff (and for `acceptance-qa`, the Jira / stated intent). The prove-it agent definitions carry their own review strategy, so the PR context is all they need. Inject the conventions overlay (the same `{overlay path(s) for LANG}` block the templates use) into the **six lanes marked "yes"**; the four intent / leak / claim lanes take none. Then **Step 3.5 runs `prove-it:repro-verifier`** to prove or refute the defect-claims (mandatory, every review).
+
+**Lane relevance gate — spawn only the lanes the diff gives work to.** Ten lanes is the ceiling, not the floor. Before dispatch, decide each lane from the changed-file list and the inlined diff you already have; a lane with clearly nothing in scope is not spawned. This is orchestrator-side — the agents themselves are unchanged, you simply spawn fewer of them.
+
+**Always run** (never gated): `code-reviewer`, `acceptance-qa`, and the Step 3.5 repro-verifier. Any code change can break conventions or its stated intent, and repro-verify runs the repo's own gates even on a docs-only diff.
+
+**Gated — spawn only when the diff meets the trigger:**
+
+| Lane | Spawn when the diff… |
+|---|---|
+| `edge-case-qa` | changes executable logic — branches, loops, I/O, parsing, async, data transforms (skip docs / config / constants-only / pure formatting) |
+| `code-smells-reviewer` | adds or modifies a non-trivial function or class body (skip test-only, or a <~10-line mechanical change) |
+| `test-reviewer` | includes test files (the existing conditional rule) |
+| `contract-reviewer` | changes a type or exported signature, a validation / DB schema, or an API request/response shape |
+| `security-reviewer` | touches a trust boundary — input handling, auth/authz, queries, file paths, deserialization, HTTP/SSRF, secrets/crypto, HTML/injection, or externally-sourced data |
+| `doc-vouching-reviewer` | adds or changes a comment that *justifies* a behavior (a swallowed error, fallback, guard, "safe because…") |
+| `self-containment-reviewer` | includes committed-facing prose — comments, docstrings, README / markdown, descriptive new-file text |
+| `comment-claim-verifier` | changes a comment or docstring that makes a falsifiable claim about the code |
+
+The three comment lanes (`doc-vouching`, `self-containment`, `comment-claim`) all key off "did the diff touch comments / docstrings / prose?" — so a code-only change with no comment edits drops all three at once. A small internal fix lands near the always-run core (~3-4 lanes); a parser / import / API PR stays heavy because it genuinely has more surface.
+
+Two rules keep the gate honest:
+- **Fail open.** If you are unsure whether a trigger is met, spawn the lane. The gate skips what is *clearly* out of scope, never minimizes aggressively — dropping a lane that would have caught something betrays the whole point of a repro-proven review.
+- **Report the skips.** Lead Step 5 with `Lanes: {N} run / {M} skipped` and name each skipped lane with its one-line reason ("no comments changed", "no trust boundary touched"). A silent drop reads as coverage; a named drop reads as judgment — the same "show what you pruned" discipline as the Step 5a sanity-check log.
+
+Scope: the gate governs the active rigorous roster (the prove-it lanes, or the pt-doots fallback lanes that exist there). Loose mode and Step 1b keep their own fixed small sets. In Mode 3 self-review, apply the gate **per arm** — each arm spawns only the lanes its own diff earns.
+
+**Additive PlexTrac lanes (either roster):** keep the conditional **Agent 7+ artifact specialists** (migration / CI-CD / Docker / skill) — they cost nothing on a normal diff and are high-value when those files appear. The default roster does **not** run a `researcher` lane: git-history context is already covered by the merge-base diff base, the rename call-outs, and the repro-verifier.
+
+**Fallback roster (no prove-it):** run the `Agent 1..7+` pt-doots agents exactly as written below.
+
+The rest of this step — pre-flight checks, the mandatory diff-inlining context strategy, and the overlay-injection mechanics — is **roster-independent** and applies to whichever roster ran.
+
+---
 
 **IMPORTANT — Pre-flight checks before spawning agents:**
 1. Confirm `WORKTREE_DIR` exists and is a valid git worktree: `git -C "$WORKTREE_DIR" rev-parse --is-inside-work-tree` returns `true`
@@ -571,9 +631,11 @@ For PRs with very large diffs (>200KB of patch content total), split files acros
 
 Do NOT add it to Agent 2 (acceptance-qa), Agent 3 (researcher), or the Agent 7+ artifact-type specialists — those are language-neutral. (Loose mode spawns only acceptance-qa + repro-verifier, so it never injects an overlay.)
 
-Launch **5-7 parallel sub-agents** via the Agent tool (6th is conditional on test files, 7th+ are conditional on artifact types — see below). Each agent returns **structured findings ONLY** — no posting, no GitHub interaction.
+**Under the default prove-it roster,** inject this same overlay block into the six lanes marked "yes" in the roster preamble instead (that list adds `contract-reviewer` and `security-reviewer`); the intent / leak / claim lanes take none.
 
-**Use pt-doots agents wherever possible** — they have domain expertise, CLAUDE.md awareness, and structured output formats that general-purpose agents don't match.
+Launch the review lanes in parallel via the Agent tool — the **default prove-it roster's 10 lanes** (test lane conditional on test files; Agent 7+ specialists conditional on artifact types), or the **fallback roster's 5-7 pt-doots agents**. Each lane returns **structured findings ONLY** — no posting, no GitHub interaction.
+
+**Fallback roster — use pt-doots agents wherever possible** — they have domain expertise, CLAUDE.md awareness, and structured output formats that general-purpose agents don't match. The `Agent 1..7+` templates below are both the fallback roster and the shared prompt shape the default prove-it lanes reuse (same PR context, diff-inlining, and overlay block; only the `subagent_type` prefix and the added lanes differ).
 
 ---
 
@@ -727,7 +789,7 @@ After all agents return, collect all findings. Deduplicate findings that refer t
 
 ### Step 3.5: Repro-verify findings (MANDATORY — runs on every review)
 
-Static reviewers reason from an inlined diff. They cannot run the code, so they both miss bugs that only surface at runtime and over-flag plausible-but-wrong concerns. `pt-doots:repro-verifier` is what makes the findings legitimate: it proves or refutes them by actually running them. Without it you are presenting guesses with a severity column attached.
+Static reviewers reason from an inlined diff. They cannot run the code, so they both miss bugs that only surface at runtime and over-flag plausible-but-wrong concerns. The repro-verifier (`prove-it:repro-verifier` by default, `pt-doots:repro-verifier` in fallback) is what makes the findings legitimate: it proves or refutes them by actually running them. Without it you are presenting guesses with a severity column attached.
 
 **When to run it: ALWAYS. There are no skip conditions, and this step has no "auto" tier to qualify for.** Spawn it on every review, in every repo, at every severity, including reviews where the static agents raised nothing above LOW. On a diff with nothing runtime-falsifiable (frontend-only, style, config), it still runs the repo's own gates, and a red gate is itself the finding.
 
@@ -738,7 +800,7 @@ Static reviewers reason from an inlined diff. They cannot run the code, so they 
 - The consolidated correctness / edge-case / security findings from Step 3 at MED severity and above, each with file:line and the concern. Skip pure style / naming / smell / test-quality findings; those are not runtime-falsifiable.
 - Its scratch workspace, which is its ONLY writable path. **When `command -v prove-it-gate` succeeds, resolve it with `prove-it-gate repro-dir {repo}-{pr_number}`** so the repros are durable: they persist under `~/.claude/prove-it/repros/{repo}-{pr_number}/`, outside any worktree, so a later re-review (Step 1b) or a follow-up can re-run the exact repro instead of rebuilding it. Otherwise use `/tmp/{repo}-{pr_number}-repro/` (tell it to `mkdir -p` it).
 
-Spawn `subagent_type: "pt-doots:repro-verifier"`. The agent definition carries the full contract, the run-the-repo's-own-gates step, and the report format. Its safety rails forbid touching any shared or production service.
+Spawn `subagent_type: "prove-it:repro-verifier"` (the default roster's verifier; use `pt-doots:repro-verifier` in the fallback roster). Either agent definition carries the full contract, the run-the-repo's-own-gates step, and the report format, and returns the same CONFIRMED / PROVEN-SAFE / INCONCLUSIVE verdicts — so everything downstream (Step 5a precedence, Step 5b) is unchanged. Spawn it unnamed, like the review lanes. Its safety rails forbid touching any shared or production service; the env-blocker playbook below is the orchestrator's job to clear, not the agent's.
 
 **How its verdicts change the findings:**
 - **CONFIRMED**: mark the finding proven. It floats to the top and is exempt from the Step 5a demotion pass (execution already settled it). Attach the repro command so the inline comment can cite runnable evidence.
@@ -885,7 +947,10 @@ If after this pass NO HIGH findings remain, default-tone the recommendation towa
 
 ```
 ## Review: #{pr_number} {ticket_key} — {pr_title}
-Jira: {ticket_key} | Author: @{author} | Files: {file_count} | Base: {base_branch}
+Jira: {ticket_key} | Author: @{author} | Files: {file_count} | Base: {base_branch} | Roster: {prove-it | pt-doots}
+
+**{N} of {M} defect-claims reproduced real.** ({K} proven-safe and dropped, {L} inconclusive — from the Step 3.5 verdicts.)
+**Lanes: {n} run / {m} skipped** — {skipped lane: one-line reason; e.g. "security — no trust boundary touched", "comment-claim / doc-vouching / self-containment — no comments changed"} (relevance gate)
 
 ### Pre-promotion sanity check
 - {N} findings demoted/dropped — examples: "HIGH on jira_sdk.ts:649 demoted to MED (FF gate present at call site)"
@@ -1307,7 +1372,7 @@ For both arm types, skip binary files and test fixtures from the diff inlined to
 
 ### Step S6: Spawn the swarm — all arms in parallel
 
-For each arm, spawn the same 5-7 reviewer agents Mode 2 uses (edge-case-qa, acceptance-qa, researcher, code-reviewer, code-smells-reviewer, conditional test-reviewer, conditional dynamic specialists). **Critical: dispatch ALL arms' agents in a single message** so they actually run concurrently — a 2-arm review is 10-14 parallel agents, not 2 sequential batches.
+For each arm, spawn the same **reviewer roster Mode 2 uses** — see Step 3's roster preamble: the prove-it lanes by default, the pt-doots `Agent 1..7+` set in fallback, plus the conditional Agent 7+ artifact specialists. The default roster runs no `researcher` lane, and the **lane relevance gate applies per arm** — each arm spawns only the lanes its own diff earns, so the 10-lane-per-arm ceiling is usually much smaller in practice. **Critical: dispatch ALL arms' agents in a single message** so they actually run concurrently — even at the ceiling a 2-arm review is one batch that queues under the concurrency cap and all completes, never sequential per-arm rounds.
 
 Use the same agent prompt templates Mode 2 uses (see Step 3 of Mode 2), with these substitutions:
 
@@ -1316,7 +1381,7 @@ Use the same agent prompt templates Mode 2 uses (see Step 3 of Mode 2), with the
 - `Jira context` → the shared Jira fetch from S3.
 - `{WORKTREE_DIR}` → the arm's worktree path.
 - Inline the diff content from S5 just like Mode 2 — full patches, not file lists.
-- **Conventions overlay** → compute `LANG` **per arm** from that arm's changed files (S5) using the detection rule in `reference/workflow.md` § Language Detection & Conventions-Overlay Injection, and inject the resolved overlay block into that arm's writer / language-sensitive-reviewer prompts (edge-case-qa, code-reviewer, code-smells-reviewer, test-reviewer) exactly as Mode 2 Step 3 does. acceptance-qa and researcher get no overlay. Each arm is its own repo, so different arms can resolve to different overlays.
+- **Conventions overlay** → compute `LANG` **per arm** from that arm's changed files (S5) using the detection rule in `reference/workflow.md` § Language Detection & Conventions-Overlay Injection, and inject the resolved overlay block into that arm's overlay lanes exactly as Mode 2 Step 3 does — the six lanes marked "yes" in the roster preamble (`code-reviewer`, `code-smells-reviewer`, `edge-case-qa`, `test-reviewer`, `contract-reviewer`, `security-reviewer` under the default roster). The intent / leak / claim lanes get no overlay. Each arm is its own repo, so different arms can resolve to different overlays.
 
 Agents return structured findings the same way. No agent needs to know about other arms.
 
