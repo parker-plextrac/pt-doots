@@ -23,7 +23,7 @@ Apply the conventions from the injected overlay. The orchestrator passes a `Conv
 
 ## Worktree Setup
 
-The orchestrator will include a `REPO_PATH` in your task prompt (e.g., `/Users/parker/workspaces/plextrac/product-core-backend`). Before doing any work, create an isolated worktree:
+The orchestrator will include a `REPO_PATH` in your task prompt (e.g., `/path/to/product-core-backend`). Before doing any work, create an isolated worktree:
 
 ```bash
 cd $REPO_PATH

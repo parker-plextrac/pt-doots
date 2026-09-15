@@ -11,7 +11,7 @@
 - Intended use: 6th parallel reviewer in the Step 4c quality gate, alongside code-reviewer, acceptance-qa, edge-case-qa, code-smells-reviewer, test-reviewer. Runs on standard, lightweight, AND docs-only workflows — doc/comment leaks happen on small and docs-only diffs too (the motivating live incident was a leftover `C2`/`C3` label in a shipped service comment caught by a human reviewer on a PR).
 - Status: Created and wired but NOT yet live — pending orchestrator + Parker review of the build report. Open confirm items: (1) agent name (`self-containment-reviewer` vs `documentation-reviewer`), (2) effort tier (high vs medium), (3) two-tier severity model, (4) whether the empty project plugin cache needs any action.
 
-### Wiring landed (all in the live source tree `/Users/parker/workspaces/plextrac/pt-doots`)
+### Wiring landed (all in the plugin source tree)
 - `agents/self-containment-reviewer.md` — agent definition (this agent)
 - `reference/agent-prompts.md` — added Self-Containment Reviewer spawn template with `{INLINED_DIFF}` + optional `{INLINED_FUNCTION_BODIES}`; added to the inline-context contract's "All quality-gate reviewers" line (now 6)
 - `commands/pt-doots.md` — added to Step 4c flow, Agent Mapping table, the Inline-Diff Substitution Contract (5→6 reviewers), Workflow Types table, and Telemetry spawn list

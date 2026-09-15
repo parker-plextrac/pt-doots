@@ -27,7 +27,6 @@ Three modes based on arguments:
 | product-services-export | `PlexTrac/product-services-export` |
 | product-services-mcp | `PlexTrac/product-services-mcp` |
 | agent-skills | `PlexTrac/agent-skills` |
-| a retired service | `PlexTrac/a retired service` |
 
 ---
 
@@ -495,7 +494,7 @@ A cheap independent smell test, worth running once: `git -C "$WORKTREE_DIR" rev-
 
 **Record the file count and insertion/deletion totals from `git diff --stat $BASE_SHA...HEAD` in the review state file.** If a reviewer later reports a finding against a file outside that list, the finding is against the wrong base, not against this PR.
 
-**This cost a real review (a retired service #25, 2026-08-17):** patches were built with `git diff main...HEAD` in a fresh worktree while local `main` was 1 merge behind. Six reviewers received 8 files that were not in the PR, plus a 265-line file shown as new that already existed at base. Both HIGH findings from one reviewer were false, and 6 findings total had to be pruned on provenance. It was caught only because a separate agent independently ran `merge-base`.
+**This cost a real review (2026-08-17):** patches were built with `git diff main...HEAD` in a fresh worktree while local `main` was 1 merge behind. Six reviewers received 8 files that were not in the PR, plus a 265-line file shown as new that already existed at base. Both HIGH findings from one reviewer were false, and 6 findings total had to be pruned on provenance. It was caught only because a separate agent independently ran `merge-base`.
 
 **Why worktrees by default:** the user almost always has another session editing the main checkout. A normal `git checkout` would either fail (uncommitted changes) or yank their working tree out from under them. Worktrees give a clean isolated copy that the main checkout never notices.
 
@@ -1023,7 +1022,7 @@ For each selected finding, write a rough draft of the comment, then spawn `pt-do
 
 ### The what/fix/why contract (MANDATORY for every posted comment)
 
-Origin: the repo owner, repo owner, 2026-08-07 — *"your code review bot might need a little tuning on its should output, it's kind of giving a teammate right now. It points at things, but doesn't really say what should be done."* A comment that only names the problem hands the diagnosis back to the author as homework. Don't do that.
+Origin: repo-owner feedback, 2026-08-07. The review bot's `should:` output was pointing at problems without saying what to do about them. A comment that only names the problem hands the diagnosis back to the author as homework. Don't do that.
 
 Every comment has exactly three parts, in order:
 

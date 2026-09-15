@@ -16,10 +16,10 @@ committed coding standard is authoritative and overrides this overlay for that r
 - **Do not go rogue.** Never impose this overlay's version of a rule over a repo's committed
   standard. If the repo says something different, the repo is right for that repo — follow it and,
   if the divergence looks like a real gap, flag it rather than silently overriding.
-- **The How-to-Code section below is a snapshot, not the source.** It now lives committed in
-  `a retired service`'s own `CLAUDE.md` ("How to Code"), so read the repo's copy and treat it
-  as authoritative — it may have evolved past what is captured here. This is principle #7 ("check
-  the source, don't recall it") applied to the standard itself.
+- **The How-to-Code section below is a snapshot, not the source.** Where a target repo commits its
+  own "How to Code" standard in its `CLAUDE.md`, read that copy and treat it as authoritative; it
+  may have evolved past what is captured here. This is principle #7 ("check the source, don't
+  recall it") applied to the standard itself.
 
 Three invariants hold everywhere **within this overlay** (they describe how this file is written;
 they do not override a repo's committed standard):

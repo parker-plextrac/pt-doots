@@ -19,10 +19,14 @@ The existing Claude Code setup is unchanged.
 /plugin install pt-doots@pt-doots
 ```
 
-Then enable agent teams (one-time):
+Then enable agent teams (one-time). Add this to `~/.claude/settings.local.json`, merging it into the existing `env` object if the file already has one:
 
-```bash
-echo 'CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1' >> ~/.claude/settings.local.json
+```json
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  }
+}
 ```
 
 Restart Claude Code after install.
@@ -195,12 +199,12 @@ The `voice-stylist` agent rewrites human-facing drafts (PR comments, Slack
 pings, Jira replies) into your voice before they're shown for approval. It
 reads two layers of rules:
 
-1. **Bundle** at `agents/voice-stylist/profile.md` — universal good-prose
+1. **Built-in rules** in the `voice-stylist` agent definition — universal good-prose
    rules shipped with the plugin (banned-phrases starter list, prefix scheme,
    em-dash rule, plain-verb mappings). Works out of the box for everyone.
 2. **User overlay** in your local user memory
    (`~/.claude/projects/{workspace}/memory/voice_*.md`) — personal additions
-   that override or extend the bundle. Your audience tiers, signature
+   that override or extend the built-in rules. Your audience tiers, signature
    emojis, phrases YOU don't use, prefix tweaks.
 
 To set up or refresh your overlay, run `/voice-profile`. The command walks

@@ -12,8 +12,8 @@ description: >
 
 The `pt-doots:voice-stylist` agent reads two layers of rules:
 
-1. **Bundle** at `agents/voice-stylist/profile.md` — universal good-prose rules that ship with the plugin.
-2. **User overlay** in your local user memory — personal touches that override or extend the bundle.
+1. **Built-in rules** in the `voice-stylist` agent definition — universal good-prose rules that ship with the plugin.
+2. **User overlay** in your local user memory — personal touches that override or extend the built-in rules.
 
 This command walks you through setting up (or refreshing) your overlay. Run it anytime — after install, after you notice the agent missing a phrase you hate, whenever your voice changes.
 
@@ -39,7 +39,7 @@ If the user is running from outside a project workspace (unusual), fall back to 
 
 ## Step 1: Show the bundle
 
-Read `agents/voice-stylist/profile.md` from the plugin install. Tell the user:
+Read the built-in rule sections (§1 through §7) from the `voice-stylist` agent definition (`agents/voice-stylist.md`). Tell the user:
 
 > Here's the universal voice profile that ships with pt-doots. Your overlay can extend or override any of it. I'll walk you through the personal layer now.
 
@@ -144,6 +144,6 @@ If they say yes, spawn `pt-doots:voice-stylist` with their sample and show the o
 
 ## Notes
 
-- This command is read/write only on user memory and the bundled profile — no source code, no agents/, no commands/.
-- Do NOT modify the bundle (`agents/voice-stylist/profile.md`). The bundle is plugin-shipped; user customizations go in the overlay only.
+- This command is read/write only on user memory — no source code, no agents/, no commands/.
+- Do NOT modify the voice-stylist's built-in rules to customize your voice. Those are plugin-shipped defaults; user customizations go in the overlay only.
 - Existing overlay files in user memory are NOT overwritten without confirmation — if they exist, ask "merge into existing, or replace?"

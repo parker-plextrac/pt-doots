@@ -379,7 +379,7 @@ Scan every committed-FACING artifact in the diff — code comments, CLAUDE.md en
 - notes/ path or local-absolute-path references
 - internal plan/session labels used as shared vocabulary (C1/C2/C3, D1/D2, T1-T5, NB-1, "Option A/B", "Chunk/Wave/Pass N" pointing at a private plan)
 - private process/history references ("the redirect", "per the plan", "as we discussed", fix-cycle/quality-gate references)
-- person/reviewer names used as load-bearing justification (Parker, a teammate, a teammate, a teammate)
+- person/reviewer names used as load-bearing justification (a first name or initials, "per <name>'s call")
 - dangling references with no in-file antecedent ("this approach", "the earlier issue")
 
 Do NOT flag legit domain/tech terms (AWS S3, TS generics like T/K/V, HTTP codes, version strings, enum members), Jira ticket keys (IO-2175), self-evident in-file structure, or prose quality/grammar. Ambiguous tokens → flag at LOW. Do NOT flag unchanged lines.

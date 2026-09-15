@@ -33,7 +33,7 @@ Apply the conventions from the injected overlay. The orchestrator passes a `Conv
 
 ## Worktree Setup
 
-The orchestrator will include `REPO_PATH` in your task prompt (e.g., `/Users/parker/workspaces/plextrac/product-core-backend`).
+The orchestrator will include `REPO_PATH` in your task prompt (e.g., `/path/to/product-core-backend`).
 
 **Before creating the worktree, extract the target branch from your task prompt.** The orchestrator names the feature branch in the prompt (look for `Branch: <name>`, `on branch <name>`, or similar). Set it explicitly:
 
@@ -304,7 +304,7 @@ A repo that rejects function-length caps has said nothing about comments. Never 
 When your task involves a parser migration (Python → TypeScript behind a feature flag), run the parser comparison tool after implementation:
 
 ```bash
-cd /Users/parker/workspaces/plextrac/tool-dev-utils/parser-comparison-tool
+cd {WORKSPACE}/tool-dev-utils/parser-comparison-tool
 npm install --silent 2>/dev/null
 npm run compare-parser <parser-name> <sample-file>
 ```

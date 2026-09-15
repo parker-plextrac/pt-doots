@@ -82,7 +82,7 @@ Examples:
 
 ### Rules
 
-1. **Never edit `pt-doots/agents/*.md` or `pt-doots/agents/voice-stylist/profile.md` to add user preferences.** Those are the plugin's bundled defaults. User changes belong in user memory.
+1. **Never edit `pt-doots/agents/*.md` (including the voice-stylist's built-in rules) to add user preferences.** Those are the plugin's bundled defaults. User changes belong in user memory.
 
 2. **Write the overlay file directly.** Don't ask the user to do it. They asked you to make the change; the overlay file IS the change.
 

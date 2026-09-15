@@ -36,16 +36,18 @@ The implementer, test-writer, and the language-sensitive reviewers (code-reviewe
 From the changed-file list (skip test fixtures and binaries):
 
 1. **By extension:** any `.ts` / `.tsx` / `.js` / `.jsx` ⇒ TypeScript; any `.py` ⇒ Python.
-2. **Repo-marker confirm / tiebreak:** `product-core-backend`, `product-core-frontend` ⇒ TypeScript; `product-services-export`, `product-services-mcp`, `a retired service` ⇒ Python.
+2. **Repo-marker confirm / tiebreak:** `product-core-backend`, `product-core-frontend` ⇒ TypeScript; `product-services-export`, `product-services-mcp` ⇒ Python.
 3. **Mixed** (both a TypeScript/JS extension **and** `.py` are present) ⇒ `LANG = mixed`.
 
 ### Overlay path(s) per `LANG`
 
 | `LANG` | Overlay path(s) to inject |
 |--------|---------------------------|
-| TypeScript | `/Users/parker/workspaces/plextrac/pt-doots/reference/typescript-conventions.md` |
-| Python | `/Users/parker/workspaces/plextrac/pt-doots/reference/python-conventions.md` |
+| TypeScript | `{PLUGIN}/reference/typescript-conventions.md` |
+| Python | `{PLUGIN}/reference/python-conventions.md` |
 | mixed | **both** of the above |
+
+`{PLUGIN}` resolves to `$CLAUDE_PLUGIN_ROOT` when set, otherwise the pt-doots checkout (e.g. `{WORKSPACE}/pt-doots`). Same rule as `commands/bootstrap-team.md`.
 
 ### Injection block (add to each writer / language-sensitive-reviewer spawn prompt)
 

@@ -57,7 +57,7 @@ Flag a finding when changed text in the review surface matches one of these five
 ### 1. notes/ path references
 Any reference to `notes/...`, a local workspace path, or an absolute path into the author's machine. A reader cannot open these.
 - Leak: `// see notes/IO-2300/research-nipper-validation.md for the mapping table`
-- Leak: `# logic mirrors /Users/parker/workspaces/plextrac/notes/...`
+- Leak: `# logic mirrors /Users/alex/dev/notes/...`
 
 ### 2. Internal session/plan label shorthand used as shared vocabulary
 Plan/session shorthand that means something only inside the author's notes: `C1`/`C2`/`C3`, `D1`/`D2`, `S1`-`S6`, `T1`-`T5`, `NB-1`..`NB-N`, "Option A/B/C", "Chunk N", "Wave N", and "Pass N" / "Rule N" — **only when they reference a private plan rather than a self-evident in-code structure.**
@@ -71,8 +71,8 @@ Phrases that assume the reader lived through this ticket's working session: "the
 - Leak: `// fixed in fix-cycle 2` — internal workflow vocabulary the reader never saw.
 
 ### 4. Person / reviewer names used as if the reader knows them
-First names or initials of teammates/reviewers dropped in as shared context: Parker, a teammate, a teammate, a teammate, a teammate, "per <name>'s call".
-- Leak: `// a teammate wanted this gated behind the flag` — the reader does not know who a teammate is or why his preference is binding.
+First names or initials of teammates/reviewers dropped in as shared context: a first name or initials, or "per <name>'s call".
+- Leak: `// a teammate wanted this gated behind the flag` — the reader does not know who that teammate is or why their preference is binding.
 - Note: a name in a git-blame or an `@author` tag that the repo conventionally uses is different; flag names used as *load-bearing justification* a stranger cannot evaluate.
 
 ### 5. Dangling references / assumed context
