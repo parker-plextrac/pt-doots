@@ -126,8 +126,9 @@ Step 2:   Plan                (main — user interaction)
 Step 3:   Create Branch       (main)
 Step 4a:  Implement           (pt-doots:implementer) → /verify   [TDD default: runs AFTER 4b, to green]
 Step 4b:  Write Tests         (pt-doots:test-writer) → /verify   [TDD default: runs FIRST, failing tests]
-Step 4c:  Quality Gate        (pt-doots:code-reviewer + acceptance-qa + edge-case-qa + code-smells-reviewer + test-reviewer + self-containment-reviewer, parallel)
-Step 4c.5: Repro-Verify       (pt-doots:repro-verifier, MANDATORY every workflow) → verdicts feed 4d
+Step 4c:  Quality Gate        (standard: prove-it review roster, relevance-gated → fallback pt-doots 6 reviewers; lightweight/docs-only: pt-doots reviewers)
+          + Simplicity lane    (pt-doots:simplicity-reviewer — additive, any roster, on source changes)
+Step 4c.5: Repro-Verify       (prove-it:repro-verifier → fallback pt-doots:repro-verifier, MANDATORY every workflow) → verdicts feed 4d
 Step 4d:  Fix Findings        (same agent used in 4a, fix-cycle mode) → /verify
 Step 4e:  Documentation       (pt-doots:documentarian — MECHANICAL: any .md/README/docstring/comment in the diff, or docs-only)
 Step 5:   Commit              (main — commit gate)
@@ -144,13 +145,10 @@ Step 6:   Handoff             (main — summary, offer /create-pr)
 | 1 | `pt-doots:researcher` | Writes research.md, returns summary. |
 | 4a, 4d | `pt-doots:implementer` | Worktree isolation. 4d = fix-cycle mode. |
 | 4b | `pt-doots:test-writer` | Worktree isolation. |
-| 4c | `pt-doots:code-reviewer` | Read-only. PlexTrac standards. |
-| 4c | `pt-doots:acceptance-qa` | Read-only. Acceptance criteria. Skipped on lightweight. |
-| 4c | `pt-doots:edge-case-qa` | Read-only. Boundary conditions. Skipped on lightweight. |
-| 4c | `pt-doots:code-smells-reviewer` | Read-only. Design quality. |
-| 4c | `pt-doots:test-reviewer` | Read-only. Test quality. |
-| 4c | `pt-doots:self-containment-reviewer` | Read-only. Private-context leak detection in comments/docs/CLAUDE.md/test strings. Runs on standard, lightweight, AND docs-only. |
-| 4c.5 | `pt-doots:repro-verifier` | Read-only + scratch dir. **Mandatory, every workflow, no skip.** Verdicts: Confirmed / Proven-safe / Inconclusive; feed 4d. Also runs the repo's gates. |
+| 4c (standard) | **prove-it lanes** (relevance-gated): `prove-it:code-reviewer` + `acceptance-qa` always; `edge-case-qa` / `code-smells-reviewer` / `test-reviewer` / `contract-reviewer` / `security-reviewer` / `doc-vouching-reviewer` / `self-containment-reviewer` / `comment-claim-verifier` as the diff earns. | Read-only, **unnamed** subagents. Adds contract / security / doc-vouching / comment-claim over the old set. Detected via `command -v prove-it-gate`. |
+| 4c (fallback / lightweight / docs-only) | `pt-doots:code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`, `self-containment-reviewer` | Read-only. The former standard six; used when prove-it is absent, and on lightweight/docs-only (trimmed per §4c). |
+| 4c (additive, any roster) | `pt-doots:simplicity-reviewer` | Read-only. Human-simplicity lens — smallest concrete simplification. Runs alongside whichever roster on any source change; skipped on docs-only. No overlay. |
+| 4c.5 | `prove-it:repro-verifier` (fallback `pt-doots:repro-verifier`) | Read-only + scratch dir. **Mandatory, every workflow, no skip.** Verdicts: Confirmed / Proven-safe / Inconclusive; feed 4d. Also runs the repo's gates. On standard, its Confirmed verdicts are the final gate. |
 | 4e | `pt-doots:documentarian` | **Mechanical trigger — no judgment call.** Fire whenever the diff touches ANY `.md`, README, docstring, or block comment, regardless of what scrum-master set. Also fire when workflow is `docs-only`. Its job is to VERIFY the claims the implementer wrote, not to author from scratch. |
 
 ### Planning (Step 2): Interactive; the Orchestrator Does Not Decide Solo
@@ -195,11 +193,11 @@ Once the plan and Done-condition are locked, execution goes quiet: only a genuin
 
 ### Conventions Overlay Injection (MANDATORY)
 
-The implementer (4a), test-writer (4b), and the language-sensitive quality-gate reviewers (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) are **language-neutral**. Their language rules come from a **conventions overlay** the orchestrator injects into each spawn prompt. Skip it and those agents fall back to TypeScript-biased defaults (the exact failure that over-flags Python code).
+The implementer (4a), test-writer (4b), and the language-sensitive quality-gate lanes (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa — plus contract-reviewer and security-reviewer under the standard-workflow prove-it roster) are **language-neutral**. Their language rules come from a **conventions overlay** the orchestrator injects into each spawn prompt. Skip it and those agents fall back to TypeScript-biased defaults (the exact failure that over-flags Python code).
 
 - **Detect `LANG` and pick the overlay path(s)** using the single source of truth: the Language Detection & Conventions-Overlay Injection section of [reference/workflow.md](../reference/workflow.md). In the ticket flow the target repo is known at Step 3, so resolve `LANG` **before the Step 4a implementer spawn**; do not wait until the quality gate.
 - **Fill `{CONVENTIONS_OVERLAY}`** in every writer and language-sensitive-reviewer template in `reference/agent-prompts.md` with the resolved path(s). Never spawn one of those agents with the token unfilled.
-- **No overlay** (these are language-neutral): scrum-master, researcher, acceptance-qa, self-containment-reviewer, documentarian.
+- **No overlay** (these are language-neutral): scrum-master, researcher, acceptance-qa, self-containment-reviewer, documentarian, the prove-it intent / leak / claim lanes (doc-vouching-reviewer, comment-claim-verifier), and the additive simplicity-reviewer.
 
 This is the writer/reviewer analog of the Inline-Diff Contract below: both are spawn-time context the orchestrator MUST inject, and both fail silently if skipped.
 
@@ -207,7 +205,7 @@ This is the writer/reviewer analog of the Inline-Diff Contract below: both are s
 
 ### Step 4c — Inline-Diff Substitution Contract (MANDATORY)
 
-All six quality-gate reviewers (`code-reviewer`, `acceptance-qa`, `edge-case-qa`, `code-smells-reviewer`, `test-reviewer`, `self-containment-reviewer`) require their full review surface inlined in the spawn prompt. The agent prompts in `reference/agent-prompts.md` contain `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders. The orchestrator MUST populate them before spawning. (`self-containment-reviewer` mainly needs `{INLINED_DIFF}` — the comments, CLAUDE.md entries, committed docs, and test/fixture strings — and rarely needs `{INLINED_FUNCTION_BODIES}`.)
+Every review lane in the active roster — the prove-it lanes on standard, or the pt-doots reviewers on lightweight / docs-only and in fallback — requires its full review surface inlined in the spawn prompt. (The prove-it lanes reuse the same PR/diff context shape; their agent definitions carry their own review strategy.) The agent prompts in `reference/agent-prompts.md` contain `{INLINED_DIFF}` and `{INLINED_FUNCTION_BODIES}` placeholders. The orchestrator MUST populate them before spawning. (`self-containment-reviewer` mainly needs `{INLINED_DIFF}` — the comments, CLAUDE.md entries, committed docs, and test/fixture strings — and rarely needs `{INLINED_FUNCTION_BODIES}`.)
 
 **Guardrail**: the orchestrator reads files / runs `git`, NOT the reviewer agents. Reviewer prompts explicitly tell the agent "do NOT use the Read tool" — passing them file lists or plan paths instead of inlined diffs is the regression that caused turn-budget exhaustion (see `$STATE/.local/team-manager/learned-patterns.md` lines 65-77 and the 2026-05-07 audit notes, where `$STATE` is the telemetry state dir defined in § Telemetry).
 
@@ -258,7 +256,7 @@ The scrum-master returns one of these four types, plus orthogonal flags (`Docume
 
 | Type | When | Pipeline |
 |------|------|----------|
-| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; parallel quality gate (6 reviewers) |
+| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; quality gate = the **prove-it** review roster (relevance-gated, repro-verified final gate), falling back to the pt-doots 6 reviewers when prove-it is absent |
 | **lightweight** | Single-file fixes, dependency bumps, additive changes | Skips acceptance-qa + edge-case-qa; runs code-reviewer + code-smells-reviewer + test-reviewer + self-containment-reviewer on a smaller review surface |
 | **docs-only** | Documentation-only tickets (READMEs, comments, reference docs) | Researcher → documentarian → code-reviewer + self-containment-reviewer → commit |
 | **custom** | Tickets that don't fit a template | Scrum-master proposes the variant with rationale |
@@ -274,7 +272,7 @@ After every code change → run `/verify`. Max 3 fix cycles per failure. If stil
 ALL must be true before committing:
 - [ ] Quality gate ran (4c), and all reviewers returned a REAL result (no truncated or empty completion notifications; thin ones retrieved via SendMessage)
 - [ ] **Repro-verify ran (4c.5) and returned verdicts.** No exceptions. If you are about to tick this from memory rather than from a report you actually received, it did not run.
-- [ ] **prove-it gate clear** — only if `command -v prove-it-gate` and a gate was opened in 4c.5: `prove-it-gate status` shows every finding Confirmed-and-fix-confirmed or Proven-safe (none blocking), or an `override --reason "..."` was recorded. Then `prove-it-gate close`. If prove-it-gate is not installed, this row is N/A. Full contract: [reference/workflow.md](../reference/workflow.md) §4c.5 / §4d / Step 5.
+- [ ] **prove-it gate clear** — on the standard workflow this IS the final gate (the prove-it repro-verified review from 4c/4c.5), not an optional add-on; it is N/A only when prove-it is absent (fail-open). When a gate was opened in 4c.5: `prove-it-gate status` shows every finding Confirmed-and-fix-confirmed or Proven-safe (none blocking), or an `override --reason "..."` was recorded. Then `prove-it-gate close`. Full contract: [reference/workflow.md](../reference/workflow.md) §4c.5 / §4d / Step 5.
 - [ ] Findings fixed or explicitly deferred (4d)
 - [ ] Verification passed after most recent change
 - [ ] All plan steps implemented

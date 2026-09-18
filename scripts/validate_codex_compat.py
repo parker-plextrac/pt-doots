@@ -292,7 +292,7 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(arguments[0]) if arguments else Path(__file__).resolve().parents[1]
     report = validate_repository(root)
     print(f"Diagnostic: canonical commands={report.command_count} (baseline=6)")
-    print(f"Diagnostic: canonical agents={report.agent_count} (baseline=15)")
+    print(f"Diagnostic: canonical agents={report.agent_count} (baseline=16)")
     for error in report.errors:
         print(error)
     return 1 if report.errors else 0

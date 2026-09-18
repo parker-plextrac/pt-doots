@@ -275,15 +275,24 @@ Implement → Verify → Test → Verify → Review → Fix → Verify → Commi
 
 **GATE: Never skip this step, even for small changes, any repo, or when resuming a session.**
 
-**Standard workflow** — spawn all six in parallel:
-- `pt-doots:code-reviewer` — PlexTrac CLAUDE.md standards
-- `pt-doots:acceptance-qa` — acceptance criteria verification
-- `pt-doots:edge-case-qa` — boundary conditions, failure modes
-- `pt-doots:code-smells-reviewer` — design quality, coupling, duplication
-- `pt-doots:test-reviewer` — test quality (hollow assertions, over-mocking, bloat)
-- `pt-doots:self-containment-reviewer` — private-context leaks in comments, docs, and test strings
+**Standard workflow — the prove-it review roster (this replaces the former six pt-doots reviewers).** Spawn the **prove-it reviewer lanes** under the **lane relevance gate**, exactly as [commands/prs.md](../commands/prs.md) §Step 3 defines them (its "Reviewer roster — prove-it lanes by default" and "Lane relevance gate" blocks are the single source of truth; do not restate the gate here). Up to ten read-only lanes:
 
-Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
+- **Always run:** `prove-it:code-reviewer`, `prove-it:acceptance-qa` (plus the 4c.5 repro-verifier).
+- **Diff-gated** (spawn only when the diff earns it; fail open when unsure): `prove-it:edge-case-qa`, `prove-it:code-smells-reviewer`, `prove-it:test-reviewer`, `prove-it:contract-reviewer`, `prove-it:security-reviewer`, `prove-it:doc-vouching-reviewer`, `prove-it:self-containment-reviewer`, `prove-it:comment-claim-verifier`.
+
+The four lanes pt-doots never had — **contract, security, doc-vouching, comment-claim** — are the reason for the swap: they review dimensions the old roster had no lane for. Spawn each as a standard **unnamed** subagent (`subagent_type` + a distinct `description`, **no `name`**) — naming one turns it into a teammate that inherits Bash/Write/Edit and silently bypasses its read-only allowlist. Report `Lanes: {N} run / {M} skipped`, one-line reason per skip.
+
+**Detect the roster once, up front** (the same probe `/prs` uses):
+
+```bash
+command -v prove-it-gate >/dev/null 2>&1 && echo "prove-it" || echo "pt-doots"
+```
+
+`prove-it` present ⇒ the lanes above. **Absent ⇒ fail open to the fallback roster** — the former pt-doots six (`pt-doots:code-reviewer`, `pt-doots:acceptance-qa`, `pt-doots:edge-case-qa`, `pt-doots:code-smells-reviewer`, `pt-doots:test-reviewer`, `pt-doots:self-containment-reviewer`), using the prompts from [agent-prompts.md](agent-prompts.md). State which roster ran when you present findings.
+
+**This swap is standard-workflow only.** Lightweight and docs-only keep their pt-doots rosters below unchanged.
+
+**Additive lane — `pt-doots:simplicity-reviewer` (runs with any roster).** Independently of which roster ran, spawn `pt-doots:simplicity-reviewer` in the same parallel fan-out whenever the diff changes source code (skip it on a docs-only or pure-config diff). It is the human-simplicity lens — "is this simple enough to understand, and what is the smallest change that makes it simpler?" — and it is the one pt-doots lane that fires even under the prove-it roster, so standard tickets get it too. Inline the diff into its prompt like any other lane. It is language-neutral: no conventions overlay (it defers to the repo's committed `CLAUDE.md`).
 
 **Lightweight workflow** — spawn only:
 - `pt-doots:code-reviewer` (single reviewer)
@@ -297,7 +306,7 @@ Use the corresponding prompts from [agent-prompts.md](agent-prompts.md).
 
 **Custom workflow** — follow the reviewer set the scrum-master included in its WORKFLOW PLAN steps.
 
-**Conventions overlay (all variants):** before spawning, detect `LANG` from the implementer's changed-file list and inject the matching conventions-overlay path into each language-sensitive reviewer's prompt (code-reviewer, code-smells-reviewer, test-reviewer, edge-case-qa) — see the **Language Detection & Conventions-Overlay Injection** section. The language-neutral acceptance-qa and self-containment-reviewer take no overlay.
+**Conventions overlay (all variants):** before spawning, detect `LANG` from the implementer's changed-file list and inject the matching conventions-overlay path into each language-sensitive lane's prompt — see the **Language Detection & Conventions-Overlay Injection** section. Under the prove-it roster that set is `code-reviewer`, `code-smells-reviewer`, `edge-case-qa`, `test-reviewer`, `contract-reviewer`, `security-reviewer`; under the pt-doots fallback / lightweight / docs-only it is `code-reviewer`, `code-smells-reviewer`, `test-reviewer`, `edge-case-qa`. The intent / leak / claim lanes (`acceptance-qa`, `self-containment-reviewer`, `doc-vouching-reviewer`, `comment-claim-verifier`) and the additive `simplicity-reviewer` take no overlay.
 
 Consolidate all findings from all reviewers before proceeding. FIRST clear the completion barrier: every dispatched reviewer must have returned a REAL result, not a truncated or empty completion notification. Retrieve any thin result via SendMessage (see [swarm-coordination.md](swarm-coordination.md) "Completion barrier") before consolidating. Do NOT consolidate a partial set.
 
@@ -309,7 +318,7 @@ Consolidate all findings from all reviewers before proceeding. FIRST clear the c
 
 An environment blocker (a held port, a missing container, an absent `.env`) is yours to clear, not a reason to skip. If the code genuinely cannot be run after you clear the blocker, STOP and tell the user what is blocking it, rather than passing unverified findings to Step 4d.
 
-- Spawn `pt-doots:repro-verifier` with the **Repro-Verifier Prompt** from [agent-prompts.md](agent-prompts.md), seeded with the consolidated correctness / edge-case findings and a scratch dir path. **When `command -v prove-it-gate` succeeds, resolve that scratch dir with `prove-it-gate repro-dir {TICKET-KEY}`** so the repros are durable (they live under `~/.claude/prove-it/repros/{TICKET-KEY}/`, outside the repo, and survive to the fix/confirm step, which is often a later session). Otherwise use a `/tmp` scratch dir as before.
+- Spawn `prove-it:repro-verifier` (the default roster's verifier; `pt-doots:repro-verifier` in the fallback roster) with the **Repro-Verifier Prompt** from [agent-prompts.md](agent-prompts.md), seeded with the consolidated correctness / edge-case findings and a scratch dir path. On the standard workflow this repro-verify is the review's proving step — its CONFIRMED verdicts are the final gate the Step 5 commit must clear. **When `command -v prove-it-gate` succeeds, resolve that scratch dir with `prove-it-gate repro-dir {TICKET-KEY}`** so the repros are durable (they live under `~/.claude/prove-it/repros/{TICKET-KEY}/`, outside the repo, and survive to the fix/confirm step, which is often a later session). Otherwise use a `/tmp` scratch dir as before.
 - It writes and runs reproduction scripts in the scratch dir and grounds them by running the repo's own gates. It is read-only toward application code and never writes fixes.
 - It returns a REPRO-VERIFIER REPORT with a verdict per finding: **Confirmed** (reproduced), **Proven-safe** (refuted), or **Inconclusive**.
 - Language-neutral: takes no conventions overlay.
@@ -365,7 +374,7 @@ The agent does not skip a higher-priority level just because work exists at a lo
 - [ ] All plan steps implemented
 - [ ] Done-condition met (the "Done when:" block from plan.md; verified by acceptance-qa on standard, or by code-reviewer plus the orchestrator on lightweight/docs-only where acceptance-qa is skipped)
 - [ ] No outstanding [GOVERNANCE] items unaddressed
-- [ ] **prove-it gate clear** (only if `command -v prove-it-gate` and a gate was opened): `prove-it-gate status` shows every finding Confirmed-and-fix-confirmed or Proven-safe, none still blocking — or a `prove-it-gate override --reason "..."` was recorded. `close` refuses while anything is unconfirmed; that refusal is the gate doing its job, not an error to work around.
+- [ ] **prove-it gate clear** — on the standard workflow this is the final gate (the prove-it repro-verified review from 4c/4c.5); it is N/A only when `command -v prove-it-gate` is absent (fail-open). When a gate was opened: `prove-it-gate status` shows every finding Confirmed-and-fix-confirmed or Proven-safe, none still blocking — or a `prove-it-gate override --reason "..."` was recorded. `close` refuses while anything is unconfirmed; that refusal is the gate doing its job, not an error to work around.
 
 Show checklist to user before committing:
 ```
@@ -404,7 +413,13 @@ Present summary:
 **Verification**: All passing
 ```
 
-Ask: **"Ready to create a PR? I can use `/create-pr` to push and open a PR with the repo's template."**
+**AI-team repos — fill the AI-reviewer PR template.** Some repos have their PRs reviewed by a model, so the PR body is written for that reviewer (entry points, invariants, a runnable verify block), not for a human skimmer. Before offering `/create-pr`:
+
+1. **Load the template overlay** — one Glob, `~/.claude/projects/*/memory/feedback_create-pr_*.md`; read every match in one parallel batch. Silently skip if none exist.
+2. **If an overlay names the target repo as AI-reviewed** (currently `plextrac-finding-validation`; the overlay owns the list), fill every `{{...}}` in its template from the branch's work: title `{TICKET-KEY}: {change}`, the entry points, the invariants a reviewer should try to break, the runnable verify block, observability, the Jira link. That filled body IS the PR body — hand it to `/create-pr` as the approved title/body verbatim; do not let create-pr re-derive it.
+3. **Otherwise** (no overlay, or repo not listed), `/create-pr` fills the repo's own template as before.
+
+Ask: **"Ready to create a PR? I can use `/create-pr` to push and open it."** (For an AI-reviewed repo, show the filled template for approval first.)
 
 **Save to progress.md**: `Handoff complete.` (or `PR created: {url}`)
 

@@ -485,7 +485,7 @@ Treat the original maxTurns 10 as an interaction/tool-call budget. Run one task 
 
         self.assertEqual(completed.returncode, 0)
         self.assertIn("Diagnostic: canonical commands=6", completed.stdout)
-        self.assertIn("Diagnostic: canonical agents=15", completed.stdout)
+        self.assertIn("Diagnostic: canonical agents=16", completed.stdout)
         self.assertNotIn("missing command adapter:", completed.stdout)
         self.assertNotIn("missing agent adapter:", completed.stdout)
 

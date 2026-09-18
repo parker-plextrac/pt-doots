@@ -583,7 +583,7 @@ Two rules keep the gate honest:
 
 Scope: the gate governs the active rigorous roster (the prove-it lanes, or the pt-doots fallback lanes that exist there). Loose mode and Step 1b keep their own fixed small sets. In Mode 3 self-review, apply the gate **per arm** — each arm spawns only the lanes its own diff earns.
 
-**Additive PlexTrac lanes (either roster):** keep the conditional **Agent 7+ artifact specialists** (migration / CI-CD / Docker / skill) — they cost nothing on a normal diff and are high-value when those files appear. The default roster does **not** run a `researcher` lane: git-history context is already covered by the merge-base diff base, the rename call-outs, and the repro-verifier.
+**Additive PlexTrac lanes (either roster):** keep the conditional **Agent 7+ artifact specialists** (migration / CI-CD / Docker / skill) — they cost nothing on a normal diff and are high-value when those files appear. Also add **`pt-doots:simplicity-reviewer`** on any diff that changes source (the human-simplicity lens — "is this simple enough to follow, and what's the smallest change that makes it simpler?"); it runs with either roster, spawned unnamed with the same inlined-diff context, and takes no overlay. The default roster does **not** run a `researcher` lane: git-history context is already covered by the merge-base diff base, the rename call-outs, and the repro-verifier.
 
 **Fallback roster (no prove-it):** run the `Agent 1..7+` pt-doots agents exactly as written below.
 

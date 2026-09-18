@@ -169,7 +169,7 @@ Step 2    Plan with the user → notes/{TICKET}/plan.md
 Step 3    Branch ({TICKET-KEY}-{short-description})
 Step 4b   Test-writer writes failing tests (TDD default, runs first) → /verify
 Step 4a   Implementer implements to green → /verify
-Step 4c   Quality gate (6 reviewers in parallel)
+Step 4c   Quality gate (standard: prove-it review roster, relevance-gated; else pt-doots reviewers)
 Step 4d   Implementer fixes findings → /verify
 Step 4e   Documentarian updates docs (when Documentation: yes or workflow is docs-only)
 Step 5    Commit gate: user approves checklist
@@ -186,7 +186,7 @@ The scrum-master picks one of four types, plus orthogonal flags
 
 | Type | When | Pipeline |
 |------|------|----------|
-| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; parallel quality gate (6 reviewers) |
+| **standard** | Most tickets — features, multi-file changes, anything risky | Full pipeline; quality gate = the **prove-it** review roster (relevance-gated, repro-verified final gate), falling back to the pt-doots reviewers when prove-it is absent |
 | **lightweight** | Single-file fixes, dependency bumps, additive changes | Skips acceptance-qa + edge-case-qa; smaller review surface |
 | **docs-only** | Documentation-only tickets (READMEs, comments, reference docs) | Researcher → documentarian → code-reviewer + self-containment-reviewer → commit |
 | **custom** | Tickets that don't fit a template | Scrum-master proposes the variant with rationale |
